@@ -1,0 +1,480 @@
+* Setting up calculations
+** Initializing the files
+#+BEGIN_SRC python :results silent
+import numpy as np
+from subprocess import call
+
+# This code is used to get a better starting point for lattice constant
+lattice = np.array([3.631, 3.712, 3.792, 3.872, 3.953])
+rad = 1 / (2*np.sqrt(2)) * lattice
+scale = rad[2] / rad[-1]
+
+call(["makelat", "-s={0}".format(scale), "Cu,Pd", "fcc,bcc"])
+
+script = '''[INCAR]
+ENCUT = 400
+NSW = 50
+IBRION = 2
+ISIF = 7
+KPPRA = 2500
+EDIFF = 1e-6
+GGA = PS
+USEPOT = PAWPBE
+'''
+
+with open('vasp.wrap', 'w') as f:
+    f.write(script)
+#+END_SRC
+
+** Binary alloy calculations
+*** fcc
+#+BEGIN_SRC python :results silent
+from os import system, chdir
+from os.path import exists
+from time import sleep
+
+N = 10
+
+chdir('./CuPd_fcc')
+system('maps -t=0.25 &')
+for n in range(N):
+    open('ready', 'w').close()
+    while exists('ready'):
+        sleep(0.1)
+open('stop', 'w').close()
+#+END_SRC
+
+#+BEGIN_SRC python :results silent
+from subprocess import call
+from os import chdir
+
+chdir('./CuPd_fcc')
+call(["foreachfile", "wait", "run_atat_vasp.py"])
+#+END_SRC
+
+*** bcc
+#+BEGIN_SRC python :results silent
+from os import system, chdir
+from os.path import exists
+from time import sleep
+
+N = 10
+
+chdir('./CuPd_bcc')
+system('maps -t=0.25 &')
+for n in range(N):
+    open('ready', 'w').close()
+    while exists('ready'):
+        sleep(0.1)
+open('stop', 'w').close()
+#+END_SRC
+
+#+BEGIN_SRC python :results silent
+from subprocess import call
+from os import chdir
+
+chdir('./CuPd_bcc')
+call(["foreachfile", "wait", "run_atat_vasp.py"])
+#+END_SRC
+
+* Checking progress
+** CuPd fcc
+#+BEGIN_SRC python
+from subprocess import call
+
+call(["atatstatus.py", "CuPd_fcc"])
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+Fit up to date
+    0:   energy = -4.0214
+    1:   energy = -5.8350
+    2:   energy = -10.0318
+    3:   energy = -10.0449
+    4:   energy = -13.9792
+    5:   energy = -15.7919
+    6:   energy = -14.1422
+    7:   energy = -15.8687
+    8:   energy = -14.0352
+    9:   energy = -15.8523
+   11:   energy = -19.7291
+   13:   energy = -18.1387
+   14:   energy = -20.0568
+   15:   job 1216670 (R)
+   16:   energy = -18.1619
+   17:   energy = -21.7823
+   18:   energy = -18.2653
+   19:   energy = -20.1122
+   20:   energy = -21.7827
+   21:   energy = -18.1469
+   22:   energy = -19.9558
+   23:   energy = -21.7161
+   25:   energy = -19.8097
+   27:   energy = -18.3046
+   28:   energy = -21.8114
+   37:   job 1216671 (R)
+   39:   job 1216669 (R)
+   40:   job 1216678 (R)
+   41:   energy = -22.2577
+   42:   energy = -24.2132
+   46:   energy = -24.1920
+   47:   energy = -23.8940
+   49:   energy = -25.7091
+   53:   energy = -23.6418
+   54:   energy = -25.8268
+   56:   energy = -27.4268
+   63:   job 1216674 (R)
+   70:   job 1216673 (R)
+   74:   energy = -28.3136
+   77:   energy = -30.0401
+   84:   energy = -30.0419
+   95:   job 1216681 (R)
+   98:   job 1216668 (R)
+  102:   energy = -31.8128
+  104:   energy = -33.4273
+  119:   job 1216675 (R)
+  140:   job 1216676 (R)
+  142:   job 1216682 (R)
+  174:   job 1216683 (R)
+  230:   job 1216684 (R)
+  234:   job 1216679 (R)
+  274:   job 1216686 (R)
+  276:   job 1216685 (R)
+  438:   energy = -38.3428
+  446:   job 1216667 (R)
+  502:   energy = -38.3249
+  505:   energy = -41.9561
+  545:   job 1216680 (R)
+  548:   job 1216677 (R)
+  552:   job 1216672 (R)
+#+end_example
+
+** CuPd bcc
+#+BEGIN_SRC python
+from subprocess import call
+
+call(["atatstatus.py", "CuPd_bcc"])
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+Fit not up to date
+    0:   energy = -3.9769
+    1:   energy = -5.7884
+    2:   energy = -9.8877
+    3:   energy = -10.0998
+    4:   energy = -7.7146
+    5:   energy = -8.4585
+    6:   energy = -14.1047
+    7:   energy = -15.7319
+    8:   energy = -13.9517
+    9:   energy = -15.6574
+   10:   energy = -17.7374
+   11:   energy = -19.4663
+   12:   energy = -21.3528
+   13:   energy = -18.0715
+   14:   energy = -19.6778
+   15:   energy = -21.5013
+   16:   energy = -18.0797
+   17:   energy = -19.9108
+   18:   energy = -21.5214
+   19:   energy = -18.1146
+   20:   energy = -21.5709
+   21:   energy = -17.9217
+   22:   energy = -19.7344
+   23:   energy = -21.4618
+   26:   energy = -18.1295
+   27:   energy = -19.7810
+   28:   energy = -21.4997
+   31:   energy = -16.3437
+   34:   job 1216658 (R)
+   35:   energy = -22.0440
+   36:   job 1216656 (R)
+   37:   energy = -23.5896
+   38:   energy = -25.8306
+   39:   energy = -25.4102
+   41:   energy = -22.0452
+   45:   energy = -21.8694
+   46:   energy = -23.8320
+   47:   energy = -23.6712
+   48:   energy = -25.5460
+   49:   energy = -25.4622
+   50:   energy = -27.2273
+   51:   energy = -22.0702
+   53:   energy = -23.8848
+   55:   energy = -25.5577
+   56:   energy = -27.2860
+   60:   energy = -29.8335
+   81:   energy = -26.0306
+   93:   energy = -29.6533
+  116:   energy = -29.2618
+  441:   energy = -39.7619
+#+end_example
+
+* FCC/BCC transition
+** Generate starting points (FCC, BCC)
+#+BEGIN_SRC python :results silent
+from ase.io import read
+from jasp import *
+JASPRC['queue.walltime'] = '24:00:00'
+
+labels = ['fcc', 'bcc']
+GGA = ['PS', 'None']
+
+for lbl in labels:
+
+    atoms = read('CuPd_{0}/3/CONTCAR'.format(lbl))
+
+    for gga in GGA:
+
+        with jasp('DFT/bulk={0}/xc=PBE/gga={1}'.format(lbl, gga),
+                  xc='PBE',
+                  gga='{0}'.format(gga),
+                  encut=400,
+                  kpts=(12, 12, 12),
+                  nsw=10,
+                  ibrion=2,
+                  isif=7,
+                  ediff=1e-8,
+                  atoms=atoms) as calc:
+            try:
+                calc.calculate()
+            except(VaspQueued, VaspSubmitted):
+                pass
+#+END_SRC
+
+**
+#+BEGIN_SRC python
+from ase.lattice.tetragonal import CenteredTetragonal as bct
+import numpy as np
+from ase.visualize import view
+from jbutil import makedb
+from jasp import *
+JASPRC['queue.walltime'] = '24:00:00'
+
+with jasp('DFT/bulk=fcc/xc=PBE/gga=PS') as calc:
+    atoms = calc.get_atoms()
+    cell = atoms.get_cell()
+
+afcc = np.linalg.norm(cell[0])
+
+with jasp('DFT/bulk=bcc/xc=PBE/gga=PS') as calc:
+    atoms = calc.get_atoms()
+    cell = atoms.get_cell()
+
+abcc = np.linalg.norm(cell[0])
+print '     fcc', '          bcc'
+print 'a:  ', afcc, abcc
+print 'c/a:', np.sqrt(2), 1.0
+
+
+ca0 = np.linspace(0.9, 1.5, 31)
+ca0 = np.append(ca0, [np.sqrt(2)])
+print ca0
+a0 = np.linspace(2.5, 3.1, 31)
+a0 = np.append(a0, [afcc, abcc])
+print a0
+
+for a in a0:
+
+    for ca in ca0:
+
+        atoms = bct('Cu', latticeconstant={'a': a, 'c/a': ca})
+        atoms[1].symbol = 'Pd'
+
+        with jasp('DFT/bulk=bct/a={0}/ca={1}/xc=PBE/gga=PS'.format(a, ca),
+                  xc='PBE',
+                  gga='PS',
+                  encut=400,
+                  kpts=(12, 12, 12),
+                  ibrion=-1,
+                  ediff=1e-8,
+                  atoms=atoms) as calc:
+            try:
+                calc.calculate()
+                makedb(calc,
+                       dbname='~/research/cluster-expansion/data.db')
+            except(VaspQueued, VaspSubmitted):
+                pass
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+     fcc           bcc
+a:   2.64179025643 2.96063403586
+c/a: 1.41421356237 1.0
+[ 0.9    0.92   0.94   0.96   0.98   1.     1.02   1.04   1.06   1.08   1.1
+  1.12   1.14   1.16   1.18   1.2    1.22   1.24   1.26   1.28   1.3    1.32
+  1.34   1.36   1.38   1.4    1.42   1.44   1.46   1.48   1.5    1.414]
+[ 2.5    2.52   2.54   2.56   2.58   2.6    2.62   2.64   2.66   2.68   2.7
+  2.72   2.74   2.76   2.78   2.8    2.82   2.84   2.86   2.88   2.9    2.92
+  2.94   2.96   2.98   3.     3.02   3.04   3.06   3.08   3.1    2.642
+  2.961]
+#+end_example
+
+** Data visualization
+#+BEGIN_SRC python
+from ase.db import connect
+from mpl_toolkits.mplot3d import axes3d
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from jasp import *
+from jbutil import makedb
+JASPRC['queue.walltime'] = '24:00:00'
+
+# Retrive the data
+db = connect('data.db')
+A, C = [], []
+E = {}
+for d in db.select([]):
+
+    if d.a not in E.keys():
+        E[d.a] = {}
+    if d.ca not in E[d.a].keys():
+        E[d.a][d.ca] = d.total_energy
+
+    A.append(d.a)
+    C.append(d.ca)
+
+with jasp('DFT/bulk=fcc/xc=PBE/gga=PS') as calc:
+    atoms = calc.get_atoms()
+    cell = atoms.get_cell()
+
+    efcc = atoms.get_potential_energy()
+    afcc = np.linalg.norm(cell[0])
+
+with jasp('DFT/bulk=bcc/xc=PBE/gga=PS') as calc:
+    atoms = calc.get_atoms()
+    cell = atoms.get_cell()
+
+    ebcc = atoms.get_potential_energy()
+    abcc = np.linalg.norm(cell[0])
+
+uA = np.unique(A)
+uC = np.unique(C)
+X, Y = np.meshgrid(uA, uC)
+Z = np.zeros(X.shape)
+
+for i, a in enumerate(uA):
+    for j, c in enumerate(uC):
+        Z[j][i] = E[a][c]
+
+fccZ, bccZ = [], []
+eminZ = []
+cminZ = []
+aminZ = []
+
+
+for i, c in enumerate(uC[5:-5]):
+    data = Z[i+5, :]
+    ind = data.tolist().index(min(data))
+
+    eminZ.append(min(data))
+    cminZ.append(c)
+    aminZ.append(uA[ind])
+
+
+rng = [ebcc, -10.2]
+
+Z[Z > rng[1]] = np.nan
+
+fig = plt.figure(figsize=(8, 6))
+ax = fig.gca(projection='3d')
+CM = cm.autumn
+
+cset = ax.contourf(X, Y, Z, zdir='z', offset=-10.8, cmap=CM, vmin=rng[0], vmax=rng[1])
+
+ax.plot_surface(X, Y, Z,
+                rstride=1,
+                cstride=1,
+                cmap=CM,
+                linewidth=0,
+                vmin=rng[0],
+                vmax=rng[1])
+
+
+ax.scatter(aminZ[1:-1], cminZ[1:-1], eminZ[1:-1], c='k')
+
+ax.plot([afcc, afcc], [np.sqrt(2), np.sqrt(2)], [-10.8, eminZ[-1]], 'go-', zorder=99)
+ax.text(afcc, np.sqrt(2), eminZ[-1]+0.01, 'fcc', color='g', zorder=99, size='large')
+
+ax.plot([abcc, abcc], [1.0, 1.0], [-10.8, eminZ[0]], 'bo-', zorder=99)
+ax.text(abcc, 1.0, eminZ[0]+0.01, 'bcc', color='b', zorder=99, size='large')
+
+ax.set_xlabel('a')
+ax.set_xlim(2.4, 3.2)
+ax.set_ylabel('c/a')
+ax.set_ylim(0.8, 1.6)
+ax.set_zlabel('Total energy (eV)')
+ax.set_zlim(-10.8, rng[1])
+plt.tight_layout()
+plt.savefig('images/3D-bcc-pathway.png')
+plt.show()
+
+from ase.lattice.tetragonal import CenteredTetragonal as bct
+
+for gga in ['PS', 'None']:
+
+    for i, ca in enumerate(cminZ):
+
+        atoms = bct('Cu', latticeconstant={'a': aminZ[i], 'c/a': ca})
+        atoms[1].symbol = 'Pd'
+
+        with jasp('DFT/bulk=bct/pathway=True/ca={0}/xc=PBE/gga={1}'.format(ca, gga),
+                  xc='PBE',
+                  gga='{0}'.format(gga),
+                  encut=400,
+                  kpts=(12, 12, 12),
+                  nsw=20,
+                  ibrion=2,
+                  isif=7,
+                  ediff=1e-9,
+                  atoms=atoms) as calc:
+            try:
+                calc.calculate()
+                #makedb(calc,
+                #       dbname='~/research/cluster-expansion/data-pathway.db')
+            except(VaspQueued, VaspSubmitted):
+                pass
+#+END_SRC
+
+#+RESULTS:
+
+
+#+BEGIN_SRC python
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Retrive the data
+db = connect('data-pathway.db')
+
+C, E = [], []
+for d in db.select(['gga=PS']):
+    C.append(d.ca)
+    E.append(d.total_energy)
+
+
+E = np.array(E) - E[0]
+
+plt.figure()
+plt.plot(C, E, 'ko-', ms=4)
+
+plt.scatter(C[0], E[0], s=30, c='b', zorder=99)
+plt.text(C[0]-0.003, E[0]+0.001, 'bcc', color='b', ha='left', size='large')
+
+plt.scatter(C[-1], E[-1], s=30, c='g', zorder=99)
+plt.text(C[-1]+0.003, E[-1]+0.001, 'fcc', color='g', ha='right', size='large')
+
+plt.xlabel('c/a')
+plt.ylabel('Energy relative to bcc phase (eV)')
+plt.xlim(0.995, np.sqrt(2)+0.005)
+plt.ylim(-0.001, E[-1]+0.003)
+plt.tight_layout()
+plt.savefig('images/diffusion-path.png')
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+
