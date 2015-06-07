@@ -77,7 +77,7 @@ chdir('./CuPd_bcc')
 call(["foreachfile", "wait", "run_atat_vasp.py"])
 #+END_SRC
 
-* Checking progress
+* Checking cluster expansion progress
 ** CuPd fcc
 #+BEGIN_SRC python
 from subprocess import call
@@ -87,7 +87,7 @@ call(["atatstatus.py", "CuPd_fcc"])
 
 #+RESULTS:
 #+begin_example
-Fit up to date
+Fit not up to date
     0:   energy = -4.0214
     1:   energy = -5.8350
     2:   energy = -10.0318
@@ -98,10 +98,12 @@ Fit up to date
     7:   energy = -15.8687
     8:   energy = -14.0352
     9:   energy = -15.8523
+   10:   job 1216725 (R)
    11:   energy = -19.7291
+   12:   energy = -21.6136
    13:   energy = -18.1387
    14:   energy = -20.0568
-   15:   job 1216670 (R)
+   15:   energy = -21.7531
    16:   energy = -18.1619
    17:   energy = -21.7823
    18:   energy = -18.2653
@@ -110,44 +112,52 @@ Fit up to date
    21:   energy = -18.1469
    22:   energy = -19.9558
    23:   energy = -21.7161
+   24:   energy = -18.0163
    25:   energy = -19.8097
+   26:   energy = -21.6629
    27:   energy = -18.3046
    28:   energy = -21.8114
-   37:   job 1216671 (R)
-   39:   job 1216669 (R)
-   40:   job 1216678 (R)
+   37:   energy = -24.1672
+   39:   energy = -25.8991
+   40:   energy = -27.5631
    41:   energy = -22.2577
    42:   energy = -24.2132
+   44:   energy = -27.5951
    46:   energy = -24.1920
    47:   energy = -23.8940
    49:   energy = -25.7091
+   50:   energy = -27.5124
    53:   energy = -23.6418
    54:   energy = -25.8268
    56:   energy = -27.4268
-   63:   job 1216674 (R)
-   70:   job 1216673 (R)
+   63:   energy = -31.7197
+   70:   energy = -31.7452
    74:   energy = -28.3136
    77:   energy = -30.0401
+   78:   energy = -31.7967
    84:   energy = -30.0419
-   95:   job 1216681 (R)
-   98:   job 1216668 (R)
+   95:   energy = -31.7234
+   98:   energy = -28.2037
   102:   energy = -31.8128
   104:   energy = -33.4273
-  119:   job 1216675 (R)
-  140:   job 1216676 (R)
-  142:   job 1216682 (R)
-  174:   job 1216683 (R)
-  230:   job 1216684 (R)
-  234:   job 1216679 (R)
-  274:   job 1216686 (R)
-  276:   job 1216685 (R)
+  119:   energy = -31.7661
+  140:   energy = -34.1757
+  142:   energy = -35.9704
+  174:   energy = -37.5647
+  230:   energy = -34.0250
+  234:   energy = -35.7792
+  274:   energy = -39.8346
+  276:   energy = -39.8679
   438:   energy = -38.3428
-  446:   job 1216667 (R)
+  446:   energy = -39.9947
   502:   energy = -38.3249
   505:   energy = -41.9561
-  545:   job 1216680 (R)
-  548:   job 1216677 (R)
-  552:   job 1216672 (R)
+  545:   energy = -38.2419
+  548:   energy = -40.1003
+  552:   energy = -39.9547
+  955:   energy = -46.0056
+ 9808:   job 1216730 (R)
+ 9992:   energy = -61.9444
 #+end_example
 
 ** CuPd bcc
@@ -184,16 +194,20 @@ Fit not up to date
    21:   energy = -17.9217
    22:   energy = -19.7344
    23:   energy = -21.4618
+   24:   energy = -17.9091
+   25:   energy = -21.5236
    26:   energy = -18.1295
    27:   energy = -19.7810
    28:   energy = -21.4997
+   29:   energy = -13.0591
    31:   energy = -16.3437
-   34:   job 1216658 (R)
+   34:   energy = -12.7813
    35:   energy = -22.0440
-   36:   job 1216656 (R)
+   36:   energy = -24.2140
    37:   energy = -23.5896
    38:   energy = -25.8306
    39:   energy = -25.4102
+   40:   energy = -27.3142
    41:   energy = -22.0452
    45:   energy = -21.8694
    46:   energy = -23.8320
@@ -203,13 +217,29 @@ Fit not up to date
    50:   energy = -27.2273
    51:   energy = -22.0702
    53:   energy = -23.8848
+   54:   energy = -25.7058
    55:   energy = -25.5577
    56:   energy = -27.2860
    60:   energy = -29.8335
    81:   energy = -26.0306
+   90:   energy = -28.2950
    93:   energy = -29.6533
+   95:   energy = -31.5346
+  105:   energy = -25.6394
+  112:   energy = -32.9307
   116:   energy = -29.2618
+  130:   energy = -28.0172
+  134:   energy = -31.3237
   441:   energy = -39.7619
+  479:   energy = -38.4438
+  494:   energy = -38.4328
+  581:   job 1216737 (R)
+  603:   energy = -38.4733
+  618:   energy = -38.4510
+ 1098:   energy = -40.2134
+ 1273:   job 1216742 (R)
+ 1721:   job 1216740 (R)
+ 2237:   job 1216741 (R)
 #+end_example
 
 * FCC/BCC transition
@@ -228,7 +258,7 @@ for lbl in labels:
 
     for gga in GGA:
 
-        with jasp('DFT/bulk={0}/xc=PBE/gga={1}'.format(lbl, gga),
+        with jasp('DFT/bulk={0}/config=3/xc=PBE/gga={1}'.format(lbl, gga),
                   xc='PBE',
                   gga='{0}'.format(gga),
                   encut=400,
@@ -253,13 +283,13 @@ from jbutil import makedb
 from jasp import *
 JASPRC['queue.walltime'] = '24:00:00'
 
-with jasp('DFT/bulk=fcc/xc=PBE/gga=PS') as calc:
+with jasp('DFT/bulk=fcc/config=3/xc=PBE/gga=PS') as calc:
     atoms = calc.get_atoms()
     cell = atoms.get_cell()
 
 afcc = np.linalg.norm(cell[0])
 
-with jasp('DFT/bulk=bcc/xc=PBE/gga=PS') as calc:
+with jasp('DFT/bulk=bcc/config=3/xc=PBE/gga=PS') as calc:
     atoms = calc.get_atoms()
     cell = atoms.get_cell()
 
@@ -283,7 +313,7 @@ for a in a0:
         atoms = bct('Cu', latticeconstant={'a': a, 'c/a': ca})
         atoms[1].symbol = 'Pd'
 
-        with jasp('DFT/bulk=bct/a={0}/ca={1}/xc=PBE/gga=PS'.format(a, ca),
+        with jasp('DFT/bulk=bct/config=3/a={0}/ca={1}/xc=PBE/gga=PS'.format(a, ca),
                   xc='PBE',
                   gga='PS',
                   encut=400,
@@ -337,14 +367,14 @@ for d in db.select([]):
     A.append(d.a)
     C.append(d.ca)
 
-with jasp('DFT/bulk=fcc/xc=PBE/gga=PS') as calc:
+with jasp('DFT/bulk=fcc/config=3/xc=PBE/gga=PS') as calc:
     atoms = calc.get_atoms()
     cell = atoms.get_cell()
 
     efcc = atoms.get_potential_energy()
     afcc = np.linalg.norm(cell[0])
 
-with jasp('DFT/bulk=bcc/xc=PBE/gga=PS') as calc:
+with jasp('DFT/bulk=bcc/config=3/xc=PBE/gga=PS') as calc:
     atoms = calc.get_atoms()
     cell = atoms.get_cell()
 
@@ -421,7 +451,7 @@ for gga in ['PS', 'None']:
         atoms = bct('Cu', latticeconstant={'a': aminZ[i], 'c/a': ca})
         atoms[1].symbol = 'Pd'
 
-        with jasp('DFT/bulk=bct/pathway=True/ca={0}/xc=PBE/gga={1}'.format(ca, gga),
+        with jasp('DFT/bulk=bct/config=3/pathway=True/ca={0}/xc=PBE/gga={1}'.format(ca, gga),
                   xc='PBE',
                   gga='{0}'.format(gga),
                   encut=400,
@@ -474,6 +504,118 @@ plt.ylim(-0.001, E[-1]+0.003)
 plt.tight_layout()
 plt.savefig('images/diffusion-path.png')
 plt.show()
+#+END_SRC
+
+#+RESULTS:
+
+* Ground states
+** fcc
+#+BEGIN_SRC python
+import numpy as np
+import matplotlib.pyplot as plt
+from jasp import *
+JASPRC['queue.walltime'] = '24:00:00'
+
+config = ['fcc', 'bcc']
+color = ['b', 'r']
+
+plt.figure()
+plt.plot([0.0, 1.0], [0, 0], 'k--')
+
+for i, cfg in enumerate(config):
+
+    with open('CuPd_{0}/gs.out'.format(cfg), 'r') as f:
+        lines = f.readlines()
+
+        GS, EGS, CGS = [], [], []
+
+        for line in lines:
+            # Composition, DFT energy, Fit energy, Configuration
+            x, y, z, c = line.split()
+
+            CGS.append(x)
+            EGS.append(y)
+            GS.append(c)
+
+    with open('CuPd_{0}/fit.out'.format(cfg), 'r') as f:
+        lines = f.readlines()
+
+        C, E = [], []
+
+        for line in lines:
+            # Composition, DFT energy, Fit energy, Fit error, Weight, Configuration
+            x, y, z, e, w, c = line.split()
+
+            C.append(x)
+            E.append(y)
+
+    plt.scatter(C, E, c='k', s=15)
+    plt.plot(CGS, EGS, c='{0}'.format(color[i]), marker='o', label='{0}'.format(cfg))
+    for j, gs in enumerate(GS[1:-1]):
+        plt.text(CGS[1:-1][j], float(EGS[1:-1][j])-0.004,
+                 '{0}'.format(gs),
+                 color='{0}'.format(color[i]),
+                 va='top', ha='center',
+                 zorder=99)
+
+    # Fraction of equilibrium lattice constant to be calculated.
+    frac_eos = np.append(np.linspace(0.85, 1.15, 61), np.linspace(1.2, 2.0, 17))
+
+    # This array represents all types of deformations we want to calculate.
+    # The nominclature being used is as follows:
+    # [ x , a , c ]
+    # [ a , y , b ]
+    # [ c , b , z ]
+    # where a, b, and c are the xy, yz, and zx tensors, respectively.
+    deformations = [['xyz', frac_eos]]
+
+    for j, gs in enumerate(GS):
+
+        for dfm in deformations:
+
+            for frac in dfm[1]:
+
+                # This code retrieves the optimized volume and atom positions from the ISIF=3 calculation.
+                with jasp('CuPd_{0}/{1}'.format(cfg, gs)) as calc:
+                    atoms = calc.get_atoms()
+                    cell0 = atoms.get_cell()
+                    k1, k2, k3 = calc.input_params['kpts']
+
+                dis = {}
+                for vector in ['x', 'y', 'z', 'a', 'b', 'c']:
+                    dis[vector] = 1.0
+
+                    if vector in dfm[0]:
+                        dis[vector] = frac
+
+                delta = np.array([[dis['x']      , 0.5 * (dis['a'] - 1), 0.5 * (dis['c'] - 1)],
+                                  [0.5 * (dis['a'] - 1), dis['y']      , 0.5 * (dis['b'] - 1)],
+                                  [0.5 * (dis['c'] - 1), 0.5 * (dis['b'] - 1), dis['z']      ]])
+
+                # This line adjusts the cell volume by the fraction specified above. 
+                # The atoms are scaled accordingly inside the new unit cell.
+                atoms.set_cell(np.dot(cell0, delta), scale_atoms=True)
+
+                with jasp('DFT/bulk={0}/config={1}/strain={2}/factor={3}/xc=PBE/gga=PS'.format(cfg, gs, dfm[0], frac),
+                          xc='PBE',
+                          gga='PS',
+                          kpts=(k1, k2, k3),
+                          encut=400,
+                          ibrion=-1,
+                          ediff=1e-8,
+                          atoms=atoms) as calc:
+                    try:
+                        calc.calculate()
+                    except(VaspSubmitted, VaspQueued):
+                        pass
+
+plt.legend(loc='best')
+plt.xlim(0, 1)
+plt.xlabel('Composition (Pd)')
+plt.ylabel('Heat of formation (eV/atom)')
+plt.ylim(-0.15, 0.01)
+plt.tight_layout()
+plt.savefig('./images/groundstate.png')
 #+END_SRC
 
 #+RESULTS:
