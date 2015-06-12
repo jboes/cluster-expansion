@@ -1,5 +1,6 @@
-* Setting up calculations
-** Initializing the files
+* ATAT
+** Setting up calculations
+*** Initializing the files
 #+BEGIN_SRC python :results silent
 import numpy as np
 from subprocess import call
@@ -26,7 +27,7 @@ with open('vasp.wrap', 'w') as f:
     f.write(script)
 #+END_SRC
 
-** Binary alloy calculations
+*** Binary alloy calculations
 *** fcc
 #+BEGIN_SRC python :results silent
 from os import system, chdir
@@ -77,8 +78,8 @@ chdir('./CuPd_bcc')
 call(["foreachfile", "wait", "run_atat_vasp.py"])
 #+END_SRC
 
-* Checking cluster expansion progress
-** CuPd fcc
+** Checking cluster expansion progress
+*** CuPd fcc
 #+BEGIN_SRC python
 from subprocess import call
 
@@ -98,7 +99,7 @@ Fit not up to date
     7:   energy = -15.8687
     8:   energy = -14.0352
     9:   energy = -15.8523
-   10:   job 1216725 (R)
+   10:   energy = -17.9918
    11:   energy = -19.7291
    12:   energy = -21.6136
    13:   energy = -18.1387
@@ -156,11 +157,11 @@ Fit not up to date
   548:   energy = -40.1003
   552:   energy = -39.9547
   955:   energy = -46.0056
- 9808:   job 1216730 (R)
+ 9808:   energy = -39.2919
  9992:   energy = -61.9444
 #+end_example
-
-** CuPd bcc
+    
+*** CuPd bcc
 #+BEGIN_SRC python
 from subprocess import call
 
@@ -233,30 +234,33 @@ Fit not up to date
   441:   energy = -39.7619
   479:   energy = -38.4438
   494:   energy = -38.4328
-  581:   job 1216737 (R)
+  581:   energy = -38.4466
   603:   energy = -38.4733
   618:   energy = -38.4510
  1098:   energy = -40.2134
- 1273:   job 1216742 (R)
- 1721:   job 1216740 (R)
- 2237:   job 1216741 (R)
+ 1273:   energy = -41.9288
+ 1721:   energy = -48.5707
+ 2237:   energy = -48.5666
 #+end_example
+   
 
-* FCC/BCC transition
-** Generate starting points (FCC, BCC)
+
+* DFT
+** CuPd fcc and bcc '3' configuration
 #+BEGIN_SRC python :results silent
-from ase.io import read
 from jasp import *
+from ase.io import read
 JASPRC['queue.walltime'] = '24:00:00'
 
-labels = ['fcc', 'bcc']
-GGA = ['PS', 'None']
+# Run for fcc and bcc
+for lbl in ['fcc', 'bcc']:
 
-for lbl in labels:
-
+    # Get the CuPd structure for fcc and bcc from ATAT
+    # Configuration '3'
     atoms = read('CuPd_{0}/3/CONTCAR'.format(lbl))
 
-    for gga in GGA:
+    # Will run these calculations on PBEsol and PBE
+    for gga in ['PS', 'None']:
 
         with jasp('DFT/bulk={0}/config=3/xc=PBE/gga={1}'.format(lbl, gga),
                   xc='PBE',
@@ -274,7 +278,8 @@ for lbl in labels:
                 pass
 #+END_SRC
 
-**
+** fcc to fcc transition through bct geometry
+*** data generation
 #+BEGIN_SRC python
 from ase.lattice.tetragonal import CenteredTetragonal as bct
 import numpy as np
@@ -283,37 +288,44 @@ from jbutil import makedb
 from jasp import *
 JASPRC['queue.walltime'] = '24:00:00'
 
+# Configuration '3' for fcc
 with jasp('DFT/bulk=fcc/config=3/xc=PBE/gga=PS') as calc:
     atoms = calc.get_atoms()
     cell = atoms.get_cell()
 
+# This is the 'a' parameter from the calculation
 afcc = np.linalg.norm(cell[0])
 
+# Configuration '3' for bcc i.e. B2
 with jasp('DFT/bulk=bcc/config=3/xc=PBE/gga=PS') as calc:
     atoms = calc.get_atoms()
     cell = atoms.get_cell()
 
+# This is the 'a' parameter from the calculation
 abcc = np.linalg.norm(cell[0])
-print '     fcc', '          bcc'
-print 'a:  ', afcc, abcc
-print 'c/a:', np.sqrt(2), 1.0
 
 
+print '     fcc', '           bcc'
+print 'a:   {0:1.3f}  {1:1.3f}'.format(afcc, abcc)
+print 'c/a: {0:1.3f}  {1:1.3f}'.format(np.sqrt(2), 1.0)
+
+# Create a list of sample points
 ca0 = np.linspace(0.9, 1.5, 31)
 ca0 = np.append(ca0, [np.sqrt(2)])
-print ca0
 a0 = np.linspace(2.5, 3.1, 31)
 a0 = np.append(a0, [afcc, abcc])
-print a0
 
 for a in a0:
 
     for ca in ca0:
 
+        # Generate structure based on sample points
         atoms = bct('Cu', latticeconstant={'a': a, 'c/a': ca})
         atoms[1].symbol = 'Pd'
 
-        with jasp('DFT/bulk=bct/config=3/a={0}/ca={1}/xc=PBE/gga=PS'.format(a, ca),
+        wd = 'DFT/bulk=bct/config=3/a={0}/ca={1}/xc=PBE/gga=PS'.format(a, ca)
+
+        with jasp(wd,
                   xc='PBE',
                   gga='PS',
                   encut=400,
@@ -323,10 +335,8 @@ for a in a0:
                   atoms=atoms) as calc:
             try:
                 calc.calculate()
-                makedb(calc,
-                       dbname='~/research/cluster-expansion/data.db')
             except(VaspQueued, VaspSubmitted):
-                pass
+                print wd, 'Queued'
 #+END_SRC
 
 #+RESULTS:
@@ -343,8 +353,15 @@ c/a: 1.41421356237 1.0
   2.961]
 #+end_example
 
-** Data visualization
+*** data visualization
+#+caption: 3D Minimum energy pathway of fcc to bcc transition through bct geometry space
+#+label: fig-3d-cupd-min
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/3D-bcc-pathway.png]]
+
 #+BEGIN_SRC python
+from ase.lattice.tetragonal import CenteredTetragonal as bct
 from ase.db import connect
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
@@ -395,7 +412,6 @@ eminZ = []
 cminZ = []
 aminZ = []
 
-
 for i, c in enumerate(uC[5:-5]):
     data = Z[i+5, :]
     ind = data.tolist().index(min(data))
@@ -440,9 +456,6 @@ ax.set_zlabel('Total energy (eV)')
 ax.set_zlim(-10.8, rng[1])
 plt.tight_layout()
 plt.savefig('images/3D-bcc-pathway.png')
-plt.show()
-
-from ase.lattice.tetragonal import CenteredTetragonal as bct
 
 for gga in ['PS', 'None']:
 
@@ -451,7 +464,9 @@ for gga in ['PS', 'None']:
         atoms = bct('Cu', latticeconstant={'a': aminZ[i], 'c/a': ca})
         atoms[1].symbol = 'Pd'
 
-        with jasp('DFT/bulk=bct/config=3/pathway=True/ca={0}/xc=PBE/gga={1}'.format(ca, gga),
+        wd = 'DFT/bulk=bct/config=3/pathway=True/ca={0}/xc=PBE/gga={1}'.format(ca, gga)
+
+        with jasp(wd,
                   xc='PBE',
                   gga='{0}'.format(gga),
                   encut=400,
@@ -463,16 +478,18 @@ for gga in ['PS', 'None']:
                   atoms=atoms) as calc:
             try:
                 calc.calculate()
-                #makedb(calc,
-                #       dbname='~/research/cluster-expansion/data-pathway.db')
+
             except(VaspQueued, VaspSubmitted):
-                pass
+                print wd, 'Queued'
 #+END_SRC
 
-#+RESULTS:
+#+caption: 2D Minimum energy pathway of fcc to bcc transition through bct geometry space
+#+label: fig-2d-cupd-min
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/diffusion-path.png]]
 
-
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results silent
 from ase.db import connect
 import matplotlib.pyplot as plt
 import numpy as np
@@ -503,14 +520,17 @@ plt.xlim(0.995, np.sqrt(2)+0.005)
 plt.ylim(-0.001, E[-1]+0.003)
 plt.tight_layout()
 plt.savefig('images/diffusion-path.png')
-plt.show()
 #+END_SRC
 
-#+RESULTS:
-
 * Ground states
-** fcc
-#+BEGIN_SRC python
+** ground state figure
+#+caption: Ground state hull of CuPd for fcc and bcc phases
+#+label: fig-cupd-gs
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/groundstate.png]]
+
+#+BEGIN_SRC python : results silent
 import numpy as np
 import matplotlib.pyplot as plt
 from jasp import *
@@ -558,6 +578,37 @@ for i, cfg in enumerate(config):
                  va='top', ha='center',
                  zorder=99)
 
+plt.legend(loc='best')
+plt.xlim(0, 1)
+plt.xlabel('Composition (Pd)')
+plt.ylabel('Heat of formation (eV/atom)')
+plt.ylim(-0.15, 0.01)
+plt.tight_layout()
+plt.savefig('./images/groundstate.png')
+#+END_SRC
+
+** EOS for all structures
+#+BEGIN_SRC python
+import numpy as np
+from jasp import *
+JASPRC['queue.walltime'] = '24:00:00'
+
+# For fcc and bcc configurations
+for cfg in ['fcc', 'bcc']:
+
+    with open('CuPd_{0}/fit.out'.format(cfg), 'r') as f:
+        lines = f.readlines()
+
+        # Begin a list of configurations
+        C = []
+
+        for line in lines:
+            # Composition, DFT energy, Fit energy, Fit error, Weight, Configuration
+            x, y, z, e, w, c = line.split()
+
+            # We only need the configuration
+            C.append(c)
+
     # Fraction of equilibrium lattice constant to be calculated.
     frac_eos = np.append(np.linspace(0.85, 1.15, 61), np.linspace(1.2, 2.0, 17))
 
@@ -569,14 +620,14 @@ for i, cfg in enumerate(config):
     # where a, b, and c are the xy, yz, and zx tensors, respectively.
     deformations = [['xyz', frac_eos]]
 
-    for j, gs in enumerate(GS):
+    for j, c in enumerate(C):
 
         for dfm in deformations:
 
             for frac in dfm[1]:
 
                 # This code retrieves the optimized volume and atom positions from the ISIF=3 calculation.
-                with jasp('CuPd_{0}/{1}'.format(cfg, gs)) as calc:
+                with jasp('CuPd_{0}/{1}'.format(cfg, c)) as calc:
                     atoms = calc.get_atoms()
                     cell0 = atoms.get_cell()
                     k1, k2, k3 = calc.input_params['kpts']
@@ -595,28 +646,107 @@ for i, cfg in enumerate(config):
                 # This line adjusts the cell volume by the fraction specified above. 
                 # The atoms are scaled accordingly inside the new unit cell.
                 atoms.set_cell(np.dot(cell0, delta), scale_atoms=True)
+                wd = 'DFT/bulk={0}/config={1}/strain={2}/factor={3}/xc=PBE/gga=PS'.format(cfg, c, dfm[0], frac)
 
-                with jasp('DFT/bulk={0}/config={1}/strain={2}/factor={3}/xc=PBE/gga=PS'.format(cfg, gs, dfm[0], frac),
-                          xc='PBE',
-                          gga='PS',
-                          kpts=(k1, k2, k3),
-                          encut=400,
-                          ibrion=-1,
-                          ediff=1e-8,
-                          atoms=atoms) as calc:
-                    try:
-                        calc.calculate()
-                    except(VaspSubmitted, VaspQueued):
-                        pass
+                try:
+                    with jasp(wd,
+                              xc='PBE',
+                              gga='PS',
+                              kpts=(k1, k2, k3),
+                              encut=400,
+                              ibrion=-1,
+                              ediff=1e-8,
+                              atoms=atoms) as calc:
+                        try:
+                            calc.calculate()
+                        except(VaspSubmitted, VaspQueued):
+                            print wd, 'Queued'
+                except(VaspNotFinished):
+                    print wd, 'VaspNotFinished'
+#+END_SRC
 
-plt.legend(loc='best')
-plt.xlim(0, 1)
-plt.xlabel('Composition (Pd)')
-plt.ylabel('Heat of formation (eV/atom)')
-plt.ylim(-0.15, 0.01)
-plt.tight_layout()
-plt.savefig('./images/groundstate.png')
+
+* Analysis tools
+** database generation
+#+BEGIN_SRC python
+from jasp import *
+import os
+from ase.io.trajectory import Trajectory
+from jbutil import makedb
+
+for r, d, f in os.walk('cluster-expansion/DFT/bulk=bct/config=3/pathway=False'):
+    if f:
+        try:
+            with jasp(r) as calc:
+                try:
+                    if not os.path.exists('out.traj'):
+                        xd = xdat2traj('out.traj', calc=calc)
+                        xd.convert()
+
+                    traj = Trajectory('out.traj')
+                    atoms = traj[-1]
+
+                    makedb(calc,
+                           atoms=atoms,
+                           dbname='~/research/cluster-expansion/networks/db0-bct/data.db')
+
+                except(VaspQueued, VaspSubmitted):
+                    print 'In Queue', r
+                except(ValueError):
+                    print 'ValueError', r
+                except(IndexError):
+                    print 'IndexError', r
+        except(VaspNotFinished):
+            print 'VaspNotFinished', r
+#+END_SRC
+
+#+RESULTS:
+: VaspNotFinished DFT/bulk=fcc/config=505/strain=xyz/factor=1.85/xc=PBE/gga=PS
+: VaspNotFinished DFT/bulk=fcc/config=505/strain=xyz/factor=1.9/xc=PBE/gga=PS
+: VaspNotFinished DFT/bulk=fcc/config=505/strain=xyz/factor=2.0/xc=PBE/gga=PS
+: VaspNotFinished DFT/bulk=fcc/config=28/strain=xyz/factor=1.85/xc=PBE/gga=PS
+: IndexError DFT/bulk=bcc/config=3/strain=xyz/factor=2.0/xc=PBE/gga=PS
+: VaspNotFinished DFT/bulk=bcc/config=603/strain=xyz/factor=1.95/xc=PBE/gga=PS
+
+** database manipulation
+#+BEGIN_SRC python
+from ase.db import connect
+import os
+
+db0 = connect('networks/db0/data.db')
+data = db0.select(['gga=PS', 'ediff!=1e-9'])
+
+wd = 'networks/db0-PS/'
+
+if not os.path.exists(wd):
+    os.makedirs(wd)
+
+db = connect(wd + '/data.db')
+
+for d in data:
+    db.write(d,
+             key_value_pairs=d.key_value_pairs)
 #+END_SRC
 
 #+RESULTS:
 
+** network training
+#+BEGIN_SRC python
+from neural.bp import BPNeural
+import os
+
+os.chdir('networks/db0-PS')
+
+calc = BPNeural()  #  label defines the prefix for a file
+
+calc.train('data.db',
+           energy_goal=1e-5,
+           force_goal=5e-4)
+#+END_SRC
+
+#+RESULTS:
+: Warning: Desired error not necessarily achieved due to precision loss.
+:          Current function value: 298.548133
+:          Iterations: 2764
+:          Function evaluations: 3211
+:          Gradient evaluations: 3200
