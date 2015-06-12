@@ -762,7 +762,7 @@ from ase.db import connect
 from jbutil import get_composition
 from ase.io import write
 
-BPcalc = BPNeural(json='networks/db0-bct/trained-parameters.json')
+BPcalc = BPNeural(json='networks/db0-PS/trained-parameters.json')
 
 config = ['fcc', 'bcc']
 color = ['b', 'r']
@@ -862,7 +862,7 @@ ax[1].set_xticks(ax[1].get_xticks()[1:])
 ax[0].legend(loc='best')
 plt.tight_layout()
 
-plt.savefig('images/db0-bct-eosfit.png')
+plt.savefig('images/db0-PS-eosfit.png')
 plt.show()
 #+END_SRC
 
