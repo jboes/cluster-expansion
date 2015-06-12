@@ -761,7 +761,7 @@ from ase.db import connect
 from jbutil import get_composition
 from ase.io import write
 
-BPcalc = BPNeural(json='networks/db0-PS/trained-parameters.json')
+BPcalc = BPNeural(json='networks/db0-bct/trained-parameters.json')
 
 config = ['fcc', 'bcc']
 color = ['b', 'r']
@@ -839,31 +839,30 @@ for i, cfg in enumerate(config):
     for a in anom:
         with jasp('CuPd_{0}/{1}'.format(cfg, a)) as calc:
             atoms = calc.get_atoms()
-        write('./images/{0}-{1}-A.png'.format(cfg, a), atoms)
+        write('./images/{0}-{1}-A.png'.format(cfg, a), atoms, rotation='45x, 45y')
 
     for a in GS:
         with jasp('CuPd_{0}/{1}'.format(cfg, a)) as calc:
             atoms = calc.get_atoms()
-        write('./images/{0}-{1}-GS.png'.format(cfg, a), atoms)
+        write('./images/{0}-{1}-GS.png'.format(cfg, a), atoms, rotation='45x, 45y')
 
 ax[1].plot([0.0, 1.0], [0, 0], 'k-')
 ax[1].set_xlim(0.0, 1.0)
 ax[1].set_xlabel('Composition (Cu)')
 ax[1].set_ylabel('Residuals to fit, Neural - DFT (eV/atom)')
 
-ax[0].plot([-0.6, -0.25], [-0.6, -0.25], 'k-', zorder=1)
+#ax[0].plot([-0.6, -0.25], [-0.6, -0.25], 'k-', zorder=1)
 ax[0].set_xlabel('DFT total energy (eV/atom)')
-ax[0].set_xlim(-0.6, -0.25)
+#ax[0].set_xlim(-0.6, -0.25)
 
 ax[0].set_ylabel('Neural fitted total energy (eV/atom)')
-ax[0].set_ylim(-0.6, -0.25)
+#ax[0].set_ylim(-0.6, -0.25)
 ax[1].set_xticks(ax[1].get_xticks()[1:])
 ax[0].legend(loc='best')
 plt.tight_layout()
 
-plt.savefig('images/db0-PS-eosfit.png')
-
-
+plt.savefig('images/db0-bct-eosfit.png')
+plt.show()
 #+END_SRC
 
 #+RESULTS:
