@@ -1,0 +1,46 @@
+#+TITLE: Mini-report on CuPd bcc to fcc transformation
+#+AUTHOR: Jacob Boes
+#+LATEX_CLASS: cmu-article
+#+OPTIONS: ^:{} # make super/subscripts only when wrapped in {}
+#+OPTIONS: toc:nil # suppress toc, so we can put it where we want
+#+OPTIONS: tex:t
+#+EXPORT_EXCLUDE_TAGS: noexport
+
+\maketitle
+
+* CuPd bcc -> fcc transition
+The bcc transforms to fcc through the body centered tetragonal (bct) shape as shown in Figure ref:fig-bct.
+
+#+label: fig-bct
+#+caption: Body Centered Tetragonal Structure
+#+attr_latex: :width 75
+[[./images/bct.png]]
+
+As dimension 'c/a' becomes equal to 1, the bct structure becomes bcc (i.e. 'c'='a'). Similarly, when 'c' becomes equal to the square root of 2, the structure becomes fcc. This is demonstrated graphically in Figure ref:fig-fcctobcc.
+
+#+label: fig-fcctobcc
+#+caption: fcc transformation to bcc by shrinking 'c/a' of bct structure
+#+attr_latex: :width 6in
+[[./images/bcc3.png]]
+
+* Energies of the diffusion pathway
+Figure ref:fig-3D shows a 3-dimensional image of the minimum energy pathway. There is approximately 50meV difference between the two structures. The pathways does not follow a simple path of constant 'a' or 'c'.
+
+
+
+#+label: fig-3D
+#+caption: 3D minimum energy well for with changes in the 'a' and 'c/a' properties of the bct structure
+#+attr_latex: :width 5in :placement [H]
+[[./images/3D-bcc-pathway.png]]
+
+Note: lines of constant 'c/a' are representative of equations of state i.e. only volume changes, while the relative magnitudes of the vectors are constant.
+
+The minimum energy pathway is shown via 'c/a' in Figure ref:fig-2D. Interestingly, there is no appreciable barrier to speak of.
+
+#+label: fig-2D
+#+caption: Minimum energy pathway for bcc transformation to fcc
+#+attr_latex: :width 4in
+[[./images/diffusion-path.png]]
+
+
+bibliography:../../bibliography/references.bib
