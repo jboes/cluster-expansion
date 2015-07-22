@@ -1,0 +1,88 @@
+#+TITLE: Mini-report on CuPd bcc to fcc transformation
+#+AUTHOR: Jacob Boes
+#+LATEX_CLASS: cmu-article
+#+OPTIONS: ^:{} # make super/subscripts only when wrapped in {}
+#+OPTIONS: toc:nil # suppress toc, so we can put it where we want
+#+OPTIONS: tex:t
+#+EXPORT_EXCLUDE_TAGS: noexport
+
+\maketitle
+
+* CuPd bcc -> fcc transition
+The bcc transforms to fcc through the body centered tetragonal (bct) shape as shown in Figure ref:fig-bct.
+
+#+label: fig-bct
+#+caption: Body Centered Tetragonal Structure
+#+attr_latex: :width 75
+[[./images/bct.png]]
+
+As dimension 'c/a' becomes equal to 1, the bct structure becomes bcc (i.e. 'c'='a'). Similarly, when 'c' becomes equal to the square root of 2, the structure becomes fcc. This is demonstrated graphically in Figure ref:fig-fcctobcc.
+
+#+label: fig-fcctobcc
+#+caption: fcc transformation to bcc by shrinking 'c/a' of bct structure
+#+attr_latex: :width 6in
+#+attr_org: :width 600
+[[./images/bcc3.png]]
+
+* Energies of the diffusion pathway
+Figure ref:fig-3D shows a 3-dimensional image of the minimum energy pathway. There is approximately 50meV difference between the two structures. The pathways does not follow a simple path of constant 'a' or 'c'.
+
+#+label: fig-3D
+#+caption: 3D minimum energy well for with changes in the 'a' and 'c/a' properties of the bct structure
+#+attr_latex: :width 5in :placement [H]
+#+attr_org: :width 500
+[[./images/3D-bcc-pathway.png]]
+
+Note: lines of constant 'c/a' are representative of equations of state i.e. only volume changes, while the relative magnitudes of the vectors are constant.
+
+The minimum energy pathway is shown via 'c/a' in Figure ref:fig-2D. Interestingly, there is no appreciable barrier to speak of.
+
+#+label: fig-2D
+#+caption: Minimum energy pathway for bcc transformation to fcc
+#+attr_latex: :width 4in
+#+attr_org: :width 400
+[[./images/diffusion-path.png]]
+
+* New ground state hull (isif=7)
+The ground state hull of fcc and bcc CuPd needed to be recalculated due to relaxation of the atoms out of phase. Figure ref:fig-gshull shows the results of the cluster expansion ground state hull with isif=7.
+
+#+label: fig-gshull
+#+caption: Ground state hull of fcc and bcc configurations. The bcc configurations are referenced to the fcc pure Cu and pure Pd structures, resulting in an upward shift of the hull.
+#+attr_latex: :width 5in
+#+attr_org: :width 500
+[[./images/groundstate.png]]
+
+* Neural work
+
+** EOS of ground state configurations
+
+[[./images/db0-PS-eosfit.png]]
+
+** 
+
+BCC configurations in fit
+#+attr_org: :width 50
+[[./images/bcc-0-GS.png]]  [[./images/bcc-3-GS.png]]  [[./images/bcc-26-GS.png]]  [[./images/bcc-603-GS.png]]  [[./images/bcc-1-GS.png]]
+
+Structures which do not fit well.
+#+attr_org: :width 50
+[[./images/bcc-112-A.png]]  [[./images/bcc-34-A.png]]  [[./images/bcc-12-A.png]]  [[./images/bcc-116-A.png]]  [[./images/bcc-11-A.png]] [[./images/bcc-31-A.png]]  [[./images/bcc-4-A.png]]  [[./images/bcc-29-A.png]]  [[./images/bcc-105-A.png]]
+
+FCC configurations
+#+attr_org: :width 50
+[[./images/fcc-0-GS.png]]  [[./images/fcc-27-GS.png]]  [[./images/fcc-19-GS.png]]  [[./images/fcc-505-GS.png]]  [[./images/fcc-28-GS.png]]  [[./images/fcc-1-GS.png]]
+
+Structures which do not fit well.
+#+attr_org: :width 50
+[[./images/fcc-56-A.png]]  [[./images/fcc-5-A.png]]  [[./images/fcc-25-A.png]]  [[./images/fcc-11-A.png]]  [[./images/fcc-53-A.png]]
+
+
+Visual inspection on the structures appears to show that "elongated" bulk configurations are likely to be candidates for poor prediction.
+
+However, a more systematic approach is needed for identifying these poorly fitted regions.
+
+One possible method of identifying dissimilar structures would be to use structure analysis tools. cite:hundt-2006-cmpz
+
+
+
+bibliography:../../bibliography/references.bib
