@@ -1553,6 +1553,8 @@ plt.show()
  -0.208 -0.197 -0.213 -0.219 -0.251]
 #+end_example
 
+** Network training
+
 #+BEGIN_SRC python
 import os
 import subprocess
@@ -1601,6 +1603,8 @@ calc.train('data.db')
 : 1248938.gilgamesh.cheme.cmu.edu
 : 1248939.gilgamesh.cheme.cmu.edu
 : 1248940.gilgamesh.cheme.cmu.edu
+
+** Network progress check
 
 #+BEGIN_SRC python
 from glob import glob
@@ -1670,3 +1674,46 @@ for label in reset:
 : l3n30-383   converged
 : l2n30-1482  converged
 : l4n30-349   converged
+
+** Multi-NN testing
+#+BEGIN_SRC python
+import numpy as np
+import matplotlib.pyplot as plt
+from jasp import *
+from neural.bp import BPNeural
+from ase.db import connect
+from ase.io import write
+from glob import glob
+import os
+
+os.chdir('./networks/db0-bct')
+
+db = connect('../../data-pathway.db')
+
+ca, nrg, img = [], [], []
+for d in db.select('gga=PS'):
+    atoms = db.get_atoms(d.id)
+    img.append(atoms)
+    ca.append(d.ca)
+    nrg.append(d.total_energy / len(atoms))
+
+plt.figure()
+plt.plot(ca, nrg, 'ko-', lw=4)
+
+for name in glob('*train-log*'):
+    n = name.split('-')[0]
+    calc = BPNeural(load='{0}'.format(n))
+
+    fit = []
+    for atoms in img:
+        atoms.set_calculator(calc)
+        fit.append(atoms.get_potential_energy() / len(atoms))
+
+    plt.plot(ca, fit, 'o-')
+plt.xlabel('')
+plt.ylabel('Energy')
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+
