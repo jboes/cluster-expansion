@@ -594,7 +594,7 @@ from jasp import *
 JASPRC['queue.walltime'] = '24:00:00'
 
 # For fcc and bcc configurations
-for cfg in ['fcc', 'bcc']:
+for i, cfg in enumerate(['fcc', 'bcc']):
 
     with open('CuPd_{0}/fit.out'.format(cfg), 'r') as f:
         lines = f.readlines()
@@ -658,12 +658,635 @@ for cfg in ['fcc', 'bcc']:
                               ediff=1e-8,
                               atoms=atoms) as calc:
                         try:
-                            calc.calculate()
+                            atoms = calc.get_atoms()
+                            nrg = atoms.get_potential_energy()
+                            print 
                         except(VaspSubmitted, VaspQueued):
                             print wd, 'Queued'
+                except(IOError):
+                    print wd, 'IOError'
                 except(VaspNotFinished):
                     print wd, 'VaspNotFinished'
 #+END_SRC
+
+#+BEGIN_SRC python
+import numpy as np
+from jasp import *
+JASPRC['queue.walltime'] = '24:00:00'
+
+# For fcc and bcc configurations
+for cfg in ['fcc', 'bcc']:
+
+    with open('CuPd_{0}/fit.out'.format(cfg), 'r') as f:
+        lines = f.readlines()
+
+        # Begin a list of configurations
+        C = []
+
+        for line in lines:
+            # Composition, DFT energy, Fit energy, Fit error, Weight, Configuration
+            x, y, z, e, w, c = line.split()
+
+            # We only need the configuration
+            C.append(c)
+
+    # Fraction of equilibrium lattice constant to be calculated.
+    frac_eos = np.append(np.linspace(0.85, 1.15, 61), np.linspace(1.2, 2.0, 17))
+
+    for j, c in enumerate(C):
+
+        for frac in frac_eos:
+
+            wd = 'DFT/bulk={0}/config={1}/strain=xyz/factor={2}/xc=PBE/gga=PS'.format(cfg, c, frac)
+
+            try:
+                with jasp(wd) as calc:
+                    try:
+                        atoms = calc.get_atoms()
+                        nrg = atoms.get_potential_energy()
+                    except(VaspSubmitted, VaspQueued):
+                        print wd, 'Queued'
+            except(IOError):
+                print wd, 'IOError'
+            except(VaspNotFinished):
+                print wd, 'VaspNotFinished'
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+DFT/bulk=fcc/config=3/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+6339: |      Your highest band is occupied at some k-points! Unless you are         |
+
+Converged: False
+
+DFT/bulk=fcc/config=9/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=15/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=17/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=17/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=17/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=20/strain=xyz/factor=1.8/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=20/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=20/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=23/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=23/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=26/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=28/strain=xyz/factor=1.85/xc=PBE/gga=PS VaspNotFinished
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=39/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=40/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=40/strain=xyz/factor=1.95/xc=PBE/gga=PS VaspNotFinished
+DFT/bulk=fcc/config=40/strain=xyz/factor=2.0/xc=PBE/gga=PS VaspNotFinished
+DFT/bulk=fcc/config=44/strain=xyz/factor=1.8/xc=PBE/gga=PS VaspNotFinished
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=44/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=44/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=44/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=44/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=49/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=49/strain=xyz/factor=2.0/xc=PBE/gga=PS VaspNotFinished
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=53/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.8/xc=PBE/gga=PS VaspNotFinished
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=54/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.85/xc=PBE/gga=PS VaspNotFinished
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.95/xc=PBE/gga=PS VaspNotFinished
+DFT/bulk=fcc/config=56/strain=xyz/factor=2.0/xc=PBE/gga=PS VaspNotFinished
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=104/strain=xyz/factor=1.7/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=104/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=104/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=119/strain=xyz/factor=1.8/xc=PBE/gga=PS Queued
+Errors found:
+9739: |      Your highest band is occupied at some k-points! Unless you are         |
+
+Converged: False
+
+DFT/bulk=fcc/config=119/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=63/strain=xyz/factor=1.8/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=63/strain=xyz/factor=1.85/xc=PBE/gga=PS VaspNotFinished
+DFT/bulk=fcc/config=63/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=63/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=63/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=70/strain=xyz/factor=1.8/xc=PBE/gga=PS VaspNotFinished
+DFT/bulk=fcc/config=70/strain=xyz/factor=1.85/xc=PBE/gga=PS VaspNotFinished
+DFT/bulk=fcc/config=70/strain=xyz/factor=1.9/xc=PBE/gga=PS VaspNotFinished
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=70/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=70/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=77/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=77/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=78/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=95/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=95/strain=xyz/factor=1.95/xc=PBE/gga=PS VaspNotFinished
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=95/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=98/strain=xyz/factor=0.915/xc=PBE/gga=PS IOError
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=234/strain=xyz/factor=1.8/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=234/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=234/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=276/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+DFT/bulk=fcc/config=505/strain=xyz/factor=1.85/xc=PBE/gga=PS VaspNotFinished
+DFT/bulk=fcc/config=505/strain=xyz/factor=1.9/xc=PBE/gga=PS VaspNotFinished
+DFT/bulk=fcc/config=505/strain=xyz/factor=2.0/xc=PBE/gga=PS VaspNotFinished
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.035/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.04/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.055/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.065/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.09/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.1/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.2/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=552/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=7/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=15/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=15/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=15/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=18/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=18/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=20/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=23/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=23/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=25/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=28/strain=xyz/factor=1.75/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=28/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=29/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=29/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=29/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=31/strain=xyz/factor=1.75/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=31/strain=xyz/factor=1.8/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=31/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=31/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=31/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=31/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=34/strain=xyz/factor=1.8/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=34/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=34/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=34/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=34/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=48/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=48/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=49/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=50/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=54/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=56/strain=xyz/factor=1.65/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=56/strain=xyz/factor=1.75/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=56/strain=xyz/factor=1.8/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=56/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=56/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=105/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=112/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+Errors found:
+7978: |      Your highest band is occupied at some k-points! Unless you are         |
+
+Converged: False
+
+DFT/bulk=bcc/config=112/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=112/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+7978: |      Your highest band is occupied at some k-points! Unless you are         |
+
+Converged: False
+
+DFT/bulk=bcc/config=112/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=134/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=134/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=60/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=93/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=95/strain=xyz/factor=1.8/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=95/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.7/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.85/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.9/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+DFT/bulk=bcc/config=603/strain=xyz/factor=1.95/xc=PBE/gga=PS VaspNotFinished
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=618/strain=xyz/factor=1.95/xc=PBE/gga=PS Queued
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=618/strain=xyz/factor=2.0/xc=PBE/gga=PS Queued
+#+end_example
+
+#+BEGIN_SRC python
+import numpy as np
+from jasp import *
+JASPRC['queue.walltime'] = '24:00:00'
+
+# For fcc and bcc configurations
+for cfg in ['fcc', 'bcc']:
+
+    with open('CuPd_{0}/fit.out'.format(cfg), 'r') as f:
+        lines = f.readlines()
+
+    # Begin a list of configurations
+    C = []
+
+    for line in lines:
+        # Composition, DFT energy, Fit energy, Fit error, Weight, Configuration
+        x, y, z, e, w, c = line.split()
+
+        # We only need the configuration
+        C.append(int(c))
+    C = np.array(C)
+
+    # Fraction of equilibrium lattice constant to be calculated.
+    frac_eos = np.append(np.linspace(0.85, 1.15, 61), np.linspace(1.2, 2.0, 17))
+
+    for j, c in enumerate(C):
+
+        for frac in frac_eos:
+
+            wd = 'DFT/bulk={0}/config={1}/strain=xyz/factor={2}/xc=PBE/gga=PS'.format(cfg, c, frac)
+
+            try:
+                with jasp(wd) as calc:
+                    atoms = calc.get_atoms()
+                    nrg = atoms.get_potential_energy()
+            except:
+                print '~/research/cluster-expansion/' + wd
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+Errors found:
+Converged: False
+
+~/research/cluster-expansion/DFT/bulk=fcc/config=3/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=9/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=15/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=17/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=17/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=17/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=20/strain=xyz/factor=1.8/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=20/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=20/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=23/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=23/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=26/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=28/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=39/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=40/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=40/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=40/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=44/strain=xyz/factor=1.8/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=44/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=44/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=44/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=44/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=49/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=49/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=53/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=53/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=54/strain=xyz/factor=1.8/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=54/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=54/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=56/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=56/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=56/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=56/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=104/strain=xyz/factor=1.7/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=104/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=104/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=119/strain=xyz/factor=1.8/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=119/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=63/strain=xyz/factor=1.8/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=63/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=63/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=63/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=63/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=70/strain=xyz/factor=1.8/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=70/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=70/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=70/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=70/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=77/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=77/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=78/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=95/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=95/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=95/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=98/strain=xyz/factor=0.915/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=174/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=174/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=174/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=174/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=234/strain=xyz/factor=1.8/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=234/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=234/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=276/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=505/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=505/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=505/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=545/strain=xyz/factor=1.035/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=545/strain=xyz/factor=1.04/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=545/strain=xyz/factor=1.055/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=545/strain=xyz/factor=1.065/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=545/strain=xyz/factor=1.09/xc=PBE/gga=PS
+Errors found:
+Converged: False
+
+~/research/cluster-expansion/DFT/bulk=fcc/config=545/strain=xyz/factor=1.1/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=545/strain=xyz/factor=1.2/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=fcc/config=552/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=7/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=15/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=15/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=15/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=18/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=18/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=20/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=23/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=23/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=25/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=28/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=29/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=29/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=29/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=31/strain=xyz/factor=1.75/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=31/strain=xyz/factor=1.8/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=31/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=31/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=31/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=31/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=34/strain=xyz/factor=1.8/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=34/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=34/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=34/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=34/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=36/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=36/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=38/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=39/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=48/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=48/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=49/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=50/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=54/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=56/strain=xyz/factor=1.65/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=56/strain=xyz/factor=1.75/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=56/strain=xyz/factor=1.8/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=56/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=56/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=105/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=112/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=112/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=112/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=112/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=134/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=134/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=60/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=93/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=95/strain=xyz/factor=1.8/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=95/strain=xyz/factor=2.0/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=441/strain=xyz/factor=1.7/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=441/strain=xyz/factor=1.85/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=441/strain=xyz/factor=1.9/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=441/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=603/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=618/strain=xyz/factor=1.95/xc=PBE/gga=PS
+~/research/cluster-expansion/DFT/bulk=bcc/config=618/strain=xyz/factor=2.0/xc=PBE/gga=PS
+#+end_example
 
 
 * Analysis tools
@@ -674,7 +1297,7 @@ import os
 from ase.io.trajectory import Trajectory
 from jbutil import makedb
 
-for r, d, f in os.walk('cluster-expansion/DFT/bulk=bct/config=3/pathway=False'):
+for r, d, f in os.walk('DFT'):
     if f:
         try:
             with jasp(r) as calc:
@@ -688,7 +1311,7 @@ for r, d, f in os.walk('cluster-expansion/DFT/bulk=bct/config=3/pathway=False'):
 
                     makedb(calc,
                            atoms=atoms,
-                           dbname='~/research/cluster-expansion/networks/db0-bct/data.db')
+                           dbname='~/research/cluster-expansion/master.db')
 
                 except(VaspQueued, VaspSubmitted):
                     print 'In Queue', r
@@ -701,22 +1324,49 @@ for r, d, f in os.walk('cluster-expansion/DFT/bulk=bct/config=3/pathway=False'):
 #+END_SRC
 
 #+RESULTS:
-: VaspNotFinished DFT/bulk=fcc/config=505/strain=xyz/factor=1.85/xc=PBE/gga=PS
-: VaspNotFinished DFT/bulk=fcc/config=505/strain=xyz/factor=1.9/xc=PBE/gga=PS
-: VaspNotFinished DFT/bulk=fcc/config=505/strain=xyz/factor=2.0/xc=PBE/gga=PS
-: VaspNotFinished DFT/bulk=fcc/config=28/strain=xyz/factor=1.85/xc=PBE/gga=PS
-: IndexError DFT/bulk=bcc/config=3/strain=xyz/factor=2.0/xc=PBE/gga=PS
-: VaspNotFinished DFT/bulk=bcc/config=603/strain=xyz/factor=1.95/xc=PBE/gga=PS
+
+** Data visualization 
+This is a tool which allows one to visualize the data set via the number of atoms and volume of atoms in the structure.
+
+#+BEGIN_SRC python
+import matplotlib.pyplot as plt
+from ase.db import connect
+from mpl_toolkits.mplot3d import Axes3D
+import os
+
+db = connect('networks/db0/data.db')
+data = db.select([])
+
+c = 0
+nrg, num, vol = [], [], []
+for d in data:
+    n = len(d.symbols)
+    nrg.append(d.energy / n)
+    num.append(n)
+    vol.append(d.volume)
+    c += 1
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(num, vol, nrg, marker='o')
+plt.title('{0} entires'.format(c))
+ax.set_xlabel('atom count')
+ax.set_ylabel('Volume ($\AA$)')
+ax.set_zlabel('Energy (eV)')
+plt.show()
+#+END_SRC
+
+#+RESULTS:
 
 ** database manipulation
 #+BEGIN_SRC python
 from ase.db import connect
 import os
 
-db0 = connect('networks/db0/data.db')
+db0 = connect('networks/db0-PS/data.db')
 data = db0.select(['gga=PS', 'ediff!=1e-9'])
 
-wd = 'networks/db0-PS/'
+wd = 'networks/db0-nbct/'
 
 if not os.path.exists(wd):
     os.makedirs(wd)
@@ -903,3 +1553,121 @@ plt.show()
  -0.954 -1.784 -0.226 -0.158 -0.178 -0.308 -0.225 -0.274 -0.22  -0.19
  -0.208 -0.197 -0.213 -0.219 -0.251]
 #+end_example
+
+#+BEGIN_SRC python
+import os
+import subprocess
+
+os.chdir('networks/db0-bct')
+
+for L in [4]:
+    for N in [30, 40, 50]:
+        layers = (L, N)
+        label = 'l{0}n{1}'.format(layers[0], layers[1])
+
+        wd = 'train-{0}.py'.format(label)
+
+        run_scrpit = '''#!/usr/bin/env python
+from neural.bp import BPNeural
+calc = BPNeural(dblabel='a0',
+                label='{0}',
+                hiddenlayers={1})
+calc.train('data.db')
+'''.format(label,
+           layers)
+
+        cmd = '''#!/bin/bash
+#PBS -N neural-CuPd-{0}
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=24:00:00
+#PBS -l mem=4GB
+#PBS -joe
+ cd $PBS_O_WORKDIR
+./{1}
+#end'''.format(label, wd)
+
+        with open(wd, 'w') as f:
+            f.write(run_scrpit)
+        os.chmod(wd, 0777)
+
+        with open('submit.sh', 'w') as f:
+            f.write(cmd)
+
+        subprocess.call(['qsub', 'submit.sh'])
+
+        os.unlink('submit.sh')
+#+END_SRC
+
+#+RESULTS:
+: 1248938.gilgamesh.cheme.cmu.edu
+: 1248939.gilgamesh.cheme.cmu.edu
+: 1248940.gilgamesh.cheme.cmu.edu
+
+#+BEGIN_SRC python
+from glob import glob
+import subprocess
+import os
+
+os.chdir('./networks/db0-bct')
+
+reset = []
+for n in glob('*train-log*'):
+    name = n.split('/')[-1].split('-')[0]
+    with open(n) as f:
+        lines = f.readlines()
+    try:
+        itr = lines[-1].split()[0]
+        nrg = float(lines[-1].split()[3])
+        if int(itr) > 100:
+            nrg0 = float(lines[-100].split()[3])
+            delta = nrg - nrg0
+            if delta > -1e-6:
+                reset.append(name)
+            else:
+                print('{0}-{1:5s} {2:1.5f}  {3:1.6f}'.format(name, itr, nrg, delta))
+        else:
+            print('{0}-{1:5s} {2:1.4f}'.format(name, itr, nrg))
+    except(IndexError):
+        print 'iteration:', int(lines[-1].split()[0])
+    except(ValueError):
+        if  'completed successfully' in lines[-1]:
+            print '{0}-{1:5s} converged'.format(name, lines[-5].split()[0])
+        elif 'Try it again' in lines[-1]:
+            reset.append(name)
+        elif 'Saving checkpoint data' in lines[-1]:
+            print name, float(lines[-2].split()[3])
+
+for label in reset:
+    files = glob('{0}-*'.format(label))
+    for f in files:
+        os.unlink(f)
+
+    wd = 'train-{0}.py'.format(label)
+
+    cmd = '''#!/bin/bash
+#PBS -N neural-CuPd-{0}
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=24:00:00
+#PBS -l mem=4GB
+#PBS -joe
+ cd $PBS_O_WORKDIR
+./{1}
+#end'''.format(label, wd)
+
+    with open('submit.sh', 'w') as f:
+        f.write(cmd)
+
+    subprocess.call(['qsub', 'submit.sh'])
+    os.unlink('submit.sh')
+#+END_SRC
+
+#+RESULTS:
+: l2n50-825   converged
+: l2n40-842   converged
+: l4n50-913   converged
+: l4n40-768   converged
+: l3n50-936   converged
+: l3n40-551   converged
+: l3n30-383   converged
+: l2n30-1482  converged
+: l4n30-349   converged
