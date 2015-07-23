@@ -521,6 +521,1309 @@ plt.tight_layout()
 plt.savefig('images/diffusion-path.png')
 #+END_SRC
 
+** Database generation
+#+BEGIN_SRC python
+import os, sys
+import jbutil as jb
+from jasp import *
+JASPRC['restart_unconverged'] = False
+
+# First compile a list of out.traj files
+for r, d, f in os.walk('DFT'):
+    if 'OUTCAR' in f and 'XDATCAR' in f:
+        try:
+            with jasp(r) as calc:
+                jb.compile_trajectory(calc)
+        except:
+            print(r)
+            print(sys.exc_info()[0])
+            print('')
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=505/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=505/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=505/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=28/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=8/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=8/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=8/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=8/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=9/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=9/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=9/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=9/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=9/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=15/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=40/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=40/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=44/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=46/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=46/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=46/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=46/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=46/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=47/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=47/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=47/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=47/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=47/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=49/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=49/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=49/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=49/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.07/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.075/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.08/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.085/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.09/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.095/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.1/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.105/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.11/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.115/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.12/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.125/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.13/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.135/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.14/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.145/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.15/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.2/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.25/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.3/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.35/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.4/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.45/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.5/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.55/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.6/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.65/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.7/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.75/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=53/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.06/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.065/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.07/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.075/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.08/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.085/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.09/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.095/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.1/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.105/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.11/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.115/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.12/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.125/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.13/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.135/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.14/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.145/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.15/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.2/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.25/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.3/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.35/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.4/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.45/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.5/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.55/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.6/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.65/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.7/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.75/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.045/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.05/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.055/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.06/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.065/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.07/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.075/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.08/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.085/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.09/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.095/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.1/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.105/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.11/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.115/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.12/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.125/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.13/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.135/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.14/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.145/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.15/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.2/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.25/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.3/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.35/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.4/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.45/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.5/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.55/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.6/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.65/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.7/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.75/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=104/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=119/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=63/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=70/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=70/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=70/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+Errors found:
+Converged: False
+
+Errors found:
+8509: |      Your highest band is occupied at some k-points! Unless you are         |
+
+Converged: False
+
+DFT/bulk=fcc/config=74/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=74/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=74/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=74/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=77/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=77/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=77/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=77/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=77/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=78/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=78/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=78/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=78/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=78/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=95/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=95/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=95/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=95/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=95/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.35/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.4/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.45/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.5/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.55/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.6/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.65/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.7/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.75/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=174/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=230/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=230/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=230/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=230/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=230/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=fcc/config=234/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=234/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=fcc/config=234/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=603/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+Errors found:
+6329: |      Your highest band is occupied at some k-points! Unless you are         |
+
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=1.4/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=1.45/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=1.5/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=1.55/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=1.6/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=1.65/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=1.7/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=1.75/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=35/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.4/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.45/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.5/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.55/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.6/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.65/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.7/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.75/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=36/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.35/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.4/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.45/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.5/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.55/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.6/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.65/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.7/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.75/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=37/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.35/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.4/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.45/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.5/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.55/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.6/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.65/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.7/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.75/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=38/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.35/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.4/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.45/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.5/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.55/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.6/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.65/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.7/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.75/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=39/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=60/strain=xyz/factor=1.7/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=60/strain=xyz/factor=1.75/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=60/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=60/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=60/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=60/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=60/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.35/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.4/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.45/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.5/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.55/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.6/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.65/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.75/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=441/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+DFT/bulk=bcc/config=441/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<type 'exceptions.ValueError'>
+
+Errors found:
+Converged: False
+
+Errors found:
+Converged: False
+
+#+end_example
+
+#+BEGIN_SRC python
+import os, sys
+import jbutil as jb
+from jasp import *
+from ase.io.trajectory import Trajectory
+JASPRC['restart_unconverged'] = False
+
+wd = '~/research/cluster-expansion/networks/db1/data.db'
+
+if os.path.exists(wd):
+    os.unlink(wd)
+
+for r, d, f in os.walk('DFT'):
+    if 'out.traj' in f:
+        try:
+            with jasp(r) as calc:
+                traj = Trajectory('out.traj')
+                n = len(traj)
+                for i, atoms in enumerate(traj):
+
+                    jb.makedb(calc,
+                              atoms=atoms,
+                              dbname=wd,
+                              keys={'traj': int(n-i-1)})
+        except(RuntimeError):
+            os.unlink(os.path.join(r, 'out.traj'))
+        except:
+            print(r)
+            print(sys.exc_info()[0])
+            print('')
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+DFT/bulk=fcc/config=3/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=15/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=17/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=17/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=17/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=20/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=20/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=20/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=23/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=23/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=26/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=39/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=40/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=40/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=40/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=44/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=44/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=44/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=44/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=44/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=54/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=56/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=104/strain=xyz/factor=1.7/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=104/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=104/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=119/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=119/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=63/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=70/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=70/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=70/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotFinished'>
+
+DFT/bulk=fcc/config=70/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=70/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=276/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.035/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.04/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.055/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.065/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.09/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.1/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=545/strain=xyz/factor=1.2/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=fcc/config=552/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=7/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=15/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=15/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=15/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=18/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=18/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=20/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=23/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=25/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=28/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=48/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=48/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=54/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=56/strain=xyz/factor=1.75/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=56/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=56/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=56/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=105/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=112/strain=xyz/factor=1.85/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=112/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=112/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=112/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=134/strain=xyz/factor=1.9/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=134/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=93/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=95/strain=xyz/factor=1.8/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=95/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=618/strain=xyz/factor=1.95/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+DFT/bulk=bcc/config=618/strain=xyz/factor=2.0/xc=PBE/gga=PS
+<class 'jasp.jasp_exceptions.VaspNotConverged'>
+
+#+end_example
+
+
 * Ground states
 ** ground state figure
 #+caption: Ground state hull of CuPd for fcc and bcc phases
@@ -1333,7 +2636,7 @@ from ase.db import connect
 from mpl_toolkits.mplot3d import Axes3D
 import os
 
-db = connect('networks/db0/data.db')
+db = connect('networks/db1/data.db')
 data = db.select([])
 
 c = 0
@@ -1356,6 +2659,26 @@ plt.show()
 #+END_SRC
 
 #+RESULTS:
+
+#+BEGIN_SRC python
+import matplotlib.pyplot as plt
+from ase.db import connect
+from mpl_toolkits.mplot3d import Axes3D
+import os
+
+db = connect('networks/db1/data.db')
+
+for d in db.select(['energy<-50.0']):
+    print d.key_value_pairs
+
+#+END_SRC
+
+#+RESULTS:
+: {u'kpt1': 10, u'bulk': u'bcc', u'kpt3': 10, u'kpt2': 10, u'train_set': True, u'ediff': 1e-08, u'xc': u'PBE', u'calc_time': 10051.138, u'encut': 400.0, u'traj': 0, u'volume': 262.00844435309403, u'strain': u'xyz', u'gga': u'PS', u'total_energy': -233.84348643, u'factor': 1.85, u'fermi': -2.8068, u'config': 7, u'kppra': 1000}
+: {u'kpt1': 13, u'bulk': u'bcc', u'kpt3': 3, u'kpt2': 13, u'train_set': True, u'ediff': 1e-08, u'xc': u'PBE', u'calc_time': 32668.14, u'encut': 400.0, u'traj': 0, u'volume': 587.6594108821723, u'strain': u'xyz', u'gga': u'PS', u'total_energy': -331.72696322, u'factor': 2.0, u'fermi': 3.0272, u'config': 105, u'kppra': 507}
+: {u'kpt1': 13, u'bulk': u'bcc', u'kpt3': 3, u'kpt2': 13, u'train_set': True, u'ediff': 1e-08, u'xc': u'PBE', u'calc_time': 33269.739, u'encut': 400.0, u'traj': 0, u'volume': 591.9836678257059, u'strain': u'xyz', u'gga': u'PS', u'total_energy': -1123.20902124, u'factor': 1.9, u'fermi': -11.0714, u'config': 112, u'kppra': 507}
+: {u'kpt1': 13, u'bulk': u'bcc', u'kpt3': 3, u'kpt2': 13, u'train_set': True, u'ediff': 1e-08, u'xc': u'PBE', u'calc_time': 37317.586, u'encut': 400.0, u'traj': 0, u'volume': 639.9598923540368, u'strain': u'xyz', u'gga': u'PS', u'total_energy': -14475.97504878, u'factor': 1.95, u'fermi': -5.0675, u'config': 112, u'kppra': 507}
+: {u'kpt1': 8, u'bulk': u'bcc', u'kpt3': 5, u'kpt2': 8, u'train_set': True, u'ediff': 1e-08, u'xc': u'PBE', u'calc_time': 16549.096, u'encut': 400.0, u'traj': 0, u'volume': 754.6258379257708, u'strain': u'xyz', u'gga': u'PS', u'total_energy': -2011.00383938, u'factor': 1.95, u'fermi': -1.3224, u'config': 618, u'kppra': 320}
 
 ** database manipulation
 #+BEGIN_SRC python
