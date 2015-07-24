@@ -58,7 +58,7 @@ The ground state hull of fcc and bcc CuPd needed to be recalculated due to relax
 
 [[./images/db0-PS-eosfit.png]]
 
-** 
+*** Problem structures
 
 BCC configurations in fit
 #+attr_org: :width 50
@@ -83,6 +83,80 @@ However, a more systematic approach is needed for identifying these poorly fitte
 
 One possible method of identifying dissimilar structures would be to use structure analysis tools. cite:hundt-2006-cmpz
 
+* EOS of problematic structures
 
+#+caption: Residuals to initial NN fitting of GS energies for various CuPd structures from cluster expansion
+#+attr_latex: :width 6in
+#+attr_org: :width 600
+[[./images/db0-PS-eosfit.png]]
+
+For some reason, the EOS for the worst fits are very distorted, although nothing appears wrong with the geometries.
+
+#+caption: Equation of state for bcc configurations: 4, 5, 29, 31, and 34
+#+attr_latex: :width 3in
+#+attr_org: :width 300
+[[./images/3D-EOS-bcc-cfg4.png]]  [[./images/3D-EOS-bcc-cfg5.png]]  [[./images/3D-EOS-bcc-cfg29.png]]  [[./images/3D-EOS-bcc-cfg31.png]]  [[./images/3D-EOS-bcc-cfg34.png]]
+
+There are some minor inconsistencies in certain fcc configurations as well.
+
+#+caption: Equation of state for fcc configurations: 545, 548, and 552
+#+attr_latex: :width 3in
+#+attr_org: :width 300
+[[./images/3D-EOS-fcc-cfg545.png]]  [[./images/3D-EOS-fcc-cfg548.png]]  [[./images/3D-EOS-fcc-cfg552.png]]
+
+The bcc structures have been removed from the database.
+
+** Testing of multiple NNs
+
+*** Fit to data included in NN
+Initial NNs were trained with several structure types:
+
+hiddenlayers: 2, 3, and 4
+nodes: 30, 40, and 50
+
+#+caption: Neural network fit to fcc to bcc transition pathway (included in fitting data)
+#+attr_latex: :width 4in
+#+attr_org: :width 400
+[[./images/multinn-path1.png]]
+
+#+caption: Residuals to above pathway data
+#+attr_latex: :width 4in
+#+attr_org: :width 400
+[[./images/multinn-path2.png]]
+
+All residuals fit well to the data points included in the fitting process, as expected.
+
+*** Fit to data NOT included in NN
+
+#+caption: Residuals to all EOS in the database
+#+attr_latex: :width 4in
+#+attr_org: :width 400
+[[./images/multinn-differences.png]]
+
+#+caption: Residuals to bct data included in the fit
+#+attr_latex: :width 4in
+#+attr_org: :width 400
+[[./images/multinn-bct.png]]
+
+* DFT calculations
+#+BEGIN_SRC python
+import numpy as np
+from ase.lattice.surface import fcc111_root
+from ase.visualize import view
+
+lattice = np.array([3.631, 3.712, 3.792, 3.872, 3.953])
+site = [None, 6, 7 ,8]
+
+img = []
+for a in lattice:
+    atoms = fcc111_root('Cu', root=3, size=(1, 1, 3), vacuum=6.0, a=a)
+    for s in site:
+        atoms[s].symbol = 'Pd'
+        img.append(atoms)
+
+view(img)
+#+END_SRC
+
+#+RESULTS:
 
 bibliography:../../bibliography/references.bib
