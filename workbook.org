@@ -2637,51 +2637,27 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import os
 
-db = connect('networks/db1-nrg0/data.db')
+db = connect('networks/db1-train2/data.db')
 
-cfg = {}
-cfg['fcc'], cfg['bcc'] = [], []
-for d in db.select():
-    if d.bulk == 'fcc':
-        cfg['fcc'].append(d.config)
-    if d.bulk == 'bcc':
-        cfg['bcc'].append(d.config)
+data = db.select()
 
-cfg['bcc'] = set(cfg['bcc'])
-cfg['fcc'] = set(cfg['fcc'])
+c = 0
+nrg, num, vol = [], [], []
+for d in data:
+    n = len(d.symbols)
+    nrg.append(d.energy / n)
+    num.append(n)
+    vol.append(d.volume)
+    c += 1
 
-for key, value in cfg.iteritems():
-    for v in value:
-
-        data = db.select(['bulk={0}'.format(key),
-                          'config={0}'.format(v)])
-
-        c = 0
-        nrg, num, vol = [], [], []
-        for d in data:
-            n = len(d.symbols)
-            nrg.append(d.energy / n)
-            num.append(n)
-            vol.append(d.volume)
-            c += 1
-
-        plt.figure()
-        plt.scatter(vol, nrg, marker='o')
-        plt.title('{0} entires'.format(c))
-        plt.xlabel('Volume ($\AA$)')
-        plt.ylabel('Total energy (eV/atom)')
-        plt.tight_layout()
-
-        '''
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(num, vol, nrg, marker='o')
-        plt.title('{0} entires'.format(c))
-        ax.set_xlabel('atom count')
-        ax.set_ylabel('Volume ($\AA$)')
-        ax.set_zlabel('Total energy (eV/atom)')
-        '''
-        plt.savefig('images/3D-EOS-{0}-cfg{1}.png'.format(key, v))
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(num, vol, nrg, marker='o')
+plt.title('{0} entires'.format(c))
+ax.set_xlabel('atom count')
+ax.set_ylabel('Volume ($\AA$)')
+ax.set_zlabel('Total energy (eV/atom)')
+plt.show()
 #+END_SRC
 
 #+RESULTS:
@@ -2913,10 +2889,10 @@ plt.show()
 import os
 import subprocess
 
-os.chdir('networks/db0-bct')
+os.chdir('networks/db1-train2')
 
-for L in [4]:
-    for N in [30, 40, 50]:
+for L in [2, 3, 4]:
+    for N in [20, 30, 40, 50]:
         layers = (L, N)
         label = 'l{0}n{1}'.format(layers[0], layers[1])
 
@@ -2954,9 +2930,20 @@ calc.train('data.db')
 #+END_SRC
 
 #+RESULTS:
-: 1248938.gilgamesh.cheme.cmu.edu
-: 1248939.gilgamesh.cheme.cmu.edu
-: 1248940.gilgamesh.cheme.cmu.edu
+#+begin_example
+1251158.gilgamesh.cheme.cmu.edu
+1251159.gilgamesh.cheme.cmu.edu
+1251160.gilgamesh.cheme.cmu.edu
+1251161.gilgamesh.cheme.cmu.edu
+1251162.gilgamesh.cheme.cmu.edu
+1251163.gilgamesh.cheme.cmu.edu
+1251164.gilgamesh.cheme.cmu.edu
+1251165.gilgamesh.cheme.cmu.edu
+1251166.gilgamesh.cheme.cmu.edu
+1251167.gilgamesh.cheme.cmu.edu
+1251168.gilgamesh.cheme.cmu.edu
+1251169.gilgamesh.cheme.cmu.edu
+#+end_example
 
 ** Network progress check
 
@@ -2965,7 +2952,7 @@ from glob import glob
 import subprocess
 import os
 
-os.chdir('./networks/db0-bct')
+os.chdir('./networks/db1-train2')
 
 reset = []
 for n in glob('*train-log*'):
@@ -2994,6 +2981,7 @@ for n in glob('*train-log*'):
         elif 'Saving checkpoint data' in lines[-1]:
             print name, float(lines[-2].split()[3])
 
+
 for label in reset:
     files = glob('{0}-*'.format(label))
     for f in files:
@@ -3019,15 +3007,12 @@ for label in reset:
 #+END_SRC
 
 #+RESULTS:
-: l2n50-825   converged
-: l2n40-842   converged
-: l4n50-913   converged
-: l4n40-768   converged
-: l3n50-936   converged
-: l3n40-551   converged
-: l3n30-383   converged
-: l2n30-1482  converged
-: l4n30-349   converged
+: l4n30-1574  0.00983  -0.000191
+: l4n20-1448  0.12020  -0.000300
+: l2n40-1205  0.12380  -0.000900
+: l3n50-127   0.39150  -0.494200
+: l4n40-151   0.04805  -0.193650
+: l3n20-152   0.17860  -0.219300
 
 ** Multi-NN testing
 #+BEGIN_SRC python
@@ -3155,8 +3140,6 @@ from ase.io import write
 from glob import glob
 import os
 
-
-
 db = connect('networks/db1-cln/data.db')
 
 nrg, img, ids = [], [], []
@@ -3169,3 +3152,61 @@ for d in db.select(['gga=PS', 'bulk=bct', 'factor=]):
 
 #+RESULTS:
 
+* MultiNN predictions
+#+BEGIN_SRC python
+import numpy as np
+from ase.lattice.surface import fcc111_root
+from ase.visualize import view
+import jbutil as jb
+import matplotlib.pyplot as plt
+from jasp import *
+from neural.bp import BPNeural
+from ase.db import connect
+from glob import glob
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+import os
+
+lattice = np.array([3.631, 3.712, 3.792, 3.872, 3.953])
+site = [[None], [6], [6, 7], [6, 7, 8]]
+
+colr = ['#FF0000', '#FF6600', '#FFFF33',
+        '#006600', '#00FF00', '#00FFFF',
+        '#0000FF', '#9933FF', '#FF0099']
+
+shape = ['o', '^', 's', 'p']
+
+patches = [] 
+
+for i, name in enumerate(glob('./networks/db0-bct/*trained-parameters.json')):
+    n = name.split('/')[-1].split('-')[0]
+    calc = BPNeural(load='{0}'.format(name))
+    patches.append(mpatches.Patch(color=colr[i], label='{0}'.format(n)))
+    for a in lattice:
+        
+
+        nrg = []
+        for h, s in enumerate(site):
+            atoms = fcc111_root('Cu', root=3, size=(1, 1, 3), vacuum=6.0, a=a)
+            for si in s:
+                atoms[si].symbol = 'Pd'
+
+            atoms.set_calculator(calc)
+            nrg = atoms.get_potential_energy() / len(atoms)
+
+            plt.scatter(a, nrg,
+                        color=colr[i],
+                        marker=shape[h])
+
+for i, s in enumerate(shape):
+    patches.append(mlines.Line2D([], [], color='k', marker=s, lw=0,
+                          markersize=10, label='{0}Pd'.format(i)))
+
+plt.xlabel('Lattice constant ($\AA$)')
+plt.ylabel('Total energy (eV/atom)')
+plt.legend(loc='best', handles=patches)
+plt.tight_layout()
+plt.savefig('./images/multinn-surface.png')
+#+END_SRC
+
+#+RESULTS:

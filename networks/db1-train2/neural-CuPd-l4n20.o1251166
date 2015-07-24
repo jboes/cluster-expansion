@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "./train-l4n20.py", line 6, in <module>
+    calc.train('data.db')
+  File "/home-research/jboes/boes-python/neural/bp/__init__.py", line 634, in train
+    log, train_forces, read_fingerprints)
+  File "/home-research/jboes/boes-python/neural/bp/__init__.py", line 1391, in __init__
+    data = json.load(fp)
+  File "/opt/kitchingroup/CANOPY/appdata/canopy-1.5.1.2730.rh5-x86_64/lib/python2.7/json/__init__.py", line 290, in load
+    **kw)
+  File "/opt/kitchingroup/CANOPY/appdata/canopy-1.5.1.2730.rh5-x86_64/lib/python2.7/json/__init__.py", line 338, in loads
+    return _default_decoder.decode(s)
+  File "/opt/kitchingroup/CANOPY/appdata/canopy-1.5.1.2730.rh5-x86_64/lib/python2.7/json/decoder.py", line 365, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "/opt/kitchingroup/CANOPY/appdata/canopy-1.5.1.2730.rh5-x86_64/lib/python2.7/json/decoder.py", line 381, in raw_decode
+    obj, end = self.scan_once(s, idx)
+ValueError: Expecting object: line 1 column 9793536 (char 9793535)

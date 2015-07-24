@@ -1,4 +1,4 @@
-#+TITLE: Mini-report on CuPd bcc to fcc transformation
+#+TITLE: Report on CuPd bcc to fcc transformation
 #+AUTHOR: Jacob Boes
 #+LATEX_CLASS: cmu-article
 #+OPTIONS: ^:{} # make super/subscripts only when wrapped in {}
@@ -8,7 +8,7 @@
 
 \maketitle
 
-* CuPd bcc -> fcc transition
+* CuPd bcc -> fcc transition					   :noexport:
 The bcc transforms to fcc through the body centered tetragonal (bct) shape as shown in Figure ref:fig-bct.
 
 #+label: fig-bct
@@ -24,7 +24,7 @@ As dimension 'c/a' becomes equal to 1, the bct structure becomes bcc (i.e. 'c'='
 #+attr_org: :width 600
 [[./images/bcc3.png]]
 
-* Energies of the diffusion pathway
+* Energies of the diffusion pathway				   :noexport:
 Figure ref:fig-3D shows a 3-dimensional image of the minimum energy pathway. There is approximately 50meV difference between the two structures. The pathways does not follow a simple path of constant 'a' or 'c'.
 
 #+label: fig-3D
@@ -43,7 +43,7 @@ The minimum energy pathway is shown via 'c/a' in Figure ref:fig-2D. Interestingl
 #+attr_org: :width 400
 [[./images/diffusion-path.png]]
 
-* New ground state hull (isif=7)
+* New ground state hull (isif=7)				   :noexport:
 The ground state hull of fcc and bcc CuPd needed to be recalculated due to relaxation of the atoms out of phase. Figure ref:fig-gshull shows the results of the cluster expansion ground state hull with isif=7.
 
 #+label: fig-gshull
@@ -83,7 +83,7 @@ However, a more systematic approach is needed for identifying these poorly fitte
 
 One possible method of identifying dissimilar structures would be to use structure analysis tools. cite:hundt-2006-cmpz
 
-* EOS of problematic structures
+*** EOS of problematic structures
 
 #+caption: Residuals to initial NN fitting of GS energies for various CuPd structures from cluster expansion
 #+attr_latex: :width 6in
@@ -138,25 +138,12 @@ All residuals fit well to the data points included in the fitting process, as ex
 #+attr_org: :width 400
 [[./images/multinn-bct.png]]
 
-* DFT calculations
-#+BEGIN_SRC python
-import numpy as np
-from ase.lattice.surface import fcc111_root
-from ase.visualize import view
 
-lattice = np.array([3.631, 3.712, 3.792, 3.872, 3.953])
-site = [None, 6, 7 ,8]
+#+caption: Multi-NN fit to various surface compositions of CuPd
+#+attr_latex: :width 4in
+#+attr_org: :width 400
+[[./images/multinn-surface.png]]
 
-img = []
-for a in lattice:
-    atoms = fcc111_root('Cu', root=3, size=(1, 1, 3), vacuum=6.0, a=a)
-    for s in site:
-        atoms[s].symbol = 'Pd'
-        img.append(atoms)
-
-view(img)
-#+END_SRC
-
-#+RESULTS:
+The mutliNN shows that surface predictions are not yet possible with the current model.
 
 bibliography:../../bibliography/references.bib
