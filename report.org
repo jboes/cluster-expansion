@@ -162,4 +162,7 @@ Again, very good (and rapid fitting) to all points of the PES for transition fro
 
 The mutliNN shows that surface predictions are not yet possible with the current model.
 
+
+* Expanding NN to all 50% compositions
+
 bibliography:../../bibliography/references.bib

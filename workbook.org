@@ -2634,7 +2634,7 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import os
 
-db = connect('networks/db1-train2/data.db')
+db = connect('networks/db1-50Cu/data.db')
 
 data = db.select()
 
@@ -2655,26 +2655,6 @@ ax.set_xlabel('atom count')
 ax.set_ylabel('Volume ($\AA$)')
 ax.set_zlabel('Total energy (eV/atom)')
 plt.show()
-#+END_SRC
-
-#+RESULTS:
-
-#+BEGIN_SRC python
-import matplotlib.pyplot as plt
-from ase.db import connect
-from mpl_toolkits.mplot3d import Axes3D
-import os
-from ase.visualize import view
-
-
-db = connect('networks/db1-cln/data.db')
-
-
-ids = []
-for d in db.select(['bulk=bcc', 'config=34']):
-    ids.append(d.id)
-
-db.delete(ids)
 #+END_SRC
 
 #+RESULTS:
@@ -2886,130 +2866,156 @@ plt.show()
 import os
 import subprocess
 
-os.chdir('networks/db1-train2')
+home = os.getcwd()
 
-for L in [2, 3, 4]:
-    for N in [20, 30, 40, 50]:
-        layers = (L, N)
-        label = 'l{0}n{1}'.format(layers[0], layers[1])
+networks = ['networks/db1-50Cu']
 
-        wd = 'train-{0}.py'.format(label)
+# Layers to use
+for net in networks:
 
-        run_scrpit = '''#!/usr/bin/env python
+    wd = os.path.join(home, net)
+    
+    for L in [2, 3, 4]:
+        for N in [20, 30, 40, 50]:
+            layers = (L, N)
+            label = 'l{0}n{1}'.format(layers[0],
+                                      layers[1])
+
+            cwd = os.path.join(wd, label)
+
+
+            os.makedirs(cwd)
+            os.chdir(cwd)
+
+            run_scrpit = """#!/usr/bin/env python
 from neural.bp import BPNeural
-calc = BPNeural(dblabel='a0',
-                label='{0}',
-                hiddenlayers={1})
-calc.train('data.db')
-'''.format(label,
-           layers)
+calc = BPNeural(dblabel='../',
+                label='./',
+                hiddenlayers={0})
+calc.train('../data.db')
+""".format(layers)
 
-        cmd = '''#!/bin/bash
-#PBS -N neural-CuPd-{0}
+            cmd = """#!/bin/bash
+#PBS -N {0}
 #PBS -l nodes=1:ppn=1
 #PBS -l walltime=24:00:00
-#PBS -l mem=4GB
+#PBS -l mem=2GB
 #PBS -joe
- cd $PBS_O_WORKDIR
-./{1}
-#end'''.format(label, wd)
+cd $PBS_O_WORKDIR
+./submit.py
+#end""".format(cwd)
 
-        with open(wd, 'w') as f:
-            f.write(run_scrpit)
-        os.chmod(wd, 0777)
+            with open('submit.py', 'w') as f:
+                f.write(run_scrpit)
+            os.chmod('submit.py', 0777)
 
-        with open('submit.sh', 'w') as f:
-            f.write(cmd)
+            with open('submit.sh', 'w') as f:
+                f.write(cmd)
 
-        subprocess.call(['qsub', 'submit.sh'])
+            subprocess.call(['qsub', 'submit.sh'])
 
-        os.unlink('submit.sh')
+            os.unlink('submit.sh')
 #+END_SRC
 
 #+RESULTS:
 #+begin_example
-1251158.gilgamesh.cheme.cmu.edu
-1251159.gilgamesh.cheme.cmu.edu
-1251160.gilgamesh.cheme.cmu.edu
-1251161.gilgamesh.cheme.cmu.edu
-1251162.gilgamesh.cheme.cmu.edu
-1251163.gilgamesh.cheme.cmu.edu
-1251164.gilgamesh.cheme.cmu.edu
-1251165.gilgamesh.cheme.cmu.edu
-1251166.gilgamesh.cheme.cmu.edu
-1251167.gilgamesh.cheme.cmu.edu
-1251168.gilgamesh.cheme.cmu.edu
-1251169.gilgamesh.cheme.cmu.edu
+1252720.gilgamesh.cheme.cmu.edu
+1252721.gilgamesh.cheme.cmu.edu
+1252722.gilgamesh.cheme.cmu.edu
+1252723.gilgamesh.cheme.cmu.edu
+1252724.gilgamesh.cheme.cmu.edu
+1252725.gilgamesh.cheme.cmu.edu
+1252726.gilgamesh.cheme.cmu.edu
+1252727.gilgamesh.cheme.cmu.edu
+1252728.gilgamesh.cheme.cmu.edu
+1252729.gilgamesh.cheme.cmu.edu
+1252730.gilgamesh.cheme.cmu.edu
+1252731.gilgamesh.cheme.cmu.edu
 #+end_example
 
 ** Network progress check
 
 #+BEGIN_SRC python
-from glob import glob
-import subprocess
 import os
+import subprocess
+from torque import PBS
 
-os.chdir('./networks/db1-train2')
+pbs = PBS()
+pbs.poll()
+njobs = []
+for job in pbs:
+    if job['Job_Owner'] == 'jboes@gilgamesh.cheme.cmu.edu' \
+       and job['job_state'] != 'C':
+        njobs.append(job['Job_Name'])
 
-reset = []
-for n in glob('*train-log*'):
-    name = n.split('/')[-1].split('-')[0]
-    with open(n) as f:
-        lines = f.readlines()
-    try:
-        itr = lines[-1].split()[0]
-        nrg = float(lines[-1].split()[3])
-        if int(itr) > 100:
-            nrg0 = float(lines[-100].split()[3])
-            delta = nrg - nrg0
-            if delta > -1e-6:
-                reset.append(name)
-            else:
-                print('{0}-{1:5s} {2:1.5f}  {3:1.6f}'.format(name, itr, nrg, delta))
-        else:
-            print('{0}-{1:5s} {2:1.4f}'.format(name, itr, nrg))
-    except(IndexError):
-        print 'iteration:', int(lines[-1].split()[0])
-    except(ValueError):
-        if  'completed successfully' in lines[-1]:
-            print '{0}-{1:5s} converged'.format(name, lines[-5].split()[0])
-        elif 'Try it again' in lines[-1]:
-            reset.append(name)
-        elif 'Saving checkpoint data' in lines[-1]:
-            print name, float(lines[-2].split()[3])
+home = os.getcwd()
 
+networks = ['networks/db1-50Cu']
 
-for label in reset:
-    files = glob('{0}-*'.format(label))
-    for f in files:
-        os.unlink(f)
+print('{0:12s}{1:7s} {2}'.format('Job ID', 'Queue', 'Info'))
 
-    wd = 'train-{0}.py'.format(label)
+# Layers to use
+for net in networks:
+    tag = net.split('-')[-1]
 
-    cmd = '''#!/bin/bash
-#PBS -N neural-CuPd-{0}
-#PBS -l nodes=1:ppn=1
-#PBS -l walltime=24:00:00
-#PBS -l mem=4GB
-#PBS -joe
- cd $PBS_O_WORKDIR
-./{1}
-#end'''.format(label, wd)
+    wd = os.path.join(home, net)
+    
+    for L in [2, 3, 4]:
+        for N in [20, 30, 40, 50]:
+            layers = (L, N)
+            label = 'l{0}n{1}'.format(layers[0],
+                                      layers[1])
 
-    with open('submit.sh', 'w') as f:
-        f.write(cmd)
+            cwd = os.path.join(wd, label)
 
-    subprocess.call(['qsub', 'submit.sh'])
-    os.unlink('submit.sh')
+            if os.path.exists(cwd + '/train-log.txt'):
+                with open(cwd + '/train-log.txt') as f:
+                    lines = f.readlines()
+                if cwd in njobs:
+                    print '{0}{1:6s} {2:6s}: {3}'.format(label, tag, 'R', lines[-1].split())
+                else:
+                    print '{0}{1:6s} {2:6s}: {3}'.format(label, tag, 'N', lines[-1].split())
 #+END_SRC
 
 #+RESULTS:
-: l4n30-1574  0.00983  -0.000191
-: l4n20-1448  0.12020  -0.000300
-: l2n40-1205  0.12380  -0.000900
-: l3n50-127   0.39150  -0.494200
-: l4n40-151   0.04805  -0.193650
-: l3n20-152   0.17860  -0.219300
+#+begin_example
+Job ID      Queue   Info
+l2n2050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '43.0', 'min.']
+l2n3050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '120.7', 'min.']
+l2n4050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '120.8', 'min.']
+l2n5050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '763.6', 'min.']
+l3n2050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '816.5', 'min.']
+l3n3050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '856.8', 'min.']
+l3n4050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '9.3', 'min.']
+l3n5050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '13.3', 'min.']
+l4n2050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '1351.4', 'min.']
+l4n3050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '448.9', 'min.']
+l4n4050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '1294.9', 'min.']
+l4n5050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '1119.0', 'min.']
+#+end_example
+
+#+BEGIN_SRC python
+import os
+import subprocess
+from glob import glob
+import shutil
+
+home = os.getcwd()
+
+for name in glob('networks/db1-train/*/train-log.txt'):
+    with open(name) as f:
+        lines = f.readlines()
+    data = lines[-3].split()
+    print 'Convergence', '   energy:', float(data[3]), '   force:', float(data[4])
+#+END_SRC
+
+#+RESULTS:
+: Convergence    energy: 0.007141    force: 0.09472
+: Convergence    energy: 0.006935    force: 0.08564
+: Convergence    energy: 0.006828    force: 0.08457
+: Convergence    energy: 0.006777    force: 0.08224
+: Convergence    energy: 0.006452    force: 0.08
+: Convergence    energy: 0.009387    force: 0.1145
 
 ** Multi-NN testing
 
@@ -3185,7 +3191,8 @@ plt.xlabel('Lattice constant ($\AA$)')
 plt.ylabel('Total energy (eV/atom)')
 plt.legend(loc='best', handles=patches)
 plt.tight_layout()
-plt.savefig('./images/multinn-surface.png')
+#plt.savefig('./images/multinn-surface.png')
+plt.show()
 #+END_SRC
 
 #+BEGIN_SRC python
