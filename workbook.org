@@ -243,7 +243,6 @@ Fit not up to date
  2237:   energy = -48.5666
 #+end_example
    
-
 * DFT
 ** CuPd fcc and bcc '3' configuration
 #+BEGIN_SRC python :results silent
@@ -1823,7 +1822,6 @@ DFT/bulk=bcc/config=618/strain=xyz/factor=2.0/xc=PBE/gga=PS
 
 #+end_example
 
-
 * Ground states
 ** ground state figure
 #+caption: Ground state hull of CuPd for fcc and bcc phases
@@ -2590,7 +2588,6 @@ Converged: False
 ~/research/cluster-expansion/DFT/bulk=bcc/config=618/strain=xyz/factor=2.0/xc=PBE/gga=PS
 #+end_example
 
-
 * Analysis tools
 ** database generation
 #+BEGIN_SRC python
@@ -3015,7 +3012,10 @@ for label in reset:
 : l3n20-152   0.17860  -0.219300
 
 ** Multi-NN testing
-#+BEGIN_SRC python
+
+[[./images/multinn-1.png]]
+
+#+BEGIN_SRC python :results silent
 import numpy as np
 import matplotlib.pyplot as plt
 from jasp import *
@@ -3055,7 +3055,7 @@ form = ['#FF0000', '#FF6600', '#FFFF33',
 
 for i, name in enumerate(glob('./networks/db0-bct/*trained-parameters.json')):
     n = name.split('/')[-1].split('-')[0]
-    calc = BPNeural(load='{0}'.format(name))
+    calc = BPNeural(json='{0}'.format(name))
 
     fit = []
     for atoms in img:
@@ -3071,12 +3071,13 @@ plt.xlim(ca[0], ca[-1])
 plt.legend(loc='best')
 plt.tight_layout()
 plt.savefig('./images/multinn-1.png')
-plt.show()
 #+END_SRC
 
-#+RESULTS:
+[[./images/multinn-differences.png]]
 
-#+BEGIN_SRC python
+[[./images/multinn-bct.png]]
+
+#+BEGIN_SRC python :results silent
 import numpy as np
 import matplotlib.pyplot as plt
 from jasp import *
@@ -3105,7 +3106,7 @@ plt.plot([ids[0], ids[-1]], [0, 0], 'k--', lw=2)
 err = {}
 for i, name in enumerate(glob('./networks/db0-bct/*trained-parameters.json')):
     n = name.split('/')[-1].split('-')[0]
-    calc = BPNeural(load='{0}'.format(name))
+    calc = BPNeural(json='{0}'.format(name))
     err[n] = []
 
     dif = []
@@ -3125,39 +3126,17 @@ plt.ylabel('Energy difference (eV/atom)')
 plt.legend(loc='best')
 plt.tight_layout()
 plt.savefig('./images/multinn-bct.png')
-plt.show()
 #+END_SRC
-
-#+RESULTS:
-
-#+BEGIN_SRC python
-import numpy as np
-import matplotlib.pyplot as plt
-from jasp import *
-from neural.bp import BPNeural
-from ase.db import connect
-from ase.io import write
-from glob import glob
-import os
-
-db = connect('networks/db1-cln/data.db')
-
-nrg, img, ids = [], [], []
-for d in db.select(['gga=PS', 'bulk=bct', 'factor=]):
-    atoms = db.get_atoms(d.id)
-    img.append(atoms)
-    nrg.append(d.total_energy / len(atoms))
-    ids.append(d.id)
-#+END_SRC
-
-#+RESULTS:
 
 * MultiNN predictions
-#+BEGIN_SRC python
+** surface predictions
+
+[[./images/multinn-surface.png]]
+
+#+BEGIN_SRC python :results silent
 import numpy as np
 from ase.lattice.surface import fcc111_root
 from ase.visualize import view
-import jbutil as jb
 import matplotlib.pyplot as plt
 from jasp import *
 from neural.bp import BPNeural
@@ -3180,7 +3159,7 @@ patches = []
 
 for i, name in enumerate(glob('./networks/db0-bct/*trained-parameters.json')):
     n = name.split('/')[-1].split('-')[0]
-    calc = BPNeural(load='{0}'.format(name))
+    calc = BPNeural(json='{0}'.format(name))
     patches.append(mpatches.Patch(color=colr[i], label='{0}'.format(n)))
     for a in lattice:
         
@@ -3209,4 +3188,70 @@ plt.tight_layout()
 plt.savefig('./images/multinn-surface.png')
 #+END_SRC
 
+#+BEGIN_SRC python
+from ase.db import connect
+
+# Connect to the ASE database
+db = connect('./networks/db1-train/data.db')
+
+# Selects all calculations in the database
+data = db.select([])
+
+# Create a dictionary of all the keys
+keys, cnt = {}, 0
+for entry in data:
+    cnt += 1
+    for k, v in entry.key_value_pairs.iteritems():
+
+        # Add all possible values to each dictionary
+        if k in keys:
+            keys[k] += [v]
+        else:
+            keys[k] = [v]
+
+# Iterate through each key and print the values
+print('{0:15s}  {1:15s} {2} calculations total'.format('keyword', 'value', cnt))
+print('---------------------------------------------------------')
+for k, v in keys.iteritems():
+    vals = list(set(v))
+
+    # Only print the first 10 values
+    if len(vals) <= 10:
+        val = ", ".join(str(e) for e in vals)
+        print('{0:15s}: {1}'.format(k, val))
+    else:
+        val = ", ".join(str(e)[:10] for e in vals[:10])
+        print('{0:15s}: {1}, etc...'.format(k, val))
+#+END_SRC
+
 #+RESULTS:
+#+begin_example
+keyword          value           2634 calculations total
+---------------------------------------------------------
+xc             : PBE
+ca             : 1.5, 1.0, 0.94, 1.26, 1.46, 1.14, 1.02, 1.42, 1.41421356, 1.4, etc...
+encut          : 400.0
+strain         : xyz
+ibz_kpts       : 128, 135, 144, 146, 148, 280, 30, 159, 160, 35, etc...
+nbands         : 32, 51, 36, 37, 38, 39, 9, 43, 44, 14, etc...
+ediff          : 1e-08
+total_energy   : -9.6299781, -18.428024, -18.839996, -28.139411, -9.7537688, -16.317443, -18.919837, -4.0692423, -10.401958, -10.412387, etc...
+factor         : 1.75, 1.0, 0.97, 0.94, 0.91, 1.45, 0.88, 0.85, 1.15, 1.12, etc...
+converged      : True
+config         : 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, etc...
+pathway        : False
+kpt1           : 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
+kpt3           : 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
+kpt2           : 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
+bulk           : bct, fcc, bcc
+ibrion         : -1
+gga            : PS
+path           : /home-rese, /home-rese, /home-rese, /home-rese, /home-rese, /home-rese, /home-rese, /home-rese, /home-rese, /home-rese, etc...
+a              : 2.5, 3.0, 2.76, 2.52, 2.78, 2.54, 2.96063403, 2.8, 2.86, 2.56, etc...
+volume         : 18.4375, 17.1875, 15.0, 82.7257700, 58.7454229, 20.6317065, 20.570824, 28.0796283, 208.945376, 27.0, etc...
+traj           : 0
+fermi          : 15.9375, 12.8125, 11.5371, -0.625, 11.889, 17.6953, 7.7316, 16.2015, 8.4918, 4.3981, etc...
+kppra          : 1728
+calc_time      : 53.75, 84.875, 63.465, 224.25, 53.806, 277.154, 1094.098, 65.745, 4406.926, 11209.158, etc...
+#+end_example
+

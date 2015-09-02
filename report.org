@@ -53,26 +53,36 @@ The ground state hull of fcc and bcc CuPd needed to be recalculated due to relax
 [[./images/groundstate.png]]
 
 * Neural work
+A summary of the work performed on CuPd neural networking July 20-24th.
 
 ** EOS of ground state configurations
+A previous neural network performed revealed poor fits to ground state data produced from cluster expansions:
 
+#+caption: Residuals to initial NN fitting of GS energies for various CuPd structures from cluster expansion
+#+attr_latex: :width 6in
+#+attr_org: :width 600
 [[./images/db0-PS-eosfit.png]]
 
 *** Problem structures
 
-BCC configurations in fit
+BCC configurations in fit:
+#+attr_latex: :width 0.5in
 #+attr_org: :width 50
 [[./images/bcc-0-GS.png]]  [[./images/bcc-3-GS.png]]  [[./images/bcc-26-GS.png]]  [[./images/bcc-603-GS.png]]  [[./images/bcc-1-GS.png]]
 
-Structures which do not fit well.
+Structures which do not fit well:
+#+attr_latex: :width 0.5in
 #+attr_org: :width 50
 [[./images/bcc-112-A.png]]  [[./images/bcc-34-A.png]]  [[./images/bcc-12-A.png]]  [[./images/bcc-116-A.png]]  [[./images/bcc-11-A.png]] [[./images/bcc-31-A.png]]  [[./images/bcc-4-A.png]]  [[./images/bcc-29-A.png]]  [[./images/bcc-105-A.png]]
 
-FCC configurations
+FCC configurations:
+#+attr_latex: :width 0.5in
 #+attr_org: :width 50
 [[./images/fcc-0-GS.png]]  [[./images/fcc-27-GS.png]]  [[./images/fcc-19-GS.png]]  [[./images/fcc-505-GS.png]]  [[./images/fcc-28-GS.png]]  [[./images/fcc-1-GS.png]]
 
-Structures which do not fit well.
+
+Structures which do not fit well:
+#+attr_latex: :width 0.5in
 #+attr_org: :width 50
 [[./images/fcc-56-A.png]]  [[./images/fcc-5-A.png]]  [[./images/fcc-25-A.png]]  [[./images/fcc-11-A.png]]  [[./images/fcc-53-A.png]]
 
@@ -85,12 +95,9 @@ One possible method of identifying dissimilar structures would be to use structu
 
 *** EOS of problematic structures
 
-#+caption: Residuals to initial NN fitting of GS energies for various CuPd structures from cluster expansion
-#+attr_latex: :width 6in
-#+attr_org: :width 600
-[[./images/db0-PS-eosfit.png]]
+Further inspection revealed that the structures with the worst fits have very disordered EOS
 
-For some reason, the EOS for the worst fits are very distorted, although nothing appears wrong with the geometries.
+although nothing appears wrong with the geometries.
 
 #+caption: Equation of state for bcc configurations: 4, 5, 29, 31, and 34
 #+attr_latex: :width 3in
@@ -104,7 +111,9 @@ There are some minor inconsistencies in certain fcc configurations as well.
 #+attr_org: :width 300
 [[./images/3D-EOS-fcc-cfg545.png]]  [[./images/3D-EOS-fcc-cfg548.png]]  [[./images/3D-EOS-fcc-cfg552.png]]
 
-The bcc structures have been removed from the database.
+The bcc structures shown above have been removed from all database moving forward. 
+
+I am not sure how to fix these calculations, or that it is worth the effort.
 
 ** Testing of multiple NNs
 
@@ -124,7 +133,9 @@ nodes: 30, 40, and 50
 #+attr_org: :width 400
 [[./images/multinn-path2.png]]
 
-All residuals fit well to the data points included in the fitting process, as expected.
+All residuals fit well to the data points included in the fitting process.
+
+This suggests that it should be possible to produce highly accurate fits, even for alloys.
 
 *** Fit to data NOT included in NN
 
@@ -133,10 +144,15 @@ All residuals fit well to the data points included in the fitting process, as ex
 #+attr_org: :width 400
 [[./images/multinn-differences.png]]
 
+The data at the end represents the bct structures included in the fitting and are magnified in Figure ref:fig-res-bct.
+
+#+label: fig-res-bct
 #+caption: Residuals to bct data included in the fit
 #+attr_latex: :width 4in
 #+attr_org: :width 400
 [[./images/multinn-bct.png]]
+
+Again, very good (and rapid fitting) to all points of the PES for transition from fcc to bcc through bct configurations.
 
 
 #+caption: Multi-NN fit to various surface compositions of CuPd
