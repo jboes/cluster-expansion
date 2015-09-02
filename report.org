@@ -146,4 +146,7 @@ All residuals fit well to the data points included in the fitting process, as ex
 
 The mutliNN shows that surface predictions are not yet possible with the current model.
 
+
+* Expanding NN to all 50% compositions
+
 bibliography:../../bibliography/references.bib
