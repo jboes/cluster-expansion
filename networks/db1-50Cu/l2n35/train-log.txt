@@ -1,0 +1,63 @@
+Neural: BP training started. 2015-09-04T15:30:15
+Parallel processing over 48 cores.
+
+Training on 2985 images.
+Hashing images...
+ 2985 unique images after hashing.
+ ...hashing completed. 0.1 min.
+2 unique elements included:  Pd, Cu
+Hidden layer structure:
+ Pd: (2, 35)
+ Cu: (2, 35)
+Symmetry functions for each element:
+ Pd: 20
+ Cu: 20
+Initializing with random weights.
+Initializing with random scalings.
+Calculating neighborlist for each atom...
+ Saved neighborlist file ../neighborlists.json loaded with 2985 entries.
+ Calculating 0 of 2985 neighborlists.
+Calculating atomic fingerprints...
+ Reading fingerprints from ../fingerprints.json...
+ ...fingerprints read 0.0 min.
+ Calculating 0 of 2985 fingerprints. (2985 exist in file.)
+Calculating derivatives of atomic fingerprints with respect to coordinates...
+ Reading fingerprint derivatives from file ../fingerprint-derivatives.json
+ ...fingerprint derivatives read. 0.1 min.
+ Calculating 0 of 2985 fingerprint derivatives. (2985 exist in file.)
+ ...all fingerprint operations complete. 0.2 min.
+Re-shaping data to send to fortran90...
+ ...data re-shaped. 0.1 min.
+Sending data to fortran90...
+ ...data sent to fortran90. 0.0 min.
+Initial parameters saved in file ./initial-parameters.json.
+Starting optimization of cost function...
+ Energy goal: 1.000e-03
+ Force goal: 5.000e-03
+ Cost function force coefficient: 0.040000
+                                         (Energy           
+                                 Cost  per Atom)      Force
+ Step                 Time   Function       RMSE       RMSE
+=====  ===================  =========  =========  =========
+    0  2015-09-04T15:31:13  1.415e+04  2.174e+00  6.295e-01
+    1  2015-09-04T15:31:22  8.959e+10  5.478e+03  6.290e-01
+    2  2015-09-04T15:31:33  1.069e+06  1.892e+01  6.290e-01
+    3  2015-09-04T15:31:43  7.709e+04  5.080e+00  6.290e-01
+    4  2015-09-04T15:31:54  1.714e+04  2.393e+00  6.303e-01
+    5  2015-09-04T15:32:05  6.723e+03  1.495e+00  6.571e-01
+    6  2015-09-04T15:32:15  1.586e+04  2.301e+00  6.635e-01
+    7  2015-09-04T15:32:25  4.279e+03  1.190e+00  6.714e-01
+    8  2015-09-04T15:32:36  3.413e+04  3.379e+00  6.350e-01
+    9  2015-09-04T15:32:47  4.179e+03  1.176e+00  6.692e-01
+   10  2015-09-04T15:32:58  3.984e+03  1.148e+00  6.627e-01
+   11  2015-09-04T15:33:10  3.405e+03  1.060e+00  6.411e-01
+   12  2015-09-04T15:33:20  2.363e+03  8.807e-01  6.339e-01
+   13  2015-09-04T15:33:31  4.737e+03  1.254e+00  5.787e-01
+   14  2015-09-04T15:33:42  2.158e+03  8.411e-01  6.214e-01
+   15  2015-09-04T15:33:53  2.382e+03  8.852e-01  6.002e-01
+   16  2015-09-04T15:34:03  2.090e+03  8.277e-01  6.166e-01
+   17  2015-09-04T15:34:13  1.956e+03  8.001e-01  6.170e-01
+   18  2015-09-04T15:34:23  1.500e+03  6.974e-01  6.384e-01
+   19  2015-09-04T15:34:34  4.197e+03  1.179e+00  6.509e-01
+   20  2015-09-04T15:34:44  1.416e+03  6.771e-01  6.303e-01
+   21  2015-09-04T15:34:54  1.260e+03  6.376e-01  6.211e-01

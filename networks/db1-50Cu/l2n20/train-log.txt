@@ -1,0 +1,228 @@
+Neural: BP training started. 2015-09-04T15:17:03
+Parallel processing over 48 cores.
+
+Training on 2985 images.
+Hashing images...
+ 2985 unique images after hashing.
+ ...hashing completed. 0.1 min.
+2 unique elements included:  Pd, Cu
+Hidden layer structure:
+ Pd: (2, 20)
+ Cu: (2, 20)
+Symmetry functions for each element:
+ Pd: 20
+ Cu: 20
+Initializing with random weights.
+Initializing with random scalings.
+Calculating neighborlist for each atom...
+ No saved neighborlist file found.
+ Calculating 2985 of 2985 neighborlists.
+ ...neighborlists calculated and saved to ../neighborlists.json. 3.1 min.
+Calculating atomic fingerprints...
+No saved fingerprint file found.
+ Calculating 2985 of 2985 fingerprints. (0 exist in file.)
+  Processor 0 calculations stored in file /tmp/fp-qnFgXR.json.
+  Processor 1 calculations stored in file /tmp/fp-GFhchz.json.
+  Processor 2 calculations stored in file /tmp/fp-MpI53Z.json.
+  Processor 3 calculations stored in file /tmp/fp-7Hy3zz.json.
+  Processor 4 calculations stored in file /tmp/fp-1_r11K.json.
+  Processor 5 calculations stored in file /tmp/fp-FAfGA_.json.
+  Processor 6 calculations stored in file /tmp/fp-axBiBy.json.
+  Processor 7 calculations stored in file /tmp/fp-RrEfh8.json.
+  Processor 8 calculations stored in file /tmp/fp-KuqihY.json.
+  Processor 9 calculations stored in file /tmp/fp-gSpb7Z.json.
+  Processor 10 calculations stored in file /tmp/fp-zqtKFI.json.
+  Processor 11 calculations stored in file /tmp/fp-dbG3qy.json.
+  Processor 12 calculations stored in file /tmp/fp-LkHswD.json.
+  Processor 13 calculations stored in file /tmp/fp-t27VDH.json.
+  Processor 14 calculations stored in file /tmp/fp-2tVDlC.json.
+  Processor 15 calculations stored in file /tmp/fp-rD0oP9.json.
+  Processor 16 calculations stored in file /tmp/fp-QOAbcE.json.
+  Processor 17 calculations stored in file /tmp/fp-CZteCR.json.
+  Processor 18 calculations stored in file /tmp/fp-ee9qKk.json.
+  Processor 19 calculations stored in file /tmp/fp-BY7njy.json.
+  Processor 20 calculations stored in file /tmp/fp-fO2UHi.json.
+  Processor 21 calculations stored in file /tmp/fp-7ZEdXl.json.
+  Processor 22 calculations stored in file /tmp/fp-6g5hUD.json.
+  Processor 23 calculations stored in file /tmp/fp-Hkuqkz.json.
+  Processor 24 calculations stored in file /tmp/fp-XMUNNP.json.
+  Processor 25 calculations stored in file /tmp/fp-DpXu8H.json.
+  Processor 26 calculations stored in file /tmp/fp-1ZmpAK.json.
+  Processor 27 calculations stored in file /tmp/fp-eKtDEd.json.
+  Processor 28 calculations stored in file /tmp/fp-0qQImX.json.
+  Processor 29 calculations stored in file /tmp/fp-58JKm_.json.
+  Processor 30 calculations stored in file /tmp/fp-9UNypH.json.
+  Processor 31 calculations stored in file /tmp/fp-St8635.json.
+  Processor 32 calculations stored in file /tmp/fp-W_xZaM.json.
+  Processor 33 calculations stored in file /tmp/fp-Jz7uGb.json.
+  Processor 34 calculations stored in file /tmp/fp-fieDfq.json.
+  Processor 35 calculations stored in file /tmp/fp-XoxP1Z.json.
+  Processor 36 calculations stored in file /tmp/fp-SINCLr.json.
+  Processor 37 calculations stored in file /tmp/fp-6lO8jl.json.
+  Processor 38 calculations stored in file /tmp/fp-k39_Aj.json.
+  Processor 39 calculations stored in file /tmp/fp-GsubAx.json.
+  Processor 40 calculations stored in file /tmp/fp-H2nVUg.json.
+  Processor 41 calculations stored in file /tmp/fp-S70H7a.json.
+  Processor 42 calculations stored in file /tmp/fp-4rURwe.json.
+  Processor 43 calculations stored in file /tmp/fp-FZTlYh.json.
+  Processor 44 calculations stored in file /tmp/fp-AjRdi_.json.
+  Processor 45 calculations stored in file /tmp/fp-sVpLrA.json.
+  Processor 46 calculations stored in file /tmp/fp-orf2U5.json.
+  Processor 47 calculations stored in file /tmp/fp-kQLgm8.json.
+ Calculated 2985 new images. 0.2 min.
+ Reading calculated child-fingerprints...
+ ...child-fingerprints are read. 0.0 min.
+ Saving fingerprints...
+ ...fingerprints saved to ../fingerprints.json. 0.0 min.
+Calculating derivatives of atomic fingerprints with respect to coordinates...
+Either no saved fingerprint-derivatives file found or it cannot be read.
+ Calculating 2985 of 2985 fingerprint derivatives. (0 exist in file.)
+  Processor 0 calculations stored in file /tmp/fp-2LWHQM.json.
+  Processor 1 calculations stored in file /tmp/fp-fJOY7r.json.
+  Processor 2 calculations stored in file /tmp/fp-ZjGH3Q.json.
+  Processor 3 calculations stored in file /tmp/fp-3arVsR.json.
+  Processor 4 calculations stored in file /tmp/fp-DJbViY.json.
+  Processor 5 calculations stored in file /tmp/fp-tV8noQ.json.
+  Processor 6 calculations stored in file /tmp/fp-c1mqGf.json.
+  Processor 7 calculations stored in file /tmp/fp-yy1zYe.json.
+  Processor 8 calculations stored in file /tmp/fp-D_ac7V.json.
+  Processor 9 calculations stored in file /tmp/fp-5ik_63.json.
+  Processor 10 calculations stored in file /tmp/fp-nUVZDh.json.
+  Processor 11 calculations stored in file /tmp/fp-aL5RgY.json.
+  Processor 12 calculations stored in file /tmp/fp-C14laM.json.
+  Processor 13 calculations stored in file /tmp/fp-qMLnRz.json.
+  Processor 14 calculations stored in file /tmp/fp-TGl4RU.json.
+  Processor 15 calculations stored in file /tmp/fp-Tu8TId.json.
+  Processor 16 calculations stored in file /tmp/fp-HFaiMH.json.
+  Processor 17 calculations stored in file /tmp/fp-CkcyG4.json.
+  Processor 18 calculations stored in file /tmp/fp-f6F6V8.json.
+  Processor 19 calculations stored in file /tmp/fp-f0iBz8.json.
+  Processor 20 calculations stored in file /tmp/fp-Stg90X.json.
+  Processor 21 calculations stored in file /tmp/fp-HTbviO.json.
+  Processor 22 calculations stored in file /tmp/fp-irjaeN.json.
+  Processor 23 calculations stored in file /tmp/fp-GQBAWE.json.
+  Processor 24 calculations stored in file /tmp/fp-yfWA3C.json.
+  Processor 25 calculations stored in file /tmp/fp-66Zpfs.json.
+  Processor 26 calculations stored in file /tmp/fp-72n2u9.json.
+  Processor 27 calculations stored in file /tmp/fp-mIDoDH.json.
+  Processor 28 calculations stored in file /tmp/fp-KfAHBa.json.
+  Processor 29 calculations stored in file /tmp/fp-8c66Hq.json.
+  Processor 30 calculations stored in file /tmp/fp-TZZ5Tg.json.
+  Processor 31 calculations stored in file /tmp/fp-jxiSCv.json.
+  Processor 32 calculations stored in file /tmp/fp-0NZiql.json.
+  Processor 33 calculations stored in file /tmp/fp-dAk8tX.json.
+  Processor 34 calculations stored in file /tmp/fp-9IVJpo.json.
+  Processor 35 calculations stored in file /tmp/fp-MI2ITE.json.
+  Processor 36 calculations stored in file /tmp/fp-CWNg7g.json.
+  Processor 37 calculations stored in file /tmp/fp-oIr3h4.json.
+  Processor 38 calculations stored in file /tmp/fp-GmtylT.json.
+  Processor 39 calculations stored in file /tmp/fp-phOL7I.json.
+  Processor 40 calculations stored in file /tmp/fp-qdN25H.json.
+  Processor 41 calculations stored in file /tmp/fp-x5GY1J.json.
+  Processor 42 calculations stored in file /tmp/fp-aPzak4.json.
+  Processor 43 calculations stored in file /tmp/fp-uj_QpR.json.
+  Processor 44 calculations stored in file /tmp/fp-31raZi.json.
+  Processor 45 calculations stored in file /tmp/fp-4nCG17.json.
+  Processor 46 calculations stored in file /tmp/fp-_i9UKr.json.
+  Processor 47 calculations stored in file /tmp/fp-D5mCxp.json.
+ Calculated 2985 new images. 2.2 min.
+ Reading child-fingerprint-derivatives...
+ ...child-fingerprint-derivatives are read. 0.3 min.
+ ...fingerprint derivatives calculated and saved to ../fingerprint-derivatives.json. 0.5 min.
+ ...all fingerprint operations complete. 3.2 min.
+Re-shaping data to send to fortran90...
+ ...data re-shaped. 0.2 min.
+Sending data to fortran90...
+ ...data sent to fortran90. 0.0 min.
+Initial parameters saved in file ./initial-parameters.json.
+Starting optimization of cost function...
+ Energy goal: 1.000e-03
+ Force goal: 5.000e-03
+ Cost function force coefficient: 0.040000
+                                         (Energy           
+                                 Cost  per Atom)      Force
+ Step                 Time   Function       RMSE       RMSE
+=====  ===================  =========  =========  =========
+    0  2015-09-04T15:23:59  1.420e+04  2.177e+00  6.280e-01
+    1  2015-09-04T15:24:06  8.952e+10  5.476e+03  6.290e-01
+    2  2015-09-04T15:24:14  9.582e+05  1.792e+01  6.290e-01
+    3  2015-09-04T15:24:22  7.033e+04  4.852e+00  6.290e-01
+    4  2015-09-04T15:24:30  1.617e+04  2.324e+00  6.295e-01
+    5  2015-09-04T15:24:38  5.799e+03  1.388e+00  6.264e-01
+    6  2015-09-04T15:24:47  3.314e+04  3.328e+00  8.500e-01
+    7  2015-09-04T15:24:55  4.504e+03  1.221e+00  6.481e-01
+    8  2015-09-04T15:25:03  1.039e+04  1.859e+00  7.807e-01
+    9  2015-09-04T15:25:11  4.303e+03  1.193e+00  6.572e-01
+   10  2015-09-04T15:25:19  4.037e+03  1.156e+00  6.255e-01
+   11  2015-09-04T15:25:26  3.609e+03  1.093e+00  5.986e-01
+   12  2015-09-04T15:25:34  3.184e+03  1.026e+00  6.080e-01
+   13  2015-09-04T15:25:41  3.335e+03  1.050e+00  6.157e-01
+   14  2015-09-04T15:25:49  2.868e+03  9.726e-01  6.142e-01
+   15  2015-09-04T15:25:55  2.431e+03  8.942e-01  6.112e-01
+   16  2015-09-04T15:26:02  2.229e+03  8.308e-01  1.191e+00
+   17  2015-09-04T15:26:10  2.028e+03  7.863e-01  1.236e+00
+   18  2015-09-04T15:26:17  1.734e+03  7.163e-01  1.303e+00
+   19  2015-09-04T15:26:24  1.345e+03  6.566e-01  6.966e-01
+   20  2015-09-04T15:26:32  1.374e+03  6.623e-01  7.366e-01
+   21  2015-09-04T15:26:39  1.128e+03  6.007e-01  6.525e-01
+   22  2015-09-04T15:26:46  1.636e+03  7.214e-01  8.338e-01
+   23  2015-09-04T15:26:53  1.030e+03  5.744e-01  6.175e-01
+   24  2015-09-04T15:27:00  1.170e+03  6.084e-01  7.379e-01
+   25  2015-09-04T15:27:07  9.857e+02  5.607e-01  6.288e-01
+   26  2015-09-04T15:27:14  9.273e+02  5.395e-01  7.001e-01
+   27  2015-09-04T15:27:21  8.162e+02  5.086e-01  6.070e-01
+   28  2015-09-04T15:27:28  1.793e+03  7.647e-01  6.265e-01
+   29  2015-09-04T15:27:35  7.823e+02  4.969e-01  6.161e-01
+   30  2015-09-04T15:27:42  7.254e+02  4.768e-01  6.267e-01
+   31  2015-09-04T15:27:50  6.897e+02  4.698e-01  5.091e-01
+   32  2015-09-04T15:27:57  6.494e+02  4.574e-01  4.555e-01
+   33  2015-09-04T15:28:04  5.981e+02  4.375e-01  4.742e-01
+   34  2015-09-04T15:28:12  4.922e+02  3.954e-01  4.622e-01
+   35  2015-09-04T15:28:21  1.981e+03  8.001e-01  7.658e-01
+   36  2015-09-04T15:28:29  4.135e+02  3.606e-01  4.606e-01
+   37  2015-09-04T15:28:37  2.506e+03  8.992e-01  8.784e-01
+   38  2015-09-04T15:28:45  3.986e+02  3.531e-01  4.704e-01
+   39  2015-09-04T15:28:53  3.705e+02  3.384e-01  4.909e-01
+   40  2015-09-04T15:29:01  3.194e+02  3.105e-01  5.146e-01
+   41  2015-09-04T15:29:08  2.687e+02  2.753e-01  5.964e-01
+   42  2015-09-04T15:29:16  3.890e+02  3.368e-01  6.500e-01
+   43  2015-09-04T15:29:25  2.559e+02  2.671e-01  5.993e-01
+   44  2015-09-04T15:29:33  2.378e+02  2.531e-01  6.243e-01
+   45  2015-09-04T15:29:41  2.071e+02  2.340e-01  6.040e-01
+   46  2015-09-04T15:29:49  6.865e+02  4.522e-01  7.977e-01
+   47  2015-09-04T15:29:57  2.041e+02  2.315e-01  6.081e-01
+   48  2015-09-04T15:30:05  1.981e+02  2.278e-01  6.017e-01
+   49  2015-09-04T15:30:14  1.773e+02  2.148e-01  5.756e-01
+   50  2015-09-04T15:30:22  1.794e+02  2.238e-01  5.001e-01
+   51  2015-09-04T15:30:30  1.588e+02  2.056e-01  5.231e-01
+   52  2015-09-04T15:30:39  2.082e+02  2.364e-01  5.882e-01
+   53  2015-09-04T15:30:47  1.526e+02  2.021e-01  5.073e-01
+   54  2015-09-04T15:30:57  1.729e+02  2.147e-01  5.432e-01
+   55  2015-09-04T15:31:06  1.514e+02  2.007e-01  5.107e-01
+   56  2015-09-04T15:31:14  1.489e+02  1.989e-01  5.080e-01
+   57  2015-09-04T15:31:22  1.425e+02  1.942e-01  5.009e-01
+   58  2015-09-04T15:31:31  1.391e+02  1.931e-01  4.820e-01
+   59  2015-09-04T15:31:39  1.363e+02  1.905e-01  4.844e-01
+   60  2015-09-04T15:31:47  1.279e+02  1.851e-01  4.632e-01
+   61  2015-09-04T15:31:56  1.449e+02  1.962e-01  5.013e-01
+   62  2015-09-04T15:32:05  1.241e+02  1.814e-01  4.657e-01
+   63  2015-09-04T15:32:14  1.177e+02  1.727e-01  4.901e-01
+   64  2015-09-04T15:32:23  1.076e+02  1.604e-01  5.084e-01
+   65  2015-09-04T15:32:32  1.132e+02  1.583e-01  5.677e-01
+   66  2015-09-04T15:32:41  1.020e+02  1.519e-01  5.264e-01
+   67  2015-09-04T15:32:49  1.252e+02  1.722e-01  5.547e-01
+   68  2015-09-04T15:32:57  1.004e+02  1.495e-01  5.313e-01
+   69  2015-09-04T15:33:05  9.785e+01  1.462e-01  5.342e-01
+   70  2015-09-04T15:33:14  9.338e+01  1.411e-01  5.331e-01
+   71  2015-09-04T15:33:22  8.761e+01  1.384e-01  5.050e-01
+   72  2015-09-04T15:33:31  9.979e+01  1.515e-01  5.115e-01
+   73  2015-09-04T15:33:39  8.544e+01  1.363e-01  5.009e-01
+   74  2015-09-04T15:33:47  8.156e+01  1.333e-01  4.888e-01
+   75  2015-09-04T15:33:55  7.799e+01  1.333e-01  4.571e-01
+   76  2015-09-04T15:34:03  7.197e+01  1.280e-01  4.398e-01
+   77  2015-09-04T15:34:12  6.466e+01  1.143e-01  4.634e-01
+   78  2015-09-04T15:34:21  8.937e+01  1.520e-01  4.137e-01
+   79  2015-09-04T15:34:29  6.295e+01  1.137e-01  4.519e-01
+   80  2015-09-04T15:34:37  6.020e+01  1.105e-01  4.461e-01
+   81  2015-09-04T15:34:46  5.675e+01  1.042e-01  4.513e-01
+   82  2015-09-04T15:34:54  5.261e+01  1.010e-01  4.306e-01
