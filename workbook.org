@@ -2634,7 +2634,7 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import os
 
-db = connect('networks/db1-train/data.db')
+db = connect('networks/db1-50Cu/data.db')
 
 data = db.select()
 
@@ -2663,22 +2663,26 @@ plt.show()
 #+BEGIN_SRC python
 from ase.db import connect
 import os
-import numpy as np
 
-frac_eos = np.append(np.linspace(0.85, 1.15, 61), np.linspace(1.2, 2.0, 17))
+fcc = [2, 3, 446, 25, 11, 19, 22, 14, 77, 84, 552, 548, 276, 274]
+bcc = [2, 3, 14, 60, 93, 11, 441, 116, 22, 27, 17]
 
-for s in select:
-    db0 = connect('networks/db1-cln/data.db')
-    data = db0.select(['bulk!=bct', 'gga=PS', 'factor={0}'.format(s)])
+db0 = connect('networks/db1-cln/data.db')
 
-    wd = 'networks/db1-50Cu/'
+wd = 'networks/db1-50Cu'
 
-    if not os.path.exists(wd):
-        os.makedirs(wd)
+if not os.path.exists(wd):
+    os.makedirs(wd)
 
-    db = connect(wd + '/data.db')
+db = connect(wd + '/data.db')
 
-    for d in data:
+for cfg in fcc:
+    for d in db0.select(['bulk=fcc', 'gga=PS', 'config={0}'.format(cfg)]):
+        db.write(d,
+                 key_value_pairs=d.key_value_pairs)
+
+for cfg in bcc:
+    for d in db0.select(['bulk=bcc', 'gga=PS', 'config={0}'.format(cfg)]):
         db.write(d,
                  key_value_pairs=d.key_value_pairs)
 #+END_SRC
@@ -2874,8 +2878,8 @@ for net in networks:
 
     wd = os.path.join(home, net)
     
-    for L in [2, 3, 4]:
-        for N in [20, 30, 40, 50]:
+    for L in [2, 3]:
+        for N in [20, 25, 30, 35, 40]:
             layers = (L, N)
             label = 'l{0}n{1}'.format(layers[0],
                                       layers[1])
@@ -2897,7 +2901,7 @@ calc.train('../data.db')
             cmd = """#!/bin/bash
 #PBS -N {0}
 #PBS -l nodes=1:ppn=1
-#PBS -l walltime=24:00:00
+#PBS -l walltime=168:00:00
 #PBS -l mem=2GB
 #PBS -joe
 cd $PBS_O_WORKDIR
@@ -2917,20 +2921,14 @@ cd $PBS_O_WORKDIR
 #+END_SRC
 
 #+RESULTS:
-#+begin_example
-1252720.gilgamesh.cheme.cmu.edu
-1252721.gilgamesh.cheme.cmu.edu
-1252722.gilgamesh.cheme.cmu.edu
-1252723.gilgamesh.cheme.cmu.edu
-1252724.gilgamesh.cheme.cmu.edu
-1252725.gilgamesh.cheme.cmu.edu
-1252726.gilgamesh.cheme.cmu.edu
-1252727.gilgamesh.cheme.cmu.edu
-1252728.gilgamesh.cheme.cmu.edu
-1252729.gilgamesh.cheme.cmu.edu
-1252730.gilgamesh.cheme.cmu.edu
-1252731.gilgamesh.cheme.cmu.edu
-#+end_example
+: 1266096.gilgamesh.cheme.cmu.edu
+: 1266097.gilgamesh.cheme.cmu.edu
+: 1266098.gilgamesh.cheme.cmu.edu
+: 1266099.gilgamesh.cheme.cmu.edu
+: 1266101.gilgamesh.cheme.cmu.edu
+: 1266102.gilgamesh.cheme.cmu.edu
+: 1266103.gilgamesh.cheme.cmu.edu
+: 1266104.gilgamesh.cheme.cmu.edu
 
 ** Network progress check
 
