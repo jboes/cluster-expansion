@@ -2879,7 +2879,7 @@ for net in networks:
     wd = os.path.join(home, net)
     
     for L in [2, 3]:
-        for N in [20, 25, 30, 35, 40]:
+        for N in [20, 30, 40, 50]:
             layers = (L, N)
             label = 'l{0}n{1}'.format(layers[0],
                                       layers[1])
@@ -2901,7 +2901,7 @@ calc.train('../data.db')
             cmd = """#!/bin/bash
 #PBS -N {0}
 #PBS -l nodes=1:ppn=1
-#PBS -l walltime=168:00:00
+#PBS -l walltime=24:00:00
 #PBS -l mem=2GB
 #PBS -joe
 cd $PBS_O_WORKDIR
@@ -2921,14 +2921,20 @@ cd $PBS_O_WORKDIR
 #+END_SRC
 
 #+RESULTS:
-: 1266096.gilgamesh.cheme.cmu.edu
-: 1266097.gilgamesh.cheme.cmu.edu
-: 1266098.gilgamesh.cheme.cmu.edu
-: 1266099.gilgamesh.cheme.cmu.edu
-: 1266101.gilgamesh.cheme.cmu.edu
-: 1266102.gilgamesh.cheme.cmu.edu
-: 1266103.gilgamesh.cheme.cmu.edu
-: 1266104.gilgamesh.cheme.cmu.edu
+#+begin_example
+1252720.gilgamesh.cheme.cmu.edu
+1252721.gilgamesh.cheme.cmu.edu
+1252722.gilgamesh.cheme.cmu.edu
+1252723.gilgamesh.cheme.cmu.edu
+1252724.gilgamesh.cheme.cmu.edu
+1252725.gilgamesh.cheme.cmu.edu
+1252726.gilgamesh.cheme.cmu.edu
+1252727.gilgamesh.cheme.cmu.edu
+1252728.gilgamesh.cheme.cmu.edu
+1252729.gilgamesh.cheme.cmu.edu
+1252730.gilgamesh.cheme.cmu.edu
+1252731.gilgamesh.cheme.cmu.edu
+#+end_example
 
 ** Network progress check
 
@@ -3732,61 +3738,4 @@ for cfg in cfgs:
 /home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.95/xc=PBE/gga=PS
 /home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=2.0/xc=PBE/gga=PS
 #+end_example
-
-
-
-
-* Working with surface structures
-#+BEGIN_SRC python
-from ase.lattice.surface import fcc111_root
-from ase.visualize import view
-from ase.constraints import FixAtoms
-from jasp import *
-
-cfgs = {0:[[]],
-        1:[[32]],
-        2:[[32, 31]],
-        3:[[32, 31, 28],
-           [32, 31, 34],
-           [32, 31, 33]],
-        4:[[29, 30, 33, 34],
-           [29, 30, 33, 28],
-           [29, 30, 34, 28]],
-        5:[[28, 29, 30, 33, 34]],
-        6:[[28, 29, 30, 31, 33, 34]],
-        7:[[28, 29, 30, 31, 32, 33, 34]]}
-
-basis = [['Cu', 'Pd'],
-         ['Pd', 'Cu']]
-
-for b in basis:
-    B, I = b[0], b[1]
-    for i, cfg in cfgs.iteritems():
-        for j, comp in enumerate(cfg):
-            atoms = fcc111_root(B, 7, [1, 1, 5], vacuum=6)
-            for k in comp:
-                atoms[k].symbol = I
-
-            constraint = FixAtoms(mask=[atom.tag > 3 for atom in atoms])
-            atoms.set_constraint(constraint)
-
-            wd = 'DFT/surf=fcc/host={0}/guest={1}/gcnt={2}/config={3}/'.format(B, I, i, j)
-            with jasp(wd,
-                      xc='PBE',
-                      gga='PS',
-                      encut=400,
-                      kpts=(5, 5, 1),
-                      ibrion=2,
-                      isif=2,
-                      nsw=40,
-                      ediff=1e-5,
-                      atoms=atoms) as calc:
-                try:
-                    calc.get_required_memory()
-                    calc.calculate()
-                except(VaspQueued, VaspSubmitted):
-                    print wd, 'Queued'
-#+END_SRC
-
-#+RESULTS:
 

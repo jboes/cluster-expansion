@@ -1,0 +1,11 @@
+Warning: Desired error not necessarily achieved due to precision loss.
+         Current function value: 4.881947
+         Iterations: 5657
+         Function evaluations: 6022
+         Gradient evaluations: 6010
+Traceback (most recent call last):
+  File "./submit.py", line 6, in <module>
+    calc.train('../data.db')
+  File "/home-research/jboes/python/neural/bp/__init__.py", line 760, in train
+    raise TrainingConvergenceError()
+neural.bp.TrainingConvergenceError
