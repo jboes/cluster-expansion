@@ -2728,7 +2728,6 @@ color = ['b', 'r']
 
 f, ax = plt.subplots(1, 2, figsize=(10, 5))
 
-
 for i, cfg in enumerate(config):
 
     # Open ground states file and collect a list of all GS configs
@@ -2826,9 +2825,6 @@ plt.show()
 #+END_SRC
 
 #+RESULTS:
-
-
-
 #+begin_example
 ['0', '27', '19', '505', '28', '1']
 ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '11', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '37', '39', '40', '41', '42', '44', '46', '47', '49', '53', '54', '56', '102', '104', '119', '63', '70', '74', '77', '78', '84', '95', '98', '140', '142', '174', '230', '234', '274', '276', '438', '446', '502', '505', '545', '548', '552']
@@ -2864,7 +2860,6 @@ plt.show()
 #+end_example
 
 ** Network training
-
 #+BEGIN_SRC python
 import os
 import subprocess
@@ -2879,18 +2874,19 @@ for net in networks:
     wd = os.path.join(home, net)
     
     for L in [2, 3]:
-        for N in [20, 30, 40, 50]:
-            layers = (L, N)
-            label = 'l{0}n{1}'.format(layers[0],
-                                      layers[1])
+        for N in [20, 25, 30, 35, 40]:
+            for i in [0, 1, 2]:
+                layers = (L, N)
+                label = 'l{0}n{1}i{2}'.format(layers[0],
+                                              layers[1],
+                                              i)
 
-            cwd = os.path.join(wd, label)
+                cwd = os.path.join(wd, label)
 
+                os.makedirs(cwd)
+                os.chdir(cwd)
 
-            os.makedirs(cwd)
-            os.chdir(cwd)
-
-            run_scrpit = """#!/usr/bin/env python
+                run_scrpit = """#!/usr/bin/env python
 from neural.bp import BPNeural
 calc = BPNeural(dblabel='../',
                 label='./',
@@ -2898,50 +2894,54 @@ calc = BPNeural(dblabel='../',
 calc.train('../data.db')
 """.format(layers)
 
-            cmd = """#!/bin/bash
+                cmd = """#!/bin/bash
 #PBS -N {0}
 #PBS -l nodes=1:ppn=1
-#PBS -l walltime=24:00:00
+#PBS -l walltime=168:00:00
 #PBS -l mem=2GB
 #PBS -joe
 cd $PBS_O_WORKDIR
 ./submit.py
 #end""".format(cwd)
 
-            with open('submit.py', 'w') as f:
-                f.write(run_scrpit)
-            os.chmod('submit.py', 0777)
+                with open('submit.py', 'w') as f:
+                    f.write(run_scrpit)
+                os.chmod('submit.py', 0777)
 
-            with open('submit.sh', 'w') as f:
-                f.write(cmd)
+                with open('submit.sh', 'w') as f:
+                    f.write(cmd)
 
-            subprocess.call(['qsub', 'submit.sh'])
+                subprocess.call(['qsub', 'submit.sh'])
 
-            os.unlink('submit.sh')
+                os.unlink('submit.sh')
 #+END_SRC
 
 #+RESULTS:
 #+begin_example
-1252720.gilgamesh.cheme.cmu.edu
-1252721.gilgamesh.cheme.cmu.edu
-1252722.gilgamesh.cheme.cmu.edu
-1252723.gilgamesh.cheme.cmu.edu
-1252724.gilgamesh.cheme.cmu.edu
-1252725.gilgamesh.cheme.cmu.edu
-1252726.gilgamesh.cheme.cmu.edu
-1252727.gilgamesh.cheme.cmu.edu
-1252728.gilgamesh.cheme.cmu.edu
-1252729.gilgamesh.cheme.cmu.edu
-1252730.gilgamesh.cheme.cmu.edu
-1252731.gilgamesh.cheme.cmu.edu
+1266506.gilgamesh.cheme.cmu.edu
+1266507.gilgamesh.cheme.cmu.edu
+1266508.gilgamesh.cheme.cmu.edu
+1266509.gilgamesh.cheme.cmu.edu
+1266510.gilgamesh.cheme.cmu.edu
+1266511.gilgamesh.cheme.cmu.edu
+1266512.gilgamesh.cheme.cmu.edu
+1266513.gilgamesh.cheme.cmu.edu
+1266514.gilgamesh.cheme.cmu.edu
+1266515.gilgamesh.cheme.cmu.edu
+1266516.gilgamesh.cheme.cmu.edu
+1266517.gilgamesh.cheme.cmu.edu
+1266518.gilgamesh.cheme.cmu.edu
+1266519.gilgamesh.cheme.cmu.edu
+1266520.gilgamesh.cheme.cmu.edu
+1266521.gilgamesh.cheme.cmu.edu
 #+end_example
 
 ** Network progress check
-
 #+BEGIN_SRC python
 import os
 import subprocess
 from torque import PBS
+from glob import glob
 
 pbs = PBS()
 pbs.poll()
@@ -2951,77 +2951,35 @@ for job in pbs:
        and job['job_state'] != 'C':
         njobs.append(job['Job_Name'])
 
-home = os.getcwd()
+dirs = glob('networks/db1-50Cu/*/train-log.txt')
 
-networks = ['networks/db1-50Cu']
+print('{0:12s} {1:8s} {2:8s} {3}'.format('Job ID', 'Queue', 'Itr.', 'Energy'))
+for d in dirs:
 
-print('{0:12s}{1:7s} {2}'.format('Job ID', 'Queue', 'Info'))
+    cwd = '/'.join(os.path.abspath(d).split('/')[:-1])
+    label = d.split('/')[-2]
 
-# Layers to use
-for net in networks:
-    tag = net.split('-')[-1]
-
-    wd = os.path.join(home, net)
-    
-    for L in [2, 3, 4]:
-        for N in [20, 30, 40, 50]:
-            layers = (L, N)
-            label = 'l{0}n{1}'.format(layers[0],
-                                      layers[1])
-
-            cwd = os.path.join(wd, label)
-
-            if os.path.exists(cwd + '/train-log.txt'):
-                with open(cwd + '/train-log.txt') as f:
-                    lines = f.readlines()
-                if cwd in njobs:
-                    print '{0}{1:6s} {2:6s}: {3}'.format(label, tag, 'R', lines[-1].split())
-                else:
-                    print '{0}{1:6s} {2:6s}: {3}'.format(label, tag, 'N', lines[-1].split())
-#+END_SRC
-
-#+RESULTS:
-#+begin_example
-Job ID      Queue   Info
-l2n2050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '43.0', 'min.']
-l2n3050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '120.7', 'min.']
-l2n4050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '120.8', 'min.']
-l2n5050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '763.6', 'min.']
-l3n2050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '816.5', 'min.']
-l3n3050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '856.8', 'min.']
-l3n4050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '9.3', 'min.']
-l3n5050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '13.3', 'min.']
-l4n2050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '1351.4', 'min.']
-l4n3050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '448.9', 'min.']
-l4n4050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '1294.9', 'min.']
-l4n5050Cu   N     : ['Try', 'it', 'again', 'or', 'assign', 'a', 'larger', 'value', 'for', '"goal".', '1119.0', 'min.']
-#+end_example
-
-#+BEGIN_SRC python
-import os
-import subprocess
-from glob import glob
-import shutil
-
-home = os.getcwd()
-
-for name in glob('networks/db1-train/*/train-log.txt'):
-    with open(name) as f:
+    with open(d) as f:
         lines = f.readlines()
-    data = lines[-3].split()
-    print 'Convergence', '   energy:', float(data[3]), '   force:', float(data[4])
+
+    if cwd in njobs:
+        info = lines[-1].split()
+        print '{0:12s} {1:8s} {2:8s} {3}'.format(label, 'R', info[0], info[-2])
+    else:
+        info = lines[-5].split()
+        print '{0:12s} {1:8s} {2:8s} {3}'.format(label, 'N', info[0], info[-2])
 #+END_SRC
 
 #+RESULTS:
-: Convergence    energy: 0.007141    force: 0.09472
-: Convergence    energy: 0.006935    force: 0.08564
-: Convergence    energy: 0.006828    force: 0.08457
-: Convergence    energy: 0.006777    force: 0.08224
-: Convergence    energy: 0.006452    force: 0.08
-: Convergence    energy: 0.009387    force: 0.1145
+: Job ID       Queue    Itr.     Energy
+: l3n30        R        31183    8.301e-03
+: l3n35        R        30655    8.719e-03
+: l3n40        R        28711    7.363e-03
+: l3n30i1      R        12466    8.101e-03
+: l3n30i2      R        14870    8.428e-03
+: l3n40i1      R        13592    8.692e-03
 
 * db0-bct trails
-
 ** phase transition pathway
 [[./images/multinn-path1.png]]
 
@@ -3239,17 +3197,18 @@ for k, v in keys.iteritems():
 
 #+RESULTS:
 #+begin_example
-keyword          value           1352 calculations total
+keyword          value           2985 calculations total
 ---------------------------------------------------------
 xc             : PBE
 ca             : 1.5, 1.0, 0.94, 1.26, 1.46, 1.14, 1.02, 1.42, 1.41421356, 1.4, etc...
 encut          : 400.0
 strain         : xyz
-ibz_kpts       : 128, 64, 98, 35, 196, 42, 75, 205, 80, 146, etc...
+ibz_kpts       : 128, 64, 98, 35, 196, 105, 42, 75, 205, 80, etc...
 nbands         : 25, 50, 37, 14
 ediff          : 1e-08
-total_energy   : -8.4153976, -9.8549079, -9.6299781, -40.878829, -8.7195167, -8.9047240, -3.0571126, -10.434188, -9.9068297, -10.112720, etc...
-factor         : 1.75, 1.0, 0.97, 0.94, 0.91, 1.45, 0.88, 0.85, 1.15, 1.12, etc...
+nsw            : 10
+total_energy   : -20.223436, -9.6299781, -39.928924, -2.0309181, -28.139411, -9.7537688, -40.143355, -5.6516627, -3.0178203, -3.6205497, etc...
+factor         : 0.875, 1.0, 2.0, 0.99, 1.075, 0.94, 1.125, 1.35, 0.88, 0.98, etc...
 converged      : True
 config         : 116, 2, 3, 548, 276, 552, 11, 77, 14, 17, etc...
 pathway        : False
@@ -3257,21 +3216,22 @@ kpt1           : 5, 6, 7, 8, 9, 11, 12, 13
 kpt3           : 5, 6, 7, 8, 9, 11, 12, 13
 kpt2           : 5, 6, 7, 8, 9, 11, 12, 13
 bulk           : bct, fcc, bcc
-ibrion         : -1
+ibrion         : 2, -1
 gga            : PS
 path           : /home-rese, /home-rese, /home-rese, /home-rese, /home-rese, /home-rese, /home-rese, /home-rese, /home-rese, /home-rese, etc...
 a              : 2.5, 3.0, 2.76, 2.52, 2.78, 2.54, 2.96063403, 2.8, 2.86, 2.56, etc...
-volume         : 18.4375, 18.125, 35.1, 21.3871537, 25.3211443, 15.0, 63.6313884, 22.4073792, 18.7041171, 20.6317065, etc...
-traj           : 0
-fermi          : 6.0791, 6.5838, 8.0371, 7.9801, 16.0877, 11.889, 6.0098, -0.7019, 6.0859, 8.9644, etc...
+volume         : 18.4375, 17.1875, 62.6934205, 53.2972310, 129.226014, 44.4870761, 219.281467, 15.0, 20.6317065, 20.570824, etc...
+traj           : 0, 1, 2, 3, 4
+isif           : 7
+fermi          : 5.5, 10.125, 11.5371, 13.1686, 11.889, 9.2329, 8.9466, 7.691, 8.4918, 4.0231, etc...
 kppra          : 1728
-calc_time      : 53.75, 84.875, 55.465, 45.528, 92.959, 62.25, 323.755, 53.806, 76.491, 60.319, etc...
+calc_time      : 53.75, 84.875, 63.465, 3279.25, 53.806, 3390.69, 563.678, 65.745, 402.083, 322.791, etc...
 #+end_example
 
 ** phase transition pathway
 [[./images/rxn-path-db1.png]]
 
-#+BEGIN_SRC python :results silent
+#+BEGIN_SRC python
 import numpy as np
 import matplotlib.pyplot as plt
 from jasp import *
@@ -3292,24 +3252,14 @@ for d in db.select('gga=PS'):
 
 plt.figure()
 plt.plot(ca, nrg, 'k-', lw=4)
-plt.annotate('bcc', xy=(ca[0], nrg[0]),
-             xytext=(1.03, -5.248),
-             arrowprops=dict(arrowstyle="->",
-                             connectionstyle="arc3"),
-             size=20,
-            )
-plt.annotate('fcc', xy=(ca[-1], nrg[-1]),
-             xytext=(1.36, -5.225),
-             arrowprops=dict(arrowstyle="->",
-                             connectionstyle="arc3"),
-             size=20,
-            )
 
-form = ['#FF0000', '#FF6600', '#FFFF33',
-        '#006600', '#00FF00', '#00FFFF',
-        '#0000FF', '#9933FF', '#FF0099']
+form = ['#FF0000', '#FFFF33',
+        '#006600', '#00FFFF',
+        '#0000FF', '#FF0099']
 
-for i, name in enumerate(glob('./networks/db1-train/*/trained-parameters.json')):
+for i, name in enumerate(glob('./networks/db1-50Cu/*/parameters-checkpoint.json')):
+    print name
+    '''
     n = name.split('/')[-2]
     calc = BPNeural(json='{0}'.format(name))
 
@@ -3321,13 +3271,22 @@ for i, name in enumerate(glob('./networks/db1-train/*/trained-parameters.json'))
     plt.plot(ca, fit, 'o-',
              label='{0}'.format(n),
              color=form[i])
+
 plt.xlabel('c/a ratio')
 plt.ylabel('Total energy (eV/atom)')
 plt.xlim(ca[0], ca[-1])
 plt.legend(loc='best')
 plt.tight_layout()
-plt.savefig('./images/rxn-path-db1.png')
+plt.savefig('./images/rxn-path-db1.png')'''
 #+END_SRC
+
+#+RESULTS:
+: ./networks/db1-50Cu/l3n30/parameters-checkpoint.json
+: ./networks/db1-50Cu/l3n35/parameters-checkpoint.json
+: ./networks/db1-50Cu/l3n40/parameters-checkpoint.json
+: ./networks/db1-50Cu/l3n30i1/parameters-checkpoint.json
+: ./networks/db1-50Cu/l3n30i2/parameters-checkpoint.json
+: ./networks/db1-50Cu/l3n40i1/parameters-checkpoint.json
 
 ** All bulk structures
 
@@ -3738,4 +3697,123 @@ for cfg in cfgs:
 /home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.95/xc=PBE/gga=PS
 /home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=2.0/xc=PBE/gga=PS
 #+end_example
+
+* Working with Surface calculations
+#+BEGIN_SRC python
+from jasp import *
+from ase.lattice.surface import fcc111_root
+from ase.visualize import view
+import numpy as np
+
+configurations = {0:[[]],
+                  1:[[32]],
+                  2:[[32, 31]],
+                  3:[[28, 31, 32],
+                     [31, 32, 33]],
+                  4:[[29, 30, 33, 34],
+                     [28, 29, 30, 34]],
+                  5:[[28, 29, 30, 33, 34]],
+                  6:[[28, 29, 30, 31, 33, 34]],
+                  7:[[28, 29, 30, 31, 32, 33, 34]]}
+
+basis = [['Cu', 'Pd', 3.634],
+         ['Pd', 'Cu', 3.939]]
+
+for base in basis:
+    b, i, a = base
+    for j, cfgs in configurations.iteritems():
+        for k, cfg in enumerate(cfgs):
+
+            atoms = fcc111_root(b, 7, [1, 1, 5], a=a)
+            for l in cfg:
+                atoms[l].symbol = i
+            wd = 'DFT/surf=fcc/host={0}/lattice={1:1.3f}/cnt={2}/config={3}'.format(b, a, j, k)
+
+            with jasp(wd,
+                      xc='PBE',
+                      gga='PS',
+                      encut=400,
+                      kpts=(5, 5, 1),
+                      ibrion=2,
+                      isif=2,
+                      nsw=40,
+                      ediff=1e-5,
+                      atoms=atoms) as calc:
+                try:
+                    atoms = calc.get_atoms()
+                    nrg = atoms.get_potential_energy()
+                except(VaspQueued, VaspSubmitted):
+                    print wd, 'Queued'
+#+END_SRC
+
+#+BEGIN_SRC python
+from jasp import *
+from ase.lattice.surface import fcc111_root
+from ase.visualize import view
+import numpy as np
+JASPRC['queue.walltime'] = '24:00:00'
+JASPRC['queue.ppn'] = 4
+
+configurations = {0:[[]],
+                  1:[[32]],
+                  2:[[32, 31]],
+                  3:[[28, 31, 32],
+                     [31, 32, 33]],
+                  4:[[29, 30, 33, 34],
+                     [28, 29, 30, 34]],
+                  5:[[28, 29, 30, 33, 34]],
+                  6:[[28, 29, 30, 31, 33, 34]],
+                  7:[[28, 29, 30, 31, 32, 33, 34]]}
+
+with jasp('DFT/surf=fcc/host=Cu/lattice=3.634/cnt=0/config=0') as calc:
+    atoms = calc.get_atoms()
+    cell0 = atoms.get_cell()
+
+cells = []
+for f in np.linspace(0.96, 1.16, 14):
+    delta = np.array([[f, 0, 0],
+                      [0, f, 0],
+                      [0, 0, 1.0]])
+
+    cells.append(np.dot(cell0, delta))
+cells = np.array(cells)
+
+basis = [['Cu', 'Pd', 3.634],
+         ['Pd', 'Cu', 3.939]]
+
+for base in basis:
+    b, i, a = base
+    for j, cfgs in configurations.iteritems():
+        for k, cfg in enumerate(cfgs):
+
+            for cell in cells:
+
+                wd = 'DFT/surf=fcc/host={0}/lattice={1:1.3f}/cnt={2}/config={3}'.format(b, a, j, k)
+
+                with jasp(wd) as calc:
+                    atoms = calc.get_atoms()
+
+                atoms.set_cell(cell, scale_atoms=True)
+
+                pos = atoms.get_positions()
+                lat = np.linalg.norm(pos[5] - pos[12])
+
+                nwd = 'DFT/surf=fcc/host={0}/lattice={1:1.3f}/cnt={2}/config={3}'.format(b, lat, j, k)
+
+                with jasp(nwd,
+                          xc='PBE',
+                          gga='PS',
+                          encut=400,
+                          kpts=(5, 5, 1),
+                          ibrion=-1,
+                          ediff=1e-5,
+                          atoms=atoms) as calc:
+                    try:
+                        calc.get_required_memory()
+                        calc.calculate()
+                    except(VaspSubmitted, VaspQueued):
+                        pass
+#+END_SRC
+
+#+RESULTS:
 

@@ -2,5 +2,5 @@
 from neural.bp import BPNeural
 calc = BPNeural(dblabel='../',
                 label='./',
-                hiddenlayers=(2, 20))
+                hiddenlayers=(3, 30))
 calc.train('../data.db')
