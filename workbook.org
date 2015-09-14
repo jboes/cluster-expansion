@@ -1817,8 +1817,7 @@ form = ['#FF0000', '#FFFF33',
         '#0000FF', '#FF0099']
 
 for i, name in enumerate(glob('./networks/db1-50Cu/*/parameters-checkpoint.json')):
-    print name
-    '''
+
     n = name.split('/')[-2]
     calc = BPNeural(json='{0}'.format(name))
 
@@ -1836,16 +1835,10 @@ plt.ylabel('Total energy (eV/atom)')
 plt.xlim(ca[0], ca[-1])
 plt.legend(loc='best')
 plt.tight_layout()
-plt.savefig('./images/rxn-path-db1.png')'''
+plt.savefig('./images/rxn-path-db1.png')
 #+END_SRC
 
 #+RESULTS:
-: ./networks/db1-50Cu/l3n30/parameters-checkpoint.json
-: ./networks/db1-50Cu/l3n35/parameters-checkpoint.json
-: ./networks/db1-50Cu/l3n40/parameters-checkpoint.json
-: ./networks/db1-50Cu/l3n30i1/parameters-checkpoint.json
-: ./networks/db1-50Cu/l3n30i2/parameters-checkpoint.json
-: ./networks/db1-50Cu/l3n40i1/parameters-checkpoint.json
 
 ** All bulk structures
 #+org_attr: :width 400
@@ -1873,15 +1866,15 @@ for d in db.select(['gga=PS']): #, 'bulk=bct'
     nrg.append(d.total_energy / len(atoms))
     ids.append(d.id)
 
-form = ['#FF0000', '#FF6600', '#FFFF33',
-        '#006600', '#00FF00', '#00FFFF',
-        '#0000FF', '#9933FF', '#FF0099']
+form = ['#FF0000', '#FFFF33',
+        '#006600', '#00FFFF',
+        '#0000FF', '#FF0099']
 
 plt.figure()
 plt.plot([ids[0], ids[-1]], [0, 0], 'k--', lw=2)
 
 err = {}
-for i, name in enumerate(glob('./networks/db1-train/*/trained-parameters.json')):
+for i, name in enumerate(glob('./networks/db1-50Cu/*/parameters-checkpoint.json')):
     n = name.split('/')[-2]
     calc = BPNeural(json='{0}'.format(name))
     err[n] = []
@@ -1986,276 +1979,88 @@ for d in db.select():
 
 db = connect('networks/db1-cln/data.db')
 
-cfgs = [2]
+bulk = ['fcc', 'bcc']
 
 for cfg in cfgs:
-    nrg, img, ids = [], [], []
-    for d in db.select(['config={0}'.format(cfg)]):
+    for b in bulk:
+        nrg, img, ids = [], [], []
+        try:
+            for d in db.select(['config={0}'.format(cfg), 'bulk={0}'.format(b)]):
+                atoms = db.get_atoms(d.id)
+                img.append(atoms)
+                nrg.append(d.total_energy / len(atoms))
+                ids.append(d.volume / len(atoms))
 
-        atoms = db.get_atoms(d.id)
-        img.append(atoms)
-        nrg.append(d.total_energy / len(atoms))
-        ids.append(d.volume / len(atoms))
+            form = ['#FF0000', '#FFFF33',
+                    '#006600', '#00FFFF',
+                    '#0000FF', '#FF0099']
 
-    form = ['#FF0000', '#FFFF33',
-            '#006600', '#00FFFF',
-            '#0000FF', '#FF0099']
+            f, ax = plt.subplots(2, sharex=True)
+            ax[1].plot([ids[0], ids[-1]], [0, 0], 'k--', lw=2)
+            ax[0].plot(ids, nrg, 'o', label='DFT', color='k', mfc='none', ms=6)
 
-    plt.figure()
-    plt.plot([ids[0], ids[-1]], [0, 0], 'k--', lw=2)
+            err = {}
+            for i, name in enumerate(glob('./networks/db1-50Cu/*/parameters-checkpoint.json')):
+                n = name.split('/')[-2]
+                calc = BPNeural(json='{0}'.format(name))
+                err[n] = []
 
-    err = {}
-    for i, name in enumerate(glob('./networks/db1-50Cu/*/trained-parameters.json')):
-        n = name.split('/')[-2]
-        calc = BPNeural(json='{0}'.format(name))
-        err[n] = []
+                dif, E = [], []
+                for j, atoms in enumerate(img):
+                    atoms.set_calculator(calc)
+                    e = atoms.get_potential_energy() / len(atoms)
+                    E.append(e)
+                    difference = e - nrg[j]
+                    if difference >= 0.1:
+                        err[n].append(ids[j])
+                    dif.append(difference)
 
-        dif = []
-        for j, atoms in enumerate(img):
-            atoms.set_calculator(calc)
-            e = atoms.get_potential_energy() / len(atoms)
-            difference = e - nrg[j]
-            if difference >= 0.1:
-                err[n].append(ids[j])
-            dif.append(difference)
-
-        plt.plot(ids, dif, 'o',
-                 label='{0}'.format(n),
-                 color=form[i])
-    plt.xlabel('Volume ($\AA$/atom)')
-    plt.ylabel('Energy difference (eV/atom)')
-    plt.legend(loc='best')
-    plt.tight_layout()
-    plt.savefig('./images/EOS-db1-{0}.png'.format(cfg))
-    plt.show()
+                ax[0].plot(ids, E, '.',
+                           label='{0}'.format(n),
+                           color=form[i], alpha=0.5)
+                ax[1].plot(ids, dif, '.',
+                           label='{0}'.format(n),
+                           color=form[i], alpha=0.5)
+            ax[1].set_xlabel('Volume ($\AA$/atom)')
+            ax[0].set_ylabel('Potential energy (eV/atom)')
+            ax[1].set_ylabel('Energy difference (eV/atom)')
+            ax[0].legend(loc='best', fontsize=8)
+            plt.tight_layout()
+            plt.savefig('./images/EOS-{0}-{1}.png'.format(cfg, b))
+        except:
+            pass
 #+END_SRC
-
-#+RESULTS:
 
 #+BEGIN_SRC python
-import numpy as np
-import matplotlib.pyplot as plt
-from jasp import *
 from neural.bp import BPNeural
 from ase.db import connect
-from ase.io import write
-from glob import glob
-import os
+from ase.visualize import view
 
-frac_eos = np.append(np.linspace(0.85, 1.15, 61), np.linspace(1.2, 2.0, 17))
-select = frac_eos[::6]
-
-db = connect('networks/db1-50Cu/data.db')
-
-cfgs = []
-for d in db.select():
-    if d.config not in cfgs:
-        cfgs.append(d.config)
-
+calc = BPNeural(json='./networks/db1-50Cu/l3n40/parameters-checkpoint.json')
 db = connect('networks/db1-cln/data.db')
 
-cfgs = [2]
+img = []
+for i, d in enumerate(db.select(['config=3', 'bulk=fcc'])):
+    atoms = db.get_atoms(d.id)
+    img.append(atoms)  
+    ref = d.total_energy / len(atoms)
 
-for cfg in cfgs:
-
-    nrg, img, ids = [], [], []
-    for d in db.select(['config={0}'.format(cfg), 'bulk!=bct']):
-        print d.path
-        atoms = db.get_atoms(d.id)
-        img.append(atoms)
-        nrg.append(d.total_energy / d.natoms)
-        ids.append(d.factor)
-
-    nrg = np.array(nrg)
-    form = ['#FF0000', '#FFFF33',
-            '#006600', '#0000FF']
-
-    plt.figure()
-    for i, name in enumerate(glob('./networks/db1-50Cu/*/trained-parameters.json')):
-        n = name.split('/')[-2]
-        calc = BPNeural(json='{0}'.format(name))
-
-        nE = []
-        for j, atoms in enumerate(img):
-            atoms.set_calculator(calc)
-            e = atoms.get_potential_energy() / len(atoms)
-            nE.append(e)
-
-        nE = np.array(nE)
-        plt.scatter(ids, nE -nrg, marker='o',
-                    label='{0}'.format(n),
-                    color=form[i], alpha=0.5)
-    for s in select:
-        plt.plot([s, s], [-0.05, 0.05], 'k-')
-    plt.plot([ids[0], ids[-1]], [0, 0], 'k--', lw=2)
-    plt.xlabel('Factor')
-    plt.ylabel('Energy difference (eV/atom)')
-    plt.ylim(-0.05, 0.05)
-    plt.legend(loc='best')
-    plt.tight_layout()
-    #plt.savefig('./images/EOS-db1-{0}.png'.format(cfg))
-    plt.show()
+    atoms.set_calculator(calc)
+    nrg = atoms.get_potential_energy() / len(atoms)
+    dif = nrg - ref
+    if abs(dif) >= 0.1:
+        print '{0} {1} {2}'.format(nrg, ref, dif)
+        print d.path, d.traj
+        #view(atoms)
 #+END_SRC
 
 #+RESULTS:
-#+begin_example
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.85/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.855/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.86/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.865/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.87/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.875/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.88/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.885/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.89/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.895/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.9/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.905/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.91/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.915/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.92/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.925/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.93/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.935/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.94/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.945/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.95/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.955/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.96/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.965/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.97/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.975/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.98/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.985/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.99/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=0.995/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.0/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.005/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.01/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.015/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.02/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.025/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.03/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.035/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.04/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.045/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.05/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.055/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.06/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.065/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.07/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.075/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.08/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.085/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.09/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.095/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.1/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.105/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.11/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.115/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.12/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.125/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.13/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.135/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.14/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.145/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.15/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.2/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.25/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.3/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.35/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.4/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.45/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.5/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.55/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.6/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.65/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.7/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.75/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.8/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.85/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.9/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=1.95/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=2/strain=xyz/factor=2.0/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.85/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.855/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.86/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.865/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.87/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.875/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.88/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.885/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.89/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.895/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.9/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.905/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.91/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.915/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.92/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.925/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.93/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.935/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.94/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.945/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.95/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.955/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.96/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.965/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.97/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.975/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.98/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.985/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.99/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=0.995/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.0/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.005/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.01/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.015/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.02/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.025/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.03/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.035/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.04/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.045/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.05/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.055/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.06/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.065/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.07/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.075/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.08/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.085/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.09/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.095/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.1/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.105/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.11/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.115/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.12/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.125/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.13/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.135/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.14/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.145/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.15/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.2/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.25/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.3/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.35/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.4/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.45/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.5/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.55/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.6/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.65/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.7/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.75/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.8/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.85/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.9/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=1.95/xc=PBE/gga=PS
-/home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=2.0/xc=PBE/gga=PS
-#+end_example
+: -5.21842918214 -4.566719705 -0.651709477143
+: /home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=3/xc=PBE/gga=None 2
+: -5.19402538259 -4.566840455 -0.627184927588
+: /home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=3/xc=PBE/gga=None 1
+: -5.20790152126 -4.568850525 -0.639050996258
+: /home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=3/xc=PBE/gga=None 0
 
 
 
@@ -2377,8 +2182,13 @@ for base in basis:
                     try:
                         calc.get_required_memory()
                         atoms = calc.get_atoms()
+<<<<<<< HEAD
+                        nrg = calc.get_potential_energy()
+                        print nrg
+=======
                         nrg = atoms.get_potential_energy()
                         cnt += 1
+>>>>>>> 5e1d3351d549219e9abc2262ae37db11bf91baf8
                     except(VaspSubmitted, VaspQueued):
                         pass
 
@@ -2392,7 +2202,7 @@ print cnt
 
 ** surface predictions
 
-#+BEGIN_SRC python :results silent
+#+BEGIN_SRC python
 import numpy as np
 from ase.lattice.surface import fcc111_root
 from ase.visualize import view
@@ -2403,27 +2213,51 @@ from ase.db import connect
 from glob import glob
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
+import os
 
 lattice = np.array([3.631, 3.712, 3.792, 3.872, 3.953])
 site = [[None], [6], [6, 7], [6, 7, 8]]
 
+colr = ['#FF0000', '#FF6600', '#FFFF33',
+        '#006600', '#00FF00', '#00FFFF',
+        '#9933FF', '#FF0099']
+
 shape = ['o', '^', 's', 'p']
 
-calc = BPNeural(json='./networks/db2-surf/l2n20i0/trained-parameters.json')
-for a in lattice:
+patches = []
+
+tol = 1.65e-3
+
+for i, name in enumerate(glob('./networks/db2-surf/*/parameters-checkpoint.json')):
+    n = name.split('/')[-2]
+    log = os.path.join('/'.join(name.split('/')[:-1]), 'train-log.txt')
+
+    with open(log) as f:
+        lines = f.readlines()
+
+    nrg = None
+    try:
+        nrg = float(lines[-1].split()[-2])
+    except(IOError):
+        pass
+
+    if nrg and nrg < tol:
+        calc = BPNeural(json='{0}'.format(name))
+        patches.append(mpatches.Patch(color=colr[i], label='{0}'.format(n)))
+        for a in lattice:
         
-    nrg = []
-    for h, s in enumerate(site):
-        atoms = fcc111_root('Cu', root=3, size=(1, 1, 3), vacuum=6.0, a=a)
-        for si in s:
-            atoms[si].symbol = 'Pd'
+            nrg = []
+            for h, s in enumerate(site):
+                atoms = fcc111_root('Cu', root=3, size=(1, 1, 3), vacuum=6.0, a=a)
+                for si in s:
+                    atoms[si].symbol = 'Pd'
 
-        atoms.set_calculator(calc)
-        nrg = atoms.get_potential_energy() / len(atoms)
+                atoms.set_calculator(calc)
+                nrg = atoms.get_potential_energy() / len(atoms)
 
-        plt.scatter(a, nrg,
-                    color='k',
-                    marker=shape[h])
+                plt.scatter(a, nrg,
+                            color=colr[i],
+                            marker=shape[h])
 
 for i, s in enumerate(shape):
     patches.append(mlines.Line2D([], [], color='k', marker=s, lw=0,
@@ -2431,9 +2265,11 @@ for i, s in enumerate(shape):
 
 plt.xlabel('Lattice constant ($\AA$)')
 plt.ylabel('Total energy (eV/atom)')
-plt.legend(loc='best')
+plt.legend(loc='best', handles=patches)
 plt.tight_layout()
 #plt.savefig('./images/surf-db1.png')
 plt.show()
 #+END_SRC
+
+#+RESULTS:
 
