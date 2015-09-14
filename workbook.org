@@ -27,7 +27,7 @@ with open('vasp.wrap', 'w') as f:
     f.write(script)
 #+END_SRC
 
-*** Binary alloy calculations
+** Binary alloy calculations
 *** fcc
 #+BEGIN_SRC python :results silent
 from os import system, chdir
@@ -520,1309 +520,7 @@ plt.tight_layout()
 plt.savefig('images/diffusion-path.png')
 #+END_SRC
 
-** Database generation
-#+BEGIN_SRC python
-import os, sys
-import jbutil as jb
-from jasp import *
-JASPRC['restart_unconverged'] = False
-
-# First compile a list of out.traj files
-for r, d, f in os.walk('DFT'):
-    if 'OUTCAR' in f and 'XDATCAR' in f:
-        try:
-            with jasp(r) as calc:
-                jb.compile_trajectory(calc)
-        except:
-            print(r)
-            print(sys.exc_info()[0])
-            print('')
-#+END_SRC
-
-#+RESULTS:
-#+begin_example
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=505/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=505/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=505/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=28/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=8/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=8/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=8/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=8/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=9/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=9/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=9/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=9/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=9/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=15/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=40/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=40/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=44/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=46/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=46/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=46/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=46/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=46/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=47/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=47/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=47/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=47/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=47/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=49/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=49/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=49/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=49/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.07/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.075/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.08/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.085/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.09/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.095/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.1/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.105/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.11/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.115/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.12/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.125/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.13/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.135/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.14/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.145/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.15/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.2/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.25/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.3/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.35/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.4/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.45/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.5/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.55/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.6/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.65/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.7/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.75/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=53/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.06/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.065/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.07/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.075/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.08/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.085/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.09/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.095/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.1/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.105/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.11/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.115/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.12/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.125/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.13/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.135/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.14/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.145/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.15/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.2/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.25/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.3/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.35/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.4/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.45/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.5/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.55/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.6/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.65/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.7/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.75/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.045/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.05/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.055/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.06/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.065/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.07/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.075/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.08/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.085/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.09/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.095/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.1/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.105/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.11/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.115/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.12/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.125/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.13/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.135/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.14/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.145/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.15/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.2/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.25/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.3/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.35/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.4/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.45/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.5/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.55/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.6/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.65/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.7/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.75/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=104/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=119/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=63/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=70/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=70/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=70/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-Errors found:
-Converged: False
-
-Errors found:
-8509: |      Your highest band is occupied at some k-points! Unless you are         |
-
-Converged: False
-
-DFT/bulk=fcc/config=74/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=74/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=74/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=74/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=77/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=77/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=77/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=77/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=77/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=78/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=78/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=78/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=78/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=78/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=95/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=95/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=95/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=95/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=95/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.35/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.4/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.45/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.5/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.55/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.6/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.65/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.7/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.75/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=174/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=230/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=230/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=230/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=230/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=230/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=fcc/config=234/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=234/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=fcc/config=234/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-DFT/bulk=bcc/config=603/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-Errors found:
-6329: |      Your highest band is occupied at some k-points! Unless you are         |
-
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=1.4/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=1.45/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=1.5/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=1.55/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=1.6/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=1.65/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=1.7/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=1.75/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=35/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=1.4/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=1.45/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=1.5/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=1.55/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=1.6/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=1.65/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=1.7/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=1.75/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=bcc/config=36/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.35/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.4/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.45/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.5/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.55/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.6/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.65/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.7/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.75/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=37/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.35/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.4/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.45/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.5/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.55/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.6/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.65/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.7/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.75/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=38/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.35/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.4/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.45/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.5/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.55/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.6/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.65/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.7/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.75/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=bcc/config=39/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-DFT/bulk=bcc/config=60/strain=xyz/factor=1.7/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=60/strain=xyz/factor=1.75/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=60/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-DFT/bulk=bcc/config=60/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=60/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=60/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=60/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-DFT/bulk=bcc/config=441/strain=xyz/factor=1.35/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=441/strain=xyz/factor=1.4/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=441/strain=xyz/factor=1.45/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=441/strain=xyz/factor=1.5/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=441/strain=xyz/factor=1.55/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=441/strain=xyz/factor=1.6/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=441/strain=xyz/factor=1.65/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=441/strain=xyz/factor=1.75/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=441/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-DFT/bulk=bcc/config=441/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<type 'exceptions.ValueError'>
-
-Errors found:
-Converged: False
-
-Errors found:
-Converged: False
-
-#+end_example
-
-#+BEGIN_SRC python
-import os, sys
-import jbutil as jb
-from jasp import *
-from ase.io.trajectory import Trajectory
-JASPRC['restart_unconverged'] = False
-
-wd = '~/research/cluster-expansion/networks/db1/data.db'
-
-if os.path.exists(wd):
-    os.unlink(wd)
-
-for r, d, f in os.walk('DFT'):
-    if 'out.traj' in f:
-        try:
-            with jasp(r) as calc:
-                traj = Trajectory('out.traj')
-                n = len(traj)
-                for i, atoms in enumerate(traj):
-
-                    jb.makedb(calc,
-                              atoms=atoms,
-                              dbname=wd,
-                              keys={'traj': int(n-i-1)})
-        except(RuntimeError):
-            os.unlink(os.path.join(r, 'out.traj'))
-        except:
-            print(r)
-            print(sys.exc_info()[0])
-            print('')
-#+END_SRC
-
-#+RESULTS:
-#+begin_example
-DFT/bulk=fcc/config=3/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=15/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=17/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=17/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=17/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=20/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=20/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=20/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=23/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=23/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=26/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=39/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=40/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=40/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=40/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=44/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=44/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=44/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=44/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=44/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=54/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=56/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=104/strain=xyz/factor=1.7/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=104/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=104/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=119/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=119/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=63/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=70/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=70/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=70/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotFinished'>
-
-DFT/bulk=fcc/config=70/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=70/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=276/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=545/strain=xyz/factor=1.035/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=545/strain=xyz/factor=1.04/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=545/strain=xyz/factor=1.055/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=545/strain=xyz/factor=1.065/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=545/strain=xyz/factor=1.09/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=545/strain=xyz/factor=1.1/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=545/strain=xyz/factor=1.2/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=fcc/config=552/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=7/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=15/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=15/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=15/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=18/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=18/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=20/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=23/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=25/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=28/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=48/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=48/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=54/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=56/strain=xyz/factor=1.75/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=56/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=56/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=56/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=105/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=112/strain=xyz/factor=1.85/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=112/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=112/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=112/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=134/strain=xyz/factor=1.9/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=134/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=93/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=95/strain=xyz/factor=1.8/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=95/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=618/strain=xyz/factor=1.95/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-DFT/bulk=bcc/config=618/strain=xyz/factor=2.0/xc=PBE/gga=PS
-<class 'jasp.jasp_exceptions.VaspNotConverged'>
-
-#+end_example
-
-* Ground states
+* ATAT analysis
 ** ground state figure
 #+caption: Ground state hull of CuPd for fcc and bcc phases
 #+label: fig-cupd-gs
@@ -2588,76 +1286,48 @@ Converged: False
 ~/research/cluster-expansion/DFT/bulk=bcc/config=618/strain=xyz/factor=2.0/xc=PBE/gga=PS
 #+end_example
 
-* Analysis tools
+* Database tools
 ** database generation
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results silent
+import os, sys
+import jbutil as jb
 from jasp import *
-import os
 from ase.io.trajectory import Trajectory
-from jbutil import makedb
+JASPRC['restart_unconverged'] = False
 
-for r, d, f in os.walk('DFT'):
-    if f:
+wd = '~/research/cluster-expansion/networks/db2-surf/data.db'
+
+if os.path.exists(wd):
+    os.unlink(wd)
+
+for r, d, f in os.walk('DFT/surf=fcc'):
+    if 'out.traj' in f:
         try:
             with jasp(r) as calc:
-                try:
-                    if not os.path.exists('out.traj'):
-                        xd = xdat2traj('out.traj', calc=calc)
-                        xd.convert()
+                traj = Trajectory('out.traj')
+                n = len(traj)
+                for i, atoms in enumerate(traj):
 
-                    traj = Trajectory('out.traj')
-                    atoms = traj[-1]
-
-                    makedb(calc,
-                           atoms=atoms,
-                           dbname='~/research/cluster-expansion/master.db')
-
-                except(VaspQueued, VaspSubmitted):
-                    print 'In Queue', r
-                except(ValueError):
-                    print 'ValueError', r
-                except(IndexError):
-                    print 'IndexError', r
-        except(VaspNotFinished):
-            print 'VaspNotFinished', r
+                    jb.makedb(calc,
+                              atoms=atoms,
+                              dbname=wd,
+                              keys={'traj': int(n-i-1)})
+        except(RuntimeError):
+            os.unlink(os.path.join(r, 'out.traj'))
+        except:
+            print(r)
+            print(sys.exc_info()[0])
+            print('')
 #+END_SRC
-
-#+RESULTS:
 
 ** Data visualization 
 This is a tool which allows one to visualize the data set via the number of atoms and volume of atoms in the structure.
 
-#+BEGIN_SRC python
-import matplotlib.pyplot as plt
-from ase.db import connect
-import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
-import os
+#+BEGIN_SRC python :results silent
+from jbdb import visualize
 
-db = connect('networks/db1-50Cu/data.db')
-
-data = db.select()
-
-c = 0
-nrg, num, vol = [], [], []
-for d in data:
-    n = len(d.symbols)
-    nrg.append(d.energy / n)
-    num.append(n)
-    vol.append(d.volume)
-    c += 1
-
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.scatter(num, vol, nrg, marker='o')
-plt.title('{0} entires'.format(c))
-ax.set_xlabel('atom count')
-ax.set_ylabel('Volume ($\AA$)')
-ax.set_zlabel('Total energy (eV/atom)')
-plt.show()
+visualize('networks/db2-surf/data.db')
 #+END_SRC
-
-#+RESULTS:
 
 ** database manipulation
 #+BEGIN_SRC python
@@ -2689,28 +1359,7 @@ for cfg in bcc:
 
 #+RESULTS:
 
-** network training
-#+BEGIN_SRC python
-from neural.bp import BPNeural
-import os
-
-os.chdir('networks/db0-PS')
-
-calc = BPNeural()  #  label defines the prefix for a file
-
-calc.train('data.db',
-           energy_goal=1e-5,
-           force_goal=5e-4)
-#+END_SRC
-
-#+RESULTS:
-: Warning: Desired error not necessarily achieved due to precision loss.
-:          Current function value: 298.548133
-:          Iterations: 2764
-:          Function evaluations: 3211
-:          Gradient evaluations: 3200
-
-* Neural
+* Neural tools
 ** GS energy prediction
 #+BEGIN_SRC python
 import numpy as np
@@ -2861,123 +1510,60 @@ plt.show()
 
 ** Network training
 #+BEGIN_SRC python
-import os
-import subprocess
+from jbnn import train
 
-home = os.getcwd()
-
-networks = ['networks/db1-50Cu']
-
-# Layers to use
-for net in networks:
-
-    wd = os.path.join(home, net)
-    
-    for L in [2, 3]:
-        for N in [20, 25, 30, 35, 40]:
-            for i in [0, 1, 2]:
-                layers = (L, N)
-                label = 'l{0}n{1}i{2}'.format(layers[0],
-                                              layers[1],
-                                              i)
-
-                cwd = os.path.join(wd, label)
-
-                os.makedirs(cwd)
-                os.chdir(cwd)
-
-                run_scrpit = """#!/usr/bin/env python
-from neural.bp import BPNeural
-calc = BPNeural(dblabel='../',
-                label='./',
-                hiddenlayers={0})
-calc.train('../data.db')
-""".format(layers)
-
-                cmd = """#!/bin/bash
-#PBS -N {0}
-#PBS -l nodes=1:ppn=1
-#PBS -l walltime=168:00:00
-#PBS -l mem=2GB
-#PBS -joe
-cd $PBS_O_WORKDIR
-./submit.py
-#end""".format(cwd)
-
-                with open('submit.py', 'w') as f:
-                    f.write(run_scrpit)
-                os.chmod('submit.py', 0777)
-
-                with open('submit.sh', 'w') as f:
-                    f.write(cmd)
-
-                subprocess.call(['qsub', 'submit.sh'])
-
-                os.unlink('submit.sh')
+train('networks/db2-surf')
 #+END_SRC
 
 #+RESULTS:
 #+begin_example
-1266506.gilgamesh.cheme.cmu.edu
-1266507.gilgamesh.cheme.cmu.edu
-1266508.gilgamesh.cheme.cmu.edu
-1266509.gilgamesh.cheme.cmu.edu
-1266510.gilgamesh.cheme.cmu.edu
-1266511.gilgamesh.cheme.cmu.edu
-1266512.gilgamesh.cheme.cmu.edu
-1266513.gilgamesh.cheme.cmu.edu
-1266514.gilgamesh.cheme.cmu.edu
-1266515.gilgamesh.cheme.cmu.edu
-1266516.gilgamesh.cheme.cmu.edu
-1266517.gilgamesh.cheme.cmu.edu
-1266518.gilgamesh.cheme.cmu.edu
-1266519.gilgamesh.cheme.cmu.edu
-1266520.gilgamesh.cheme.cmu.edu
-1266521.gilgamesh.cheme.cmu.edu
+1268606.gilgamesh.cheme.cmu.edu
+1268607.gilgamesh.cheme.cmu.edu
+1268608.gilgamesh.cheme.cmu.edu
+1268609.gilgamesh.cheme.cmu.edu
+1268610.gilgamesh.cheme.cmu.edu
+1268611.gilgamesh.cheme.cmu.edu
+1268612.gilgamesh.cheme.cmu.edu
+1268613.gilgamesh.cheme.cmu.edu
+1268614.gilgamesh.cheme.cmu.edu
+1268615.gilgamesh.cheme.cmu.edu
+1268616.gilgamesh.cheme.cmu.edu
+1268617.gilgamesh.cheme.cmu.edu
+1268618.gilgamesh.cheme.cmu.edu
+1268619.gilgamesh.cheme.cmu.edu
+1268620.gilgamesh.cheme.cmu.edu
+1268621.gilgamesh.cheme.cmu.edu
 #+end_example
 
-** Network progress check
+** Neural Network progress check
+Code to check the progress of a neural network currently being run out of a selected directory
+
 #+BEGIN_SRC python
-import os
-import subprocess
-from torque import PBS
-from glob import glob
+from jbnn import NN_progress
 
-pbs = PBS()
-pbs.poll()
-njobs = []
-for job in pbs:
-    if job['Job_Owner'] == 'jboes@gilgamesh.cheme.cmu.edu' \
-       and job['job_state'] != 'C':
-        njobs.append(job['Job_Name'])
-
-dirs = glob('networks/db1-50Cu/*/train-log.txt')
-
-print('{0:12s} {1:8s} {2:8s} {3}'.format('Job ID', 'Queue', 'Itr.', 'Energy'))
-for d in dirs:
-
-    cwd = '/'.join(os.path.abspath(d).split('/')[:-1])
-    label = d.split('/')[-2]
-
-    with open(d) as f:
-        lines = f.readlines()
-
-    if cwd in njobs:
-        info = lines[-1].split()
-        print '{0:12s} {1:8s} {2:8s} {3}'.format(label, 'R', info[0], info[-2])
-    else:
-        info = lines[-5].split()
-        print '{0:12s} {1:8s} {2:8s} {3}'.format(label, 'N', info[0], info[-2])
+NN_progress(directory='db2-surf')
 #+END_SRC
 
 #+RESULTS:
-: Job ID       Queue    Itr.     Energy
-: l3n30        R        31183    8.301e-03
-: l3n35        R        30655    8.719e-03
-: l3n40        R        28711    7.363e-03
-: l3n30i1      R        12466    8.101e-03
-: l3n30i2      R        14870    8.428e-03
-: l3n40i1      R        13592    8.692e-03
+#+begin_example
+Job ID       Queue    Itr.     Energy
+l2n20i0      R        4457     2.548e-03
+l2n25i1      R        3547     4.936e-03
+l2n30i0      R        4736     2.482e-03
+l2n30i1      R        4240     2.679e-03
+l2n35i0      R        4100     5.392e-03
+l2n35i1      R        4058     3.700e-03
+l2n40i0      R        3836     3.677e-03
+l2n40i1      R        3829     2.615e-03
+l3n25i0      R        3557     1.650e-03
+l3n25i1      R        3578     1.728e-03
+l3n30i0      R        3901     1.346e-03
+l3n30i1      R        3927     1.689e-03
+l3n35i0      R        3821     1.942e-03
+l3n35i1      R        3729     1.523e-03
+l3n40i0      R        3526     1.669e-03
+l3n40i1      R        3519     1.709e-03
+#+end_example
 
 * db0-bct trails
 ** phase transition pathway
@@ -3159,40 +1745,12 @@ plt.show()
 #+END_SRC
 
 * db1-train trails
+Section containing code used to recreate 
+
 #+BEGIN_SRC python
-from ase.db import connect
+from jbdb import get_keys
 
-# Connect to the ASE database
-db = connect('./networks/db1-50Cu/data.db')
-
-# Selects all calculations in the database
-data = db.select([])
-
-# Create a dictionary of all the keys
-keys, cnt = {}, 0
-for entry in data:
-    cnt += 1
-    for k, v in entry.key_value_pairs.iteritems():
-
-        # Add all possible values to each dictionary
-        if k in keys:
-            keys[k] += [v]
-        else:
-            keys[k] = [v]
-
-# Iterate through each key and print the values
-print('{0:15s}  {1:15s} {2} calculations total'.format('keyword', 'value', cnt))
-print('---------------------------------------------------------')
-for k, v in keys.iteritems():
-    vals = list(set(v))
-
-    # Only print the first 10 values
-    if len(vals) <= 10:
-        val = ", ".join(str(e) for e in vals)
-        print('{0:15s}: {1}'.format(k, val))
-    else:
-        val = ", ".join(str(e)[:10] for e in vals[:10])
-        print('{0:15s}: {1}, etc...'.format(k, val))
+get_keys('./networks/db1-50Cu/data.db')
 #+END_SRC
 
 #+RESULTS:
@@ -3229,6 +1787,7 @@ calc_time      : 53.75, 84.875, 63.465, 3279.25, 53.806, 3390.69, 563.678, 65.74
 #+end_example
 
 ** phase transition pathway
+#+org_attr: :width 400
 [[./images/rxn-path-db1.png]]
 
 #+BEGIN_SRC python
@@ -3289,9 +1848,10 @@ plt.savefig('./images/rxn-path-db1.png')'''
 : ./networks/db1-50Cu/l3n40i1/parameters-checkpoint.json
 
 ** All bulk structures
-
+#+org_attr: :width 400
 [[./images/all-db1.png]]
 
+#+org_attr: :width 400
 [[./images/bct-db1.png]]
 
 #+BEGIN_SRC python :results silent
@@ -3404,7 +1964,6 @@ plt.tight_layout()
 plt.savefig('./images/surf-db1.png')
 #plt.show()
 #+END_SRC
-
 
 ** EOS reproduction
 
@@ -3698,7 +2257,11 @@ for cfg in cfgs:
 /home-research/jboes/research/cluster-expansion/DFT/bulk=bcc/config=2/strain=xyz/factor=2.0/xc=PBE/gga=PS
 #+end_example
 
-* Working with Surface calculations
+
+
+* Surface calculations
+
+** Relaxations of root 7 slab
 #+BEGIN_SRC python
 from jasp import *
 from ase.lattice.surface import fcc111_root
@@ -3746,6 +2309,7 @@ for base in basis:
                     print wd, 'Queued'
 #+END_SRC
 
+** xy strain effect surface
 #+BEGIN_SRC python
 from jasp import *
 from ase.lattice.surface import fcc111_root
@@ -3781,7 +2345,9 @@ cells = np.array(cells)
 basis = [['Cu', 'Pd', 3.634],
          ['Pd', 'Cu', 3.939]]
 
+cnt = 0
 for base in basis:
+    print base
     b, i, a = base
     for j, cfgs in configurations.iteritems():
         for k, cfg in enumerate(cfgs):
@@ -3810,10 +2376,64 @@ for base in basis:
                           atoms=atoms) as calc:
                     try:
                         calc.get_required_memory()
-                        calc.calculate()
+                        atoms = calc.get_atoms()
+                        nrg = atoms.get_potential_energy()
+                        cnt += 1
                     except(VaspSubmitted, VaspQueued):
                         pass
+
+print cnt
 #+END_SRC
 
 #+RESULTS:
+: ['Cu', 'Pd', 3.634]
+: ['Pd', 'Cu', 3.939]
+: 280
+
+** surface predictions
+
+#+BEGIN_SRC python :results silent
+import numpy as np
+from ase.lattice.surface import fcc111_root
+from ase.visualize import view
+import matplotlib.pyplot as plt
+from jasp import *
+from neural.bp import BPNeural
+from ase.db import connect
+from glob import glob
+import matplotlib.patches as mpatches
+import matplotlib.lines as mlines
+
+lattice = np.array([3.631, 3.712, 3.792, 3.872, 3.953])
+site = [[None], [6], [6, 7], [6, 7, 8]]
+
+shape = ['o', '^', 's', 'p']
+
+calc = BPNeural(json='./networks/db2-surf/l2n20i0/trained-parameters.json')
+for a in lattice:
+        
+    nrg = []
+    for h, s in enumerate(site):
+        atoms = fcc111_root('Cu', root=3, size=(1, 1, 3), vacuum=6.0, a=a)
+        for si in s:
+            atoms[si].symbol = 'Pd'
+
+        atoms.set_calculator(calc)
+        nrg = atoms.get_potential_energy() / len(atoms)
+
+        plt.scatter(a, nrg,
+                    color='k',
+                    marker=shape[h])
+
+for i, s in enumerate(shape):
+    patches.append(mlines.Line2D([], [], color='k', marker=s, lw=0,
+                          markersize=10, label='{0}Pd'.format(i)))
+
+plt.xlabel('Lattice constant ($\AA$)')
+plt.ylabel('Total energy (eV/atom)')
+plt.legend(loc='best')
+plt.tight_layout()
+#plt.savefig('./images/surf-db1.png')
+plt.show()
+#+END_SRC
 
