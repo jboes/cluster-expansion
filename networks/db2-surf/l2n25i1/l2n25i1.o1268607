@@ -1,0 +1,28 @@
+Traceback (most recent call last):
+  File "./submit.py", line 6, in <module>
+    calc.train('../data.db')
+  File "/home-research/jboes/python/neural/bp/__init__.py", line 745, in train
+    gtol=10. ** -500.)
+  File "/opt/kitchingroup/CANOPY/Canopy_64bit/User/lib/python2.7/site-packages/scipy/optimize/optimize.py", line 777, in fmin_bfgs
+    res = _minimize_bfgs(f, x0, args, fprime, callback=callback, **opts)
+  File "/opt/kitchingroup/CANOPY/Canopy_64bit/User/lib/python2.7/site-packages/scipy/optimize/optimize.py", line 850, in _minimize_bfgs
+    old_fval, old_old_fval)
+  File "/opt/kitchingroup/CANOPY/Canopy_64bit/User/lib/python2.7/site-packages/scipy/optimize/optimize.py", line 685, in _line_search_wolfe12
+    **kwargs)
+  File "/opt/kitchingroup/CANOPY/Canopy_64bit/User/lib/python2.7/site-packages/scipy/optimize/linesearch.py", line 96, in line_search_wolfe1
+    c1=c1, c2=c2, amax=amax, amin=amin, xtol=xtol)
+  File "/opt/kitchingroup/CANOPY/Canopy_64bit/User/lib/python2.7/site-packages/scipy/optimize/linesearch.py", line 167, in scalar_search_wolfe1
+    phi1 = phi(stp)
+  File "/opt/kitchingroup/CANOPY/Canopy_64bit/User/lib/python2.7/site-packages/scipy/optimize/linesearch.py", line 82, in phi
+    return f(xk + s*pk, *args)
+  File "/opt/kitchingroup/CANOPY/Canopy_64bit/User/lib/python2.7/site-packages/scipy/optimize/optimize.py", line 281, in function_wrapper
+    return function(*(wrapper_args + args))
+  File "/home-research/jboes/python/neural/bp/__init__.py", line 1222, in f
+    _args=task_args, len_of_variables=len(variables))
+  File "/home-research/jboes/python/neural/bp/__init__.py", line 2549, in share_cost_function_task_between_cores
+    processes[x].start()
+  File "/opt/kitchingroup/CANOPY/appdata/canopy-1.5.1.2730.rh5-x86_64/lib/python2.7/multiprocessing/process.py", line 130, in start
+    self._popen = Popen(self)
+  File "/opt/kitchingroup/CANOPY/appdata/canopy-1.5.1.2730.rh5-x86_64/lib/python2.7/multiprocessing/forking.py", line 121, in __init__
+    self.pid = os.fork()
+OSError: [Errno 12] Cannot allocate memory
