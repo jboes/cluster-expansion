@@ -2182,13 +2182,8 @@ for base in basis:
                     try:
                         calc.get_required_memory()
                         atoms = calc.get_atoms()
-<<<<<<< HEAD
-                        nrg = calc.get_potential_energy()
-                        print nrg
-=======
                         nrg = atoms.get_potential_energy()
                         cnt += 1
->>>>>>> 5e1d3351d549219e9abc2262ae37db11bf91baf8
                     except(VaspSubmitted, VaspQueued):
                         pass
 
@@ -2202,9 +2197,9 @@ print cnt
 
 ** surface predictions
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results silent
 import numpy as np
-from ase.lattice.surface import fcc111_root
+from ase.lattice.surface import fcc111_root, fcc111
 from ase.visualize import view
 import matplotlib.pyplot as plt
 from jasp import *
@@ -2215,8 +2210,10 @@ import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import os
 
-lattice = np.array([3.631, 3.712, 3.792, 3.872, 3.953])
-site = [[None], [6], [6, 7], [6, 7, 8]]
+lattice = np.linspace(3.634, 3.939, 5)
+site = [[None], [12], [12, 13], [12, 13, 14]]
+site = [[213, 214, 219, 220, 221, 226, 227, 164, 165, 195]]
+site = [[None]]
 
 colr = ['#FF0000', '#FF6600', '#FFFF33',
         '#006600', '#00FF00', '#00FFFF',
@@ -2226,7 +2223,8 @@ shape = ['o', '^', 's', 'p']
 
 patches = []
 
-tol = 1.65e-3
+tol = 1.67e-3
+#tol = 1.65e-3
 
 for i, name in enumerate(glob('./networks/db2-surf/*/parameters-checkpoint.json')):
     n = name.split('/')[-2]
@@ -2248,10 +2246,12 @@ for i, name in enumerate(glob('./networks/db2-surf/*/parameters-checkpoint.json'
         
             nrg = []
             for h, s in enumerate(site):
-                atoms = fcc111_root('Cu', root=3, size=(1, 1, 3), vacuum=6.0, a=a)
+                atoms = fcc111_root('Pd', root=3, size=(1, 1, 5), vacuum=6.0, a=a)
+                #atoms = fcc111('Pd', size=(2, 2, 5), vacuum=6.0, a=a)
+
                 for si in s:
                     atoms[si].symbol = 'Pd'
-
+                #view(atoms)
                 atoms.set_calculator(calc)
                 nrg = atoms.get_potential_energy() / len(atoms)
 
@@ -2259,6 +2259,7 @@ for i, name in enumerate(glob('./networks/db2-surf/*/parameters-checkpoint.json'
                             color=colr[i],
                             marker=shape[h])
 
+view(atoms)
 for i, s in enumerate(shape):
     patches.append(mlines.Line2D([], [], color='k', marker=s, lw=0,
                           markersize=10, label='{0}Pd'.format(i)))
@@ -2271,7 +2272,13 @@ plt.tight_layout()
 plt.show()
 #+END_SRC
 
-#+RESULTS:
+#+BEGIN_SRC python :results silent
+from ase.lattice.surface import fcc111_root, fcc111
+from ase.visualize import view
+
+atoms = fcc111('Cu', size=(7, 7, 5), vacuum=6.0)
+view(atoms)
+#+END_SRC
 
 ** training set residuals
 #+attr_org: :width 500
