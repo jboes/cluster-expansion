@@ -1,0 +1,17 @@
+Neural: BP training started. 2015-09-11T14:56:51
+Parallel processing over 48 cores.
+
+Training on 2985 images.
+Hashing images...
+ 2985 unique images after hashing.
+ ...hashing completed. 0.1 min.
+2 unique elements included:  Pd, Cu
+Hidden layer structure:
+ Pd: (2, 20)
+ Cu: (2, 20)
+Symmetry functions for each element:
+ Pd: 20
+ Cu: 20
+Initializing with random weights.
+Initializing with random scalings.
+Calculating neighborlist for each atom...
