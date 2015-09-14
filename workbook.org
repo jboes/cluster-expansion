@@ -2277,7 +2277,7 @@ plt.show()
 #+attr_org: :width 500
 [[./images/db2-surf.png]]
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results silent
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 from ase.db import connect
@@ -2319,7 +2319,7 @@ ax0.set_xlabel('Calculation ID')
 ax0.set_ylabel('Energy residual error (eV/atom)')
 
 ax1 = plt.subplot(gs[1])
-n, bins, patches = ax1.hist(dif, 50,
+n, bins, patches = ax1.hist(dif, 20,
                             range=(-max(abs(dif))-0.1*max(abs(dif)),
                                    max(abs(dif))+0.1*max(abs(dif))),
                             normed=True,
@@ -2346,6 +2346,3 @@ plt.subplots_adjust(left=0.11,
 
 plt.savefig('./images/db2-surf.png')
 #+END_SRC
-
-#+RESULTS:
-
