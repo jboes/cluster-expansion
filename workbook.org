@@ -2274,6 +2274,9 @@ plt.show()
 #+RESULTS:
 
 ** training set residuals
+#+attr_org: :width 500
+[[./images/db2-surf.png]]
+
 #+BEGIN_SRC python
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
@@ -2309,27 +2312,28 @@ gs = gridspec.GridSpec(1, 2, width_ratios=[2, 1])
 ax0 = plt.subplot(gs[0])
 ax0.scatter(ids, dif, marker='o', color='k', alpha=0.5)
 ax0.plot([0, len(dif)-1], [0, 0], 'r--', lw=2)
-ax0.text(100, 0.145, 'RMSE: {0:1.3f}'.format(RMSE), fontsize=15, va='top', ha='left')
+ax0.text(len(dif)*0.05, max(abs(dif)), 'RMSE: {0:1.3f}'.format(RMSE), fontsize=15, va='top', ha='left')
 ax0.set_xlim(0, len(dif)-1)
-ax0.set_ylim(-0.15, 0.15)
+ax0.set_ylim(-max(abs(dif))-0.1*max(abs(dif)), max(abs(dif))+0.1*max(abs(dif)))
 ax0.set_xlabel('Calculation ID')
 ax0.set_ylabel('Energy residual error (eV/atom)')
 
 ax1 = plt.subplot(gs[1])
-n, bins, patches = ax1.hist(dif, 200,
-                            range=(-0.5, 0.5),
+n, bins, patches = ax1.hist(dif, 50,
+                            range=(-max(abs(dif))-0.1*max(abs(dif)),
+                                   max(abs(dif))+0.1*max(abs(dif))),
                             normed=True,
                             facecolor='k',
                             alpha=0.5,
                             orientation='horizontal')
 
 y = mlab.normpdf(bins, mu, sigma)
-ax1.text(1, 0.145, '$\mu$: {0:1.3f}'.format(mu), fontsize=15, va='top', ha='left')
-ax1.text(1, 0.13, '$\sigma$: {0:1.3f}'.format(sigma), fontsize=15, va='top', ha='left')
+ax1.text(1, max(abs(dif)), '$\mu$: {0:1.3f}'.format(mu), fontsize=15, va='top', ha='left')
+ax1.text(1, max(abs(dif))*0.9, '$\sigma$: {0:1.3f}'.format(sigma), fontsize=15, va='top', ha='left')
 ax1.plot(y, bins, 'k--', lw=2)
 ax1.plot([0, 35], [0, 0], 'r--', lw=2)
 ax1.set_xlabel('Probability density')
-ax1.set_ylim(-0.15, 0.15)
+ax1.set_ylim(-max(abs(dif))-0.1*max(abs(dif)), max(abs(dif))+0.1*max(abs(dif)))
 ax1.set_xlim(0, 35)
 ax1.set_yticklabels(())
 
@@ -2340,5 +2344,8 @@ plt.subplots_adjust(left=0.11,
                     wspace=0.02,
                     hspace=0.2)
 
-plt.savefig('./images/db5-train.png')
+plt.savefig('./images/db2-surf.png')
 #+END_SRC
+
+#+RESULTS:
+
