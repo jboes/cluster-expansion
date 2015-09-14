@@ -1547,22 +1547,22 @@ NN_progress(directory='db2-surf')
 #+RESULTS:
 #+begin_example
 Job ID       Queue    Itr.     Energy
-l2n20i0      R        4457     2.548e-03
-l2n25i1      R        3547     4.936e-03
-l2n30i0      R        4736     2.482e-03
-l2n30i1      R        4240     2.679e-03
-l2n35i0      R        4100     5.392e-03
-l2n35i1      R        4058     3.700e-03
-l2n40i0      R        3836     3.677e-03
-l2n40i1      R        3829     2.615e-03
-l3n25i0      R        3557     1.650e-03
-l3n25i1      R        3578     1.728e-03
-l3n30i0      R        3901     1.346e-03
-l3n30i1      R        3927     1.689e-03
-l3n35i0      R        3821     1.942e-03
-l3n35i1      R        3729     1.523e-03
-l3n40i0      R        3526     1.669e-03
-l3n40i1      R        3519     1.709e-03
+l2n20i0      R        4557     2.604e-03
+l2n25i1      N        3576     5.001e-03
+l2n30i0      R        4852     2.483e-03
+l2n30i1      R        4319     2.669e-03
+l2n35i0      R        4181     5.401e-03
+l2n35i1      R        4134     3.715e-03
+l2n40i0      R        3914     3.739e-03
+l2n40i1      R        3892     2.625e-03
+l3n25i0      R        3615     1.658e-03
+l3n25i1      R        3630     1.730e-03
+l3n30i0      R        3964     1.350e-03
+l3n30i1      R        3975     1.696e-03
+l3n35i0      R        Saving   checkpoint
+l3n35i1      R        3773     1.522e-03
+l3n40i0      R        3596     1.674e-03
+l3n40i1      R        3586     1.699e-03
 #+end_example
 
 * db0-bct trails
@@ -2273,3 +2273,72 @@ plt.show()
 
 #+RESULTS:
 
+** training set residuals
+#+BEGIN_SRC python
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
+from ase.db import connect
+from neural.bp import BPNeural
+import numpy as np
+from glob import glob
+from scipy.stats import norm
+from matplotlib import gridspec
+
+db = connect('networks/db2-surf/data.db')
+
+img, nrg, ids = [], [], []
+for d in db.select():
+    img.append(db.get_atoms(d.id))
+    nrg.append(d.total_energy / len(d.symbols))
+    ids.append(d.id)
+
+calc = BPNeural(json='networks/db2-surf/l3n30i0/parameters-checkpoint.json')
+
+fit = []
+for atoms in img:
+    atoms.set_calculator(calc)
+    fit.append(atoms.get_potential_energy() / len(atoms))
+dif = np.array(fit) - np.array(nrg)
+
+RMSE = np.sqrt(sum(dif ** 2) / len(dif))
+
+(mu, sigma) = norm.fit(dif)
+
+fig = plt.figure(figsize=(8, 6)) 
+gs = gridspec.GridSpec(1, 2, width_ratios=[2, 1])
+ax0 = plt.subplot(gs[0])
+ax0.scatter(ids, dif, marker='o', color='k', alpha=0.5)
+ax0.plot([0, len(dif)-1], [0, 0], 'r--', lw=2)
+ax0.text(100, 0.145, 'RMSE: {0:1.3f}'.format(RMSE), fontsize=15, va='top', ha='left')
+ax0.set_xlim(0, len(dif)-1)
+ax0.set_ylim(-0.15, 0.15)
+ax0.set_xlabel('Calculation ID')
+ax0.set_ylabel('Energy residual error (eV/atom)')
+
+ax1 = plt.subplot(gs[1])
+n, bins, patches = ax1.hist(dif, 200,
+                            range=(-0.5, 0.5),
+                            normed=True,
+                            facecolor='k',
+                            alpha=0.5,
+                            orientation='horizontal')
+
+y = mlab.normpdf(bins, mu, sigma)
+ax1.text(1, 0.145, '$\mu$: {0:1.3f}'.format(mu), fontsize=15, va='top', ha='left')
+ax1.text(1, 0.13, '$\sigma$: {0:1.3f}'.format(sigma), fontsize=15, va='top', ha='left')
+ax1.plot(y, bins, 'k--', lw=2)
+ax1.plot([0, 35], [0, 0], 'r--', lw=2)
+ax1.set_xlabel('Probability density')
+ax1.set_ylim(-0.15, 0.15)
+ax1.set_xlim(0, 35)
+ax1.set_yticklabels(())
+
+plt.subplots_adjust(left=0.11,
+                    bottom=0.09,
+                    right=0.97,
+                    top=0.97,
+                    wspace=0.02,
+                    hspace=0.2)
+
+plt.savefig('./images/db5-train.png')
+#+END_SRC
