@@ -1547,22 +1547,22 @@ NN_progress(directory='db2-surf')
 #+RESULTS:
 #+begin_example
 Job ID       Queue    Itr.     Energy
-l2n20i0      R        4557     2.604e-03
+l2n20i0      N        5455     2.604e-03
 l2n25i1      N        3576     5.001e-03
-l2n30i0      R        4852     2.483e-03
-l2n30i1      R        4319     2.669e-03
-l2n35i0      R        4181     5.401e-03
-l2n35i1      R        4134     3.715e-03
-l2n40i0      R        3914     3.739e-03
-l2n40i1      R        3892     2.625e-03
-l3n25i0      R        3615     1.658e-03
-l3n25i1      R        3630     1.730e-03
-l3n30i0      R        3964     1.350e-03
-l3n30i1      R        3975     1.696e-03
-l3n35i0      R        Saving   checkpoint
-l3n35i1      R        3773     1.522e-03
-l3n40i0      R        3596     1.674e-03
-l3n40i1      R        3586     1.699e-03
+l2n30i0      N        6121     2.475e-03
+l2n30i1      N        5206     2.646e-03
+l2n35i0      N        5087     5.375e-03
+l2n35i1      N        4996     3.674e-03
+l2n40i0      N        4805     3.487e-03
+l2n40i1      N        4582     2.625e-03
+l3n25i0      N        4271     1.609e-03
+l3n25i1      N        4198     1.732e-03
+l3n30i0      N        4669     1.398e-03
+l3n30i1      N        4523     1.681e-03
+l3n35i0      N        4792     1.843e-03
+l3n35i1      N        4248     1.471e-03
+l3n40i0      N        4393     1.575e-03
+l3n40i1      N        4336     1.679e-03
 #+end_example
 
 * db0-bct trails
@@ -2898,15 +2898,7 @@ site = [[None], [12], [12, 13], [12, 13, 14]]
 site = [[213, 214, 219, 220, 221, 226, 227, 164, 165, 195]]
 site = [[None]]
 
-colr = ['#FF0000', '#FF6600', '#FFFF33',
-        '#006600', '#00FF00', '#00FFFF',
-        '#9933FF', '#FF0099']
-
-shape = ['o', '^', 's', 'p']
- [[atoms = fcc111('Cu', size=(5, 5, 5), vacuum=6.0, a=a)]] 
-patches = []
-
-tol = 1.67e-3
+tol = 1.6e-3
 #tol = 1.65e-3
 
 for i, name in enumerate(glob('./networks/db2-surf/*/parameters-checkpoint.json')):
@@ -2918,13 +2910,13 @@ for i, name in enumerate(glob('./networks/db2-surf/*/parameters-checkpoint.json'
 
     nrg = None
     try:
-        nrg = float(lines[-1].split()[-2])
-    except(IOError):
+        nrg = float(lines[-5].split()[-2])
+    except(ValueError):
         pass
+
 
     if nrg and nrg < tol:
         calc = BPNeural(json='{0}'.format(name))
-        patches.append(mpatches.Patch(color=colr[i], label='{0}'.format(n)))
         for a in lattice:
         
             nrg = []
@@ -2939,16 +2931,13 @@ for i, name in enumerate(glob('./networks/db2-surf/*/parameters-checkpoint.json'
                 nrg = atoms.get_potential_energy() / len(atoms)
 
                 plt.scatter(a, nrg,
-                            color=colr[i],
-                            marker=shape[h])
+                            marker=shape[h],
+                            label='{0}'.format(n))
 
-for i, s in enumerate(shape):
-    patches.append(mlines.Line2D([], [], color='k', marker=s, lw=0,
-                          markersize=10, label='{0}Pd'.format(i)))
 
 plt.xlabel('Lattice constant ($\AA$)')
 plt.ylabel('Total energy (eV/atom)')
-plt.legend(loc='best', handles=patches)
+plt.legend(loc='best')
 plt.tight_layout()
 #plt.savefig('./images/surf-db1.png')
 plt.show()
