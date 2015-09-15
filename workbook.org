@@ -2134,66 +2134,749 @@ configurations = {0:[[]],
                   6:[[28, 29, 30, 31, 33, 34]],
                   7:[[28, 29, 30, 31, 32, 33, 34]]}
 
-with jasp('DFT/surf=fcc/host=Cu/lattice=3.634/cnt=0/config=0') as calc:
-    atoms = calc.get_atoms()
-    cell0 = atoms.get_cell()
+basis = [['Cu', 'Pd', 3.634, np.linspace(0.96, 1.16, 14)],
+         ['Pd', 'Cu', 3.939, np.linspace(0.84, 1.04, 14)]]
 
-cells = []
-for f in np.linspace(0.96, 1.16, 14):
-    delta = np.array([[f, 0, 0],
-                      [0, f, 0],
-                      [0, 0, 1.0]])
+cells = {}
+for b, i, a, fac in basis:
+    with jasp('DFT/surf=fcc/host={0}/lattice={1:1.3f}/cnt=0/config=0'.format(b, a)) as calc:
+        atoms = calc.get_atoms()
+        cell0 = atoms.get_cell()
 
-    cells.append(np.dot(cell0, delta))
-cells = np.array(cells)
+    pos = atoms.get_positions()
+    z = pos[12][-1] - pos[5][-1]
+    cells['{0:1.3f}'.format(z)] = []
+    for f in fac:
+        delta = np.array([[f, 0, 0],
+                          [0, f, 0],
+                          [0, 0, 1.0]])
 
-basis = [['Cu', 'Pd', 3.634],
-         ['Pd', 'Cu', 3.939]]
+        cells['{0:1.3f}'.format(z)].append(np.dot(cell0, delta))
+    cells['{0:1.3f}'.format(z)] = np.array(cells['{0:1.3f}'.format(z)])
 
-cnt = 0
-for base in basis:
-    print base
-    b, i, a = base
+for b, i, a, fac in basis:
+
     for j, cfgs in configurations.iteritems():
         for k, cfg in enumerate(cfgs):
 
-            for cell in cells:
+            for z, cell in cells.iteritems():
 
-                wd = 'DFT/surf=fcc/host={0}/lattice={1:1.3f}/cnt={2}/config={3}'.format(b, a, j, k)
+                for c in cell:
 
-                with jasp(wd) as calc:
-                    atoms = calc.get_atoms()
+                    wd = 'DFT/surf=fcc/host={0}/lattice={1:1.3f}/cnt={2}/config={3}'.format(b, a, j, k)
 
-                atoms.set_cell(cell, scale_atoms=True)
-
-                pos = atoms.get_positions()
-                lat = np.linalg.norm(pos[5] - pos[12])
-
-                nwd = 'DFT/surf=fcc/host={0}/lattice={1:1.3f}/cnt={2}/config={3}'.format(b, lat, j, k)
-
-                with jasp(nwd,
-                          xc='PBE',
-                          gga='PS',
-                          encut=400,
-                          kpts=(5, 5, 1),
-                          ibrion=-1,
-                          ediff=1e-5,
-                          atoms=atoms) as calc:
-                    try:
-                        calc.get_required_memory()
+                    with jasp(wd) as calc:
                         atoms = calc.get_atoms()
-                        nrg = atoms.get_potential_energy()
-                        cnt += 1
-                    except(VaspSubmitted, VaspQueued):
-                        pass
 
-print cnt
+                    atoms.set_cell(c, scale_atoms=True)
+
+                    pos = atoms.get_positions()
+                    lat = np.linalg.norm(pos[5] - pos[12])
+
+                    nwd = 'DFT/surf=fcc/host={0}/z={1}/xy={2:1.3f}/cnt={3}/config={4}'.format(b, z, lat, j, k)
+                    print nwd
+
+                    with jasp(nwd,
+                              xc='PBE',
+                              gga='PS',
+                              encut=400,
+                              kpts=(5, 5, 1),
+                              ibrion=-1,
+                              ediff=1e-5,
+                              atoms=atoms) as calc:
+                        try:
+                            calc.get_required_memory()
+                            atoms = calc.get_atoms()
+                            nrg = atoms.get_potential_energy()
+                        except(VaspSubmitted, VaspQueued):
+                            pass
 #+END_SRC
 
 #+RESULTS:
-: ['Cu', 'Pd', 3.634]
-: ['Pd', 'Cu', 3.939]
-: 280
+#+begin_example
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.466/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.504/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.543/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.582/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.622/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.662/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.702/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.742/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.782/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.823/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.864/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.905/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.946/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.987/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.538/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.575/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.612/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.649/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.686/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.724/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.762/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.800/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.838/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.876/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.915/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.953/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.992/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=4.031/cnt=0/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.466/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.504/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.543/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.582/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.622/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.662/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.702/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.742/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.782/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.823/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.864/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.905/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.946/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.987/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.538/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.575/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.612/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.649/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.686/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.724/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.762/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.800/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.838/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.876/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.915/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.953/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.992/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=4.031/cnt=1/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.466/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.504/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.543/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.582/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.622/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.662/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.702/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.742/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.782/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.823/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.864/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.905/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.946/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.987/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.538/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.575/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.612/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.649/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.686/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.724/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.762/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.800/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.838/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.876/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.915/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.953/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.992/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=4.031/cnt=2/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.466/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.504/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.543/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.582/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.622/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.662/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.702/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.742/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.782/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.823/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.864/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.905/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.946/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.987/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.538/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.575/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.612/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.649/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.686/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.724/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.762/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.800/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.838/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.876/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.915/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.953/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.992/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=4.031/cnt=3/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.466/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.504/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.543/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.582/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.622/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.662/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.702/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.742/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.782/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.823/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.864/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.905/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.946/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.987/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.538/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.575/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.612/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.649/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.686/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.724/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.762/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.800/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.838/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.876/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.915/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.953/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.992/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=4.031/cnt=3/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.466/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.504/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.543/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.582/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.622/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.662/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.702/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.742/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.782/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.823/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.864/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.905/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.946/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.987/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.538/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.575/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.612/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.649/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.686/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.724/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.762/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.800/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.838/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.876/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.915/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.953/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.992/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=4.031/cnt=4/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.466/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.504/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.543/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.582/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.622/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.662/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.702/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.742/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.782/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.823/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.864/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.905/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.946/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.987/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.538/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.575/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.612/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.649/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.686/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.724/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.762/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.800/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.838/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.876/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.915/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.953/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.992/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.098/xy=4.031/cnt=4/config=1
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.466/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.504/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.543/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.582/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.622/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.662/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.702/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.742/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.782/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.823/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.864/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.905/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.946/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.987/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.538/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.575/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.612/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.649/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.686/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.724/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.762/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.800/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.838/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.876/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.915/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.953/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.992/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=4.031/cnt=5/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.466/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.504/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.543/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.582/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.622/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.662/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.702/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.742/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.782/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.823/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.864/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.905/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.946/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.987/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.538/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.575/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.612/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.649/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.686/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.724/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.762/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.800/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.838/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.876/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.915/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.953/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.992/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=4.031/cnt=6/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.466/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.504/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.543/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.582/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.622/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.662/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.702/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.742/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.782/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.823/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.864/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.905/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.946/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.274/xy=3.987/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.538/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.575/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.612/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.649/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.686/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.724/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.762/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.800/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.838/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.876/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.915/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.953/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=3.992/cnt=7/config=0
+DFT/surf=fcc/host=Cu/z=2.098/xy=4.031/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.531/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.569/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.608/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.646/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.685/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.724/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.763/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.803/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.843/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.883/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.923/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.963/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.004/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.045/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.598/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.634/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.671/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.707/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.744/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.781/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.819/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.856/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.894/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.931/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.969/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.007/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.046/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.084/cnt=0/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.531/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.569/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.608/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.646/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.685/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.724/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.763/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.803/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.843/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.883/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.923/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.963/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.004/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.045/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.598/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.634/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.671/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.707/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.744/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.781/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.819/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.856/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.894/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.931/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.969/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.007/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.046/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.084/cnt=1/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.531/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.569/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.608/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.646/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.685/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.724/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.763/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.803/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.843/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.883/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.923/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.963/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.004/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.045/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.598/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.634/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.671/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.707/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.744/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.781/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.819/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.856/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.894/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.931/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.969/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.007/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.046/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.084/cnt=2/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.531/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.569/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.608/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.646/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.685/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.724/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.763/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.803/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.843/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.883/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.923/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.963/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.004/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.045/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.598/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.634/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.671/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.707/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.744/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.781/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.819/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.856/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.894/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.931/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.969/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.007/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.046/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.084/cnt=3/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.531/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.569/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.608/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.646/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.685/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.724/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.763/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.803/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.843/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.883/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.923/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.963/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.004/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.045/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.598/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.634/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.671/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.707/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.744/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.781/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.819/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.856/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.894/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.931/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.969/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.007/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.046/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.084/cnt=3/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.531/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.569/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.608/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.646/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.685/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.724/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.763/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.803/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.843/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.883/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.923/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.963/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.004/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.045/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.598/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.634/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.671/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.707/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.744/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.781/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.819/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.856/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.894/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.931/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.969/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.007/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.046/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.084/cnt=4/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.531/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.569/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.608/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.646/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.685/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.724/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.763/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.803/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.843/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.883/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.923/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.963/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.004/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.045/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.598/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.634/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.671/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.707/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.744/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.781/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.819/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.856/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.894/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.931/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.969/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.007/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.046/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.084/cnt=4/config=1
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.531/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.569/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.608/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.646/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.685/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.724/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.763/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.803/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.843/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.883/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.923/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.963/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.004/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.045/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.598/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.634/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.671/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.707/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.744/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.781/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.819/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.856/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.894/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.931/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.969/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.007/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.046/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.084/cnt=5/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.531/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.569/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.608/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.646/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.685/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.724/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.763/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.803/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.843/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.883/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.923/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.963/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.004/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.045/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.598/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.634/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.671/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.707/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.744/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.781/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.819/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.856/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.894/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.931/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.969/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.007/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.046/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.084/cnt=6/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.531/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.569/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.608/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.646/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.685/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.724/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.763/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.803/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.843/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.883/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.923/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=3.963/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.004/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.274/xy=4.045/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.598/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.634/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.671/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.707/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.744/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.781/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.819/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.856/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.894/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.931/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=3.969/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.007/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.046/cnt=7/config=0
+DFT/surf=fcc/host=Pd/z=2.098/xy=4.084/cnt=7/config=0
+#+end_example
+
+#+BEGIN_SRC python
+from jasp import *
+from ase.lattice.surface import fcc111_root
+from ase.visualize import view
+import numpy as np
+JASPRC['queue.walltime'] = '24:00:00'
+JASPRC['queue.ppn'] = 4
+
+configurations = {0:[[]],
+                  1:[[32]],
+                  2:[[32, 31]],
+                  3:[[28, 31, 32],
+                     [31, 32, 33]],
+                  4:[[29, 30, 33, 34],
+                     [28, 29, 30, 34]],
+                  5:[[28, 29, 30, 33, 34]],
+                  6:[[28, 29, 30, 31, 33, 34]],
+                  7:[[28, 29, 30, 31, 32, 33, 34]]}
+
+with jasp('DFT/surf=fcc/host=Pd/lattice=3.939/cnt=0/config=0') as calc:
+    atoms = calc.get_atoms()
+    cell0 = atoms.get_cell()
+
+
+f = 1.04
+
+delta = np.array([[f, 0, 0],
+                  [0, f, 0],
+                  [0, 0, 1.0]])
+
+atoms.set_cell(np.dot(cell0, delta), scale_atoms=True)
+
+pos = atoms.get_positions()
+z = pos[12][-1] - pos[5][-1]
+lat = np.linalg.norm(pos[5] - pos[12])
+print lat, z
+
+
+#+END_SRC
+
+#+RESULTS:
+: 4.04472202041 2.27418271034
+
+#+BEGIN_SRC python
+from glob import glob
+import os
+
+dirs = glob('DFT/surf=fcc/host=*/lattice=*')
+
+for d in dirs:
+    print d
+    val = d.split('=').pop()
+    path = '/'.join(d.split('/')[:-1])
+    n = '/'.join([path, 'xy={0}'.format(val)])
+    print n
+    os.rename(d, n)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+DFT/surf=fcc/host=Cu/lattice=3.634
+DFT/surf=fcc/host=Cu/xy=3.634
+DFT/surf=fcc/host=Cu/lattice=3.538
+DFT/surf=fcc/host=Cu/xy=3.538
+DFT/surf=fcc/host=Cu/lattice=3.575
+DFT/surf=fcc/host=Cu/xy=3.575
+DFT/surf=fcc/host=Cu/lattice=3.612
+DFT/surf=fcc/host=Cu/xy=3.612
+DFT/surf=fcc/host=Cu/lattice=3.649
+DFT/surf=fcc/host=Cu/xy=3.649
+DFT/surf=fcc/host=Cu/lattice=3.686
+DFT/surf=fcc/host=Cu/xy=3.686
+DFT/surf=fcc/host=Cu/lattice=3.724
+DFT/surf=fcc/host=Cu/xy=3.724
+DFT/surf=fcc/host=Cu/lattice=3.762
+DFT/surf=fcc/host=Cu/xy=3.762
+DFT/surf=fcc/host=Cu/lattice=3.800
+DFT/surf=fcc/host=Cu/xy=3.800
+DFT/surf=fcc/host=Cu/lattice=3.838
+DFT/surf=fcc/host=Cu/xy=3.838
+DFT/surf=fcc/host=Cu/lattice=3.876
+DFT/surf=fcc/host=Cu/xy=3.876
+DFT/surf=fcc/host=Cu/lattice=3.915
+DFT/surf=fcc/host=Cu/xy=3.915
+DFT/surf=fcc/host=Cu/lattice=3.953
+DFT/surf=fcc/host=Cu/xy=3.953
+DFT/surf=fcc/host=Cu/lattice=3.992
+DFT/surf=fcc/host=Cu/xy=3.992
+DFT/surf=fcc/host=Cu/lattice=4.031
+DFT/surf=fcc/host=Cu/xy=4.031
+DFT/surf=fcc/host=Pd/lattice=3.939
+DFT/surf=fcc/host=Pd/xy=3.939
+DFT/surf=fcc/host=Pd/lattice=3.598
+DFT/surf=fcc/host=Pd/xy=3.598
+DFT/surf=fcc/host=Pd/lattice=3.634
+DFT/surf=fcc/host=Pd/xy=3.634
+DFT/surf=fcc/host=Pd/lattice=3.671
+DFT/surf=fcc/host=Pd/xy=3.671
+DFT/surf=fcc/host=Pd/lattice=3.707
+DFT/surf=fcc/host=Pd/xy=3.707
+DFT/surf=fcc/host=Pd/lattice=3.744
+DFT/surf=fcc/host=Pd/xy=3.744
+DFT/surf=fcc/host=Pd/lattice=3.781
+DFT/surf=fcc/host=Pd/xy=3.781
+DFT/surf=fcc/host=Pd/lattice=3.819
+DFT/surf=fcc/host=Pd/xy=3.819
+DFT/surf=fcc/host=Pd/lattice=3.856
+DFT/surf=fcc/host=Pd/xy=3.856
+DFT/surf=fcc/host=Pd/lattice=3.894
+DFT/surf=fcc/host=Pd/xy=3.894
+DFT/surf=fcc/host=Pd/lattice=3.931
+DFT/surf=fcc/host=Pd/xy=3.931
+DFT/surf=fcc/host=Pd/lattice=3.969
+DFT/surf=fcc/host=Pd/xy=3.969
+DFT/surf=fcc/host=Pd/lattice=4.007
+DFT/surf=fcc/host=Pd/xy=4.007
+DFT/surf=fcc/host=Pd/lattice=4.046
+DFT/surf=fcc/host=Pd/xy=4.046
+DFT/surf=fcc/host=Pd/lattice=4.084
+DFT/surf=fcc/host=Pd/xy=4.084
+#+end_example
 
 ** surface predictions
 
@@ -2220,7 +2903,7 @@ colr = ['#FF0000', '#FF6600', '#FFFF33',
         '#9933FF', '#FF0099']
 
 shape = ['o', '^', 's', 'p']
-
+ [[atoms = fcc111('Cu', size=(5, 5, 5), vacuum=6.0, a=a)]] 
 patches = []
 
 tol = 1.67e-3
@@ -2259,7 +2942,6 @@ for i, name in enumerate(glob('./networks/db2-surf/*/parameters-checkpoint.json'
                             color=colr[i],
                             marker=shape[h])
 
-view(atoms)
 for i, s in enumerate(shape):
     patches.append(mlines.Line2D([], [], color='k', marker=s, lw=0,
                           markersize=10, label='{0}Pd'.format(i)))
@@ -2276,7 +2958,7 @@ plt.show()
 from ase.lattice.surface import fcc111_root, fcc111
 from ase.visualize import view
 
-atoms = fcc111('Cu', size=(7, 7, 5), vacuum=6.0)
+atoms = fcc111('Cu', size=(7, 7, 5), vacuum=6.0, a=6.0)
 view(atoms)
 #+END_SRC
 
@@ -2353,3 +3035,31 @@ plt.subplots_adjust(left=0.11,
 
 plt.savefig('./images/db2-surf.png')
 #+END_SRC
+
+** DFT calculations
+#+BEGIN_SRC python
+from glob import glob
+import matplotlib.pyplot as plt
+from jasp import *
+from ase.visualize import view
+
+files = glob('DFT/surf=fcc/host=Pd/lattice=*/cnt=0/config=0/')
+
+nrg, lat = [], []
+for d in files:
+    lat.append(float(d.split('/')[-4].split('=')[-1]))
+    with jasp(d) as calc:
+        atoms = calc.get_atoms()
+        view(atoms)
+        nrg.append(atoms.get_potential_energy())
+
+print lat
+print nrg
+plt.scatter(lat, nrg)
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+: [3.939, 3.598, 3.634, 3.671, 3.707, 3.744, 3.781, 3.819, 3.856, 3.894, 3.931, 3.969, 4.007, 4.046, 4.084]
+: [-198.09440201, -175.28086786, -182.32973114, -187.76172146, -191.82713139, -194.72813349, -196.64330941, -197.725866, -198.10542974, -197.8946207, -197.18822708, -196.07055696, -194.61375569, -192.87700269, -190.90961447]
+
