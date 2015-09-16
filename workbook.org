@@ -2446,155 +2446,69 @@ plt.savefig('./images/db2-surf.png')
 #+BEGIN_SRC python
 from itertools import permutations
 import numpy as np
+from ase.lattice.surface import fcc111_root
+from ase.visualize import view
+from ase.calculators.emt import EMT
+from ase import Atoms
 
-natoms = 7
+base = fcc111_root('Cu', 7, size=(1, 1, 5), vacuum=6.0, a=3.787)
+base[25].symbol = 'Pd'
+natoms = [a.index for a in base if a.tag <= 1]
 metals = ['Cu', 'Pd']
 
 perms = []
-for i in range(natoms + 1):
-    subset = i*[metals[0]] + (natoms - i)*[metals[1]]
+for i in range(len(natoms) + 1):
+    subset = i*[metals[0]] + (len(natoms) - i)*[metals[1]]
 
-    perm = permutations(subset, natoms)
+    perm = permutations(subset, len(natoms))
 
     for p in set(perm):
         perms.append(p)
 
 perms = np.array(perms)
 
-print len(perms)
-print np.array(perms)
+nrgs, A = [], []
+for cfg in perms:
+    atoms = Atoms.copy(base)
+
+    for i, s in enumerate(natoms):
+        atoms[s].symbol = cfg[i]
+
+    atoms.set_calculator(EMT())
+    nrgs.append(round(atoms.get_potential_energy(), 4))
+    A.append(atoms)
+
+uniq, ids = [], []
+for i, x in enumerate(nrgs):
+    if x not in uniq:
+        uniq.append(x)
+        ids.append(i)
+
+print len(ids)
+print ids
+print uniq
+#for j in ids:
+#    view(A[j] * (4, 4, 1))
 #+END_SRC
 
 #+RESULTS:
-#+begin_example
-128
-[['Pd' 'Pd' 'Pd' 'Pd' 'Pd' 'Pd' 'Pd']
- ['Pd' 'Pd' 'Pd' 'Pd' 'Pd' 'Pd' 'Cu']
- ['Pd' 'Cu' 'Pd' 'Pd' 'Pd' 'Pd' 'Pd']
- ['Pd' 'Pd' 'Pd' 'Cu' 'Pd' 'Pd' 'Pd']
- ['Pd' 'Pd' 'Cu' 'Pd' 'Pd' 'Pd' 'Pd']
- ['Pd' 'Pd' 'Pd' 'Pd' 'Cu' 'Pd' 'Pd']
- ['Pd' 'Pd' 'Pd' 'Pd' 'Pd' 'Cu' 'Pd']
- ['Cu' 'Pd' 'Pd' 'Pd' 'Pd' 'Pd' 'Pd']
- ['Cu' 'Pd' 'Pd' 'Pd' 'Cu' 'Pd' 'Pd']
- ['Pd' 'Pd' 'Pd' 'Pd' 'Cu' 'Cu' 'Pd']
- ['Pd' 'Pd' 'Cu' 'Pd' 'Pd' 'Cu' 'Pd']
- ['Pd' 'Pd' 'Pd' 'Pd' 'Pd' 'Cu' 'Cu']
- ['Pd' 'Pd' 'Pd' 'Pd' 'Cu' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Pd' 'Pd' 'Pd' 'Pd' 'Pd']
- ['Pd' 'Cu' 'Cu' 'Pd' 'Pd' 'Pd' 'Pd']
- ['Pd' 'Pd' 'Pd' 'Cu' 'Pd' 'Pd' 'Cu']
- ['Pd' 'Pd' 'Pd' 'Cu' 'Pd' 'Cu' 'Pd']
- ['Pd' 'Pd' 'Cu' 'Pd' 'Pd' 'Pd' 'Cu']
- ['Pd' 'Cu' 'Pd' 'Cu' 'Pd' 'Pd' 'Pd']
- ['Cu' 'Pd' 'Pd' 'Pd' 'Pd' 'Cu' 'Pd']
- ['Pd' 'Pd' 'Cu' 'Pd' 'Cu' 'Pd' 'Pd']
- ['Pd' 'Cu' 'Pd' 'Pd' 'Pd' 'Pd' 'Cu']
- ['Cu' 'Pd' 'Pd' 'Cu' 'Pd' 'Pd' 'Pd']
- ['Cu' 'Pd' 'Cu' 'Pd' 'Pd' 'Pd' 'Pd']
- ['Pd' 'Cu' 'Pd' 'Pd' 'Cu' 'Pd' 'Pd']
- ['Pd' 'Pd' 'Pd' 'Cu' 'Cu' 'Pd' 'Pd']
- ['Cu' 'Pd' 'Pd' 'Pd' 'Pd' 'Pd' 'Cu']
- ['Pd' 'Cu' 'Pd' 'Pd' 'Pd' 'Cu' 'Pd']
- ['Pd' 'Pd' 'Cu' 'Cu' 'Pd' 'Pd' 'Pd']
- ['Pd' 'Cu' 'Cu' 'Cu' 'Pd' 'Pd' 'Pd']
- ['Pd' 'Pd' 'Pd' 'Cu' 'Cu' 'Cu' 'Pd']
- ['Pd' 'Pd' 'Cu' 'Cu' 'Cu' 'Pd' 'Pd']
- ['Pd' 'Pd' 'Cu' 'Cu' 'Pd' 'Pd' 'Cu']
- ['Pd' 'Cu' 'Cu' 'Pd' 'Pd' 'Pd' 'Cu']
- ['Pd' 'Cu' 'Pd' 'Cu' 'Pd' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Pd' 'Cu' 'Pd' 'Pd' 'Pd']
- ['Cu' 'Pd' 'Cu' 'Pd' 'Pd' 'Cu' 'Pd']
- ['Pd' 'Cu' 'Cu' 'Pd' 'Pd' 'Cu' 'Pd']
- ['Cu' 'Pd' 'Cu' 'Pd' 'Pd' 'Pd' 'Cu']
- ['Cu' 'Pd' 'Cu' 'Cu' 'Pd' 'Pd' 'Pd']
- ['Cu' 'Cu' 'Cu' 'Pd' 'Pd' 'Pd' 'Pd']
- ['Pd' 'Cu' 'Pd' 'Pd' 'Cu' 'Cu' 'Pd']
- ['Cu' 'Cu' 'Pd' 'Pd' 'Pd' 'Cu' 'Pd']
- ['Pd' 'Cu' 'Pd' 'Cu' 'Cu' 'Pd' 'Pd']
- ['Pd' 'Pd' 'Cu' 'Pd' 'Pd' 'Cu' 'Cu']
- ['Pd' 'Cu' 'Pd' 'Cu' 'Pd' 'Cu' 'Pd']
- ['Cu' 'Pd' 'Pd' 'Pd' 'Cu' 'Pd' 'Cu']
- ['Pd' 'Cu' 'Pd' 'Pd' 'Pd' 'Cu' 'Cu']
- ['Pd' 'Pd' 'Pd' 'Cu' 'Cu' 'Pd' 'Cu']
- ['Pd' 'Pd' 'Cu' 'Cu' 'Pd' 'Cu' 'Pd']
- ['Cu' 'Pd' 'Pd' 'Cu' 'Cu' 'Pd' 'Pd']
- ['Cu' 'Pd' 'Pd' 'Cu' 'Pd' 'Cu' 'Pd']
- ['Pd' 'Pd' 'Pd' 'Cu' 'Pd' 'Cu' 'Cu']
- ['Pd' 'Cu' 'Cu' 'Pd' 'Cu' 'Pd' 'Pd']
- ['Cu' 'Pd' 'Pd' 'Pd' 'Cu' 'Cu' 'Pd']
- ['Pd' 'Pd' 'Pd' 'Pd' 'Cu' 'Cu' 'Cu']
- ['Pd' 'Pd' 'Cu' 'Pd' 'Cu' 'Pd' 'Cu']
- ['Cu' 'Pd' 'Pd' 'Cu' 'Pd' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Pd' 'Pd' 'Pd' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Pd' 'Pd' 'Cu' 'Pd' 'Pd']
- ['Cu' 'Pd' 'Cu' 'Pd' 'Cu' 'Pd' 'Pd']
- ['Pd' 'Cu' 'Pd' 'Pd' 'Cu' 'Pd' 'Cu']
- ['Cu' 'Pd' 'Pd' 'Pd' 'Pd' 'Cu' 'Cu']
- ['Pd' 'Pd' 'Cu' 'Pd' 'Cu' 'Cu' 'Pd']
- ['Cu' 'Cu' 'Cu' 'Pd' 'Pd' 'Pd' 'Cu']
- ['Cu' 'Pd' 'Cu' 'Pd' 'Pd' 'Cu' 'Cu']
- ['Pd' 'Cu' 'Pd' 'Cu' 'Cu' 'Pd' 'Cu']
- ['Pd' 'Pd' 'Cu' 'Cu' 'Cu' 'Cu' 'Pd']
- ['Cu' 'Pd' 'Cu' 'Cu' 'Pd' 'Cu' 'Pd']
- ['Cu' 'Cu' 'Pd' 'Pd' 'Cu' 'Pd' 'Cu']
- ['Cu' 'Pd' 'Pd' 'Cu' 'Cu' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Pd' 'Cu' 'Pd' 'Cu' 'Pd']
- ['Cu' 'Cu' 'Pd' 'Cu' 'Cu' 'Pd' 'Pd']
- ['Cu' 'Pd' 'Pd' 'Pd' 'Cu' 'Cu' 'Cu']
- ['Cu' 'Pd' 'Pd' 'Cu' 'Pd' 'Cu' 'Cu']
- ['Pd' 'Cu' 'Cu' 'Cu' 'Pd' 'Cu' 'Pd']
- ['Pd' 'Cu' 'Cu' 'Cu' 'Pd' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Pd' 'Pd' 'Cu' 'Cu' 'Pd']
- ['Pd' 'Cu' 'Pd' 'Cu' 'Pd' 'Cu' 'Cu']
- ['Cu' 'Pd' 'Cu' 'Pd' 'Cu' 'Pd' 'Cu']
- ['Cu' 'Pd' 'Cu' 'Pd' 'Cu' 'Cu' 'Pd']
- ['Pd' 'Cu' 'Pd' 'Pd' 'Cu' 'Cu' 'Cu']
- ['Pd' 'Pd' 'Cu' 'Cu' 'Pd' 'Cu' 'Cu']
- ['Cu' 'Cu' 'Pd' 'Cu' 'Pd' 'Pd' 'Cu']
- ['Pd' 'Cu' 'Cu' 'Cu' 'Cu' 'Pd' 'Pd']
- ['Pd' 'Cu' 'Pd' 'Cu' 'Cu' 'Cu' 'Pd']
- ['Pd' 'Cu' 'Cu' 'Pd' 'Cu' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Cu' 'Cu' 'Pd' 'Pd' 'Pd']
- ['Pd' 'Pd' 'Pd' 'Cu' 'Cu' 'Cu' 'Cu']
- ['Pd' 'Pd' 'Cu' 'Pd' 'Cu' 'Cu' 'Cu']
- ['Pd' 'Cu' 'Cu' 'Pd' 'Pd' 'Cu' 'Cu']
- ['Cu' 'Pd' 'Pd' 'Cu' 'Cu' 'Cu' 'Pd']
- ['Cu' 'Pd' 'Cu' 'Cu' 'Cu' 'Pd' 'Pd']
- ['Cu' 'Cu' 'Cu' 'Pd' 'Cu' 'Pd' 'Pd']
- ['Cu' 'Pd' 'Cu' 'Cu' 'Pd' 'Pd' 'Cu']
- ['Pd' 'Pd' 'Cu' 'Cu' 'Cu' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Pd' 'Pd' 'Pd' 'Cu' 'Cu']
- ['Pd' 'Cu' 'Cu' 'Pd' 'Cu' 'Cu' 'Pd']
- ['Cu' 'Cu' 'Cu' 'Pd' 'Pd' 'Cu' 'Pd']
- ['Cu' 'Pd' 'Cu' 'Pd' 'Cu' 'Cu' 'Cu']
- ['Cu' 'Pd' 'Cu' 'Cu' 'Cu' 'Cu' 'Pd']
- ['Cu' 'Cu' 'Pd' 'Pd' 'Cu' 'Cu' 'Cu']
- ['Pd' 'Cu' 'Cu' 'Cu' 'Pd' 'Cu' 'Cu']
- ['Pd' 'Cu' 'Cu' 'Cu' 'Cu' 'Cu' 'Pd']
- ['Pd' 'Cu' 'Cu' 'Pd' 'Cu' 'Cu' 'Cu']
- ['Cu' 'Cu' 'Cu' 'Pd' 'Cu' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Pd' 'Cu' 'Pd' 'Cu' 'Cu']
- ['Cu' 'Cu' 'Cu' 'Cu' 'Pd' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Pd' 'Cu' 'Cu' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Cu' 'Pd' 'Pd' 'Cu' 'Cu']
- ['Cu' 'Cu' 'Cu' 'Cu' 'Pd' 'Cu' 'Pd']
- ['Cu' 'Pd' 'Pd' 'Cu' 'Cu' 'Cu' 'Cu']
- ['Cu' 'Pd' 'Cu' 'Cu' 'Cu' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Cu' 'Pd' 'Cu' 'Cu' 'Pd']
- ['Pd' 'Cu' 'Cu' 'Cu' 'Cu' 'Pd' 'Cu']
- ['Cu' 'Cu' 'Cu' 'Cu' 'Cu' 'Pd' 'Pd']
- ['Cu' 'Pd' 'Cu' 'Cu' 'Pd' 'Cu' 'Cu']
- ['Pd' 'Cu' 'Pd' 'Cu' 'Cu' 'Cu' 'Cu']
- ['Cu' 'Cu' 'Pd' 'Cu' 'Cu' 'Cu' 'Pd']
- ['Pd' 'Pd' 'Cu' 'Cu' 'Cu' 'Cu' 'Cu']
- ['Cu' 'Cu' 'Pd' 'Cu' 'Cu' 'Cu' 'Cu']
- ['Cu' 'Pd' 'Cu' 'Cu' 'Cu' 'Cu' 'Cu']
- ['Cu' 'Cu' 'Cu' 'Cu' 'Pd' 'Cu' 'Cu']
- ['Cu' 'Cu' 'Cu' 'Cu' 'Cu' 'Cu' 'Pd']
- ['Cu' 'Cu' 'Cu' 'Cu' 'Cu' 'Pd' 'Cu']
- ['Pd' 'Cu' 'Cu' 'Cu' 'Cu' 'Cu' 'Cu']
- ['Cu' 'Cu' 'Cu' 'Pd' 'Cu' 'Cu' 'Cu']
- ['Cu' 'Cu' 'Cu' 'Cu' 'Cu' 'Cu' 'Cu']]
-#+end_example
+: 34
+: [0, 1, 3, 7, 8, 9, 10, 13, 14, 29, 30, 31, 33, 35, 38, 39, 50, 64, 65, 66, 67, 68, 76, 78, 91, 99, 100, 102, 103, 105, 120, 122, 125, 127]
+: [6.6428, 6.7683, 6.7311, 6.7711, 6.9078, 6.8687, 6.905, 6.9445, 6.9417, 7.1258, 7.0547, 7.09, 7.162, 7.1286, 7.1647, 7.1285, 7.0927, 7.4307, 7.3951, 7.3571, 7.3224, 7.3599, 7.3924, 7.3572, 7.3251, 7.6717, 7.6375, 7.669, 7.6348, 7.7063, 7.9933, 8.0268, 7.9906, 8.3911]
+
+#+BEGIN_SRC python
+from itertools import permutations
+import numpy as np
+from ase.lattice.surface import fcc111_root
+from ase.visualize import view
+from ase.calculators.emt import EMT
+
+
+base = fcc111_root('Cu', 7, size=(1, 1, 5), vacuum=6.0, a=3.787)
+
+
+#+END_SRC
+
+#+RESULTS:
+: [28, 29, 30, 31, 32, 33, 34]
 
