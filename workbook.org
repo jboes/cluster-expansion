@@ -2450,10 +2450,14 @@ from ase.lattice.surface import fcc111_root
 from ase.visualize import view
 from ase.calculators.emt import EMT
 from ase import Atoms
+from ase.db import connect
+from ase.io import write
+
+full_traj = connect('trajectories/full.db')
+uniq_traj = connect('trajectories/uniq.db')
 
 base = fcc111_root('Cu', 7, size=(1, 1, 5), vacuum=6.0, a=3.787)
-base[25].symbol = 'Pd'
-natoms = [a.index for a in base if a.tag <= 1]
+natoms = [a.index for a in base if a.tag <= 2]
 metals = ['Cu', 'Pd']
 
 perms = []
@@ -2475,26 +2479,23 @@ for cfg in perms:
         atoms[s].symbol = cfg[i]
 
     atoms.set_calculator(EMT())
-    nrgs.append(round(atoms.get_potential_energy(), 4))
+    nrgs.append(round(atoms.get_potential_energy(), 3))
+    full_traj.write(atoms)
     A.append(atoms)
 
 uniq, ids = [], []
 for i, x in enumerate(nrgs):
     if x not in uniq:
+        uniq_traj.write(A[i])
         uniq.append(x)
         ids.append(i)
+        write('trajectories/layer2-{0}.png'.format(i), A[i]*(4, 4, 1))
 
 print len(ids)
-print ids
-print uniq
-#for j in ids:
-#    view(A[j] * (4, 4, 1))
 #+END_SRC
 
 #+RESULTS:
-: 34
-: [0, 1, 3, 7, 8, 9, 10, 13, 14, 29, 30, 31, 33, 35, 38, 39, 50, 64, 65, 66, 67, 68, 76, 78, 91, 99, 100, 102, 103, 105, 120, 122, 125, 127]
-: [6.6428, 6.7683, 6.7311, 6.7711, 6.9078, 6.8687, 6.905, 6.9445, 6.9417, 7.1258, 7.0547, 7.09, 7.162, 7.1286, 7.1647, 7.1285, 7.0927, 7.4307, 7.3951, 7.3571, 7.3224, 7.3599, 7.3924, 7.3572, 7.3251, 7.6717, 7.6375, 7.669, 7.6348, 7.7063, 7.9933, 8.0268, 7.9906, 8.3911]
+: 8
 
 #+BEGIN_SRC python
 from itertools import permutations
@@ -2511,4 +2512,3 @@ base = fcc111_root('Cu', 7, size=(1, 1, 5), vacuum=6.0, a=3.787)
 
 #+RESULTS:
 : [28, 29, 30, 31, 32, 33, 34]
-
