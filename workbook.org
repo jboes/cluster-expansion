@@ -2444,96 +2444,35 @@ plt.savefig('./images/db2-surf.png')
 
 * playing with permutations
 #+BEGIN_SRC python
-from itertools import permutations
-import numpy as np
+from itertools import product
 from ase.lattice.surface import fcc111_root
-from ase.visualize import view
-from ase.calculators.emt import EMT
+from asap3 import EMT
 from ase import Atoms
 from ase.db import connect
 
-full_traj = connect('traj/full.db')
-uniq_traj = connect('traj/uniq.db')
+save = connect('traj/unique-3layer.db')
 
-base = fcc111_root('Cu', 7, size=(1, 1, 5), vacuum=6.0, a=3.787)
-natoms = [a.index for a in base if a.tag <= 2]
+base = fcc111_root('Pd', 7, size=(1, 1, 5), vacuum=6.0, a=3.939)
+natoms = [a.index for a in base if a.tag <= 3]
 metals = ['Cu', 'Pd']
 
-perms = []
-for i in range(len(natoms) + 1):
-    subset = i*[metals[0]] + (len(natoms) - i)*[metals[1]]
+nrgs = set()
+for i, c in enumerate(product(metals, repeat=len(natoms))):
+    atoms0 = Atoms.copy(base)
+    for j, s in enumerate(natoms):
+        atoms0[s].symbol = c[j]
 
-    perm = permutations(subset, len(natoms))
-
-    for p in set(perm):
-        perms.append(p)
-
-perms = np.array(perms)
-
-nrgs, A = [], []
-for cfg in perms:
-    atoms = Atoms.copy(base)
-
-    for i, s in enumerate(natoms):
-        atoms[s].symbol = cfg[i]
-
+    atoms = Atoms.copy(atoms0)
     atoms.set_calculator(EMT())
-    nrgs.append(round(atoms.get_potential_energy(), 3))
-    #full_traj.write(atoms)
-    A.append(atoms)
+    nrg = round(atoms.get_potential_energy(), 3)
 
-uniq, ids = [], []
-for i, x in enumerate(nrgs):
-    if x not in uniq:
-        uniq_traj.write(A[i])
-        uniq.append(x)
-        ids.append(i)
-
-print len(ids)
+    if nrg not in nrgs:
+        nrgs.add(nrg)
+        save.write(atoms0)
+print len(nrgs)
 #+END_SRC
 
 #+RESULTS:
-: 128
-: 8
+: 3406
 
-#+BEGIN_SRC python
-from itertools import permutations
-from ase.lattice.surface import fcc111_root
-from ase.visualize import view
-from ase.calculators.emt import EMT
-from ase import Atoms
-from ase.db import connect
-
-base = fcc111_root('Cu', 3, size=(1, 1, 5), vacuum=6.0, a=3.787)
-natoms = [a.index for a in base if a.tag <= 1]
-metals = ['Cu', 'Pd']
-
-view(base)
-
-'''
-
-A, cnt = [], 0
-for i in range(len(natoms) + 1):
-    subset = i*[metals[0]] + (len(natoms) - i)*[metals[1]]
-
-    perm = permutations(subset, len(natoms))
-
-    for cfgs in set(perm):
-        for cfg in cfgs:
-            atoms = Atoms.copy(base)
-
-            for i, s in enumerate(natoms):
-                atoms[s].symbol = cfg
-
-            atoms.set_calculator(EMT())
-            nrg = round(atoms.get_potential_energy(), 3)
-            cnt += 1
-            A.append(atoms)
-
-print cnt
-view(A[0])
-'''
-#+END_SRC
-
-#+RESULTS:
-
+Number of unique permutations predicted for 3 layers of root 7 x root 7 slab.
