@@ -2288,20 +2288,41 @@ plt.show()
 #+RESULTS:
 
 #+BEGIN_SRC python
-from ase.lattice.surface import fcc111_root, fcc111
+from ase.lattice.surface import fcc111_root
 from ase.visualize import view
+from itertools import product, combinations, permutations
+import numpy as np
 
-# 28
-# 30, 29, 34
-# 31, 32, 33
+# 25 - central atom
+# 1' = [31, 32, 33]
+# 2' = [29, 30, 34]
+# 3' = [28]
 
+d = {0: 3, # 28
+     1: 2,
+     2: 2,
+     3: 1,
+     4: 1,
+     5: 1,
+     6: 2} # 34
 
-cfgs = [[28], [29], [31]]
-cfgs = [[31, 32],
+#print np.array(list(set(product([0, 1, 2], repeat=3))))
+
+n = []
+for i, l in enumerate(product(['Cu', 'Pd'], repeat=7)):
+    n[i] = []
+    for j, v in enumerate(l):
+       n[i].append(d[])j
+
+cfgs = [[],
+        [28],
+        [29],
+        [31],
+        [31, 32],
         [31, 28],
         [31, 30],
-        [31, 34]]
-cfgs = [[31, 32, 33],
+        [31, 34],
+        [31, 32, 33],
         [31, 32, 29],
         [31, 32, 28],
         [31, 32, 34],
@@ -2312,58 +2333,12 @@ cfgs = [[31, 32, 33],
         [29, 30, 34],
         [29, 30, 28]]
 
-cfgs = [[28], [29], [31], [34]]
-cfgs = [[31, 28],
-        [31, 29],
-        [31, 34],
-        [29, 32],
-        [29, 28],
-        [29, 34],
-        [29, 33],
-        [29, 30],
-        [28, 33],
-        [28, 30],
-        [28, 34],
-        [34, 30]]
-cfgs = [[29, 32, 28],
-        [29, 32, 31],
-        [29, 32, 34],
-        [28, 33, 29],
-        [28, 33, 31],
-        [28, 33, 34],
-        [34, 30, 28],
-        [34, 30, 31],
-        [34, 30, 29],
-        [29, 28, 31],
-        [29, 28, 34],
-        [29, 28, 30],
-        [29, 34, 33],
-        [29, 34, 31],
-        [29, 31, 30]]
-
-cfgs = [[28], [31]]
-cfgs = [[31, 28],
-        [31, 34],
-        [29, 30],
-        [29, 33]]
-cfgs = [[31, 28, 34],
-        [31, 28, 30],
-        [31, 28, 33],
-        [28, 34, 30],
-        [28, 34, 33],
-        [28, 30, 32]]
-
+'''
 for cfg in cfgs:
     atoms = fcc111_root('Cu', 7, size=(1, 1, 5), vacuum=6.0, a=3.787)
-    atoms[22].symbol = 'Pd'
-    atoms[24].symbol = 'Pd'
-    atoms[25].symbol = 'Pd'
-
-
-    for s in cfg:
-        atoms[s].symbol = 'Pd'
-
-    view(atoms * (4, 4, 1))
+    for a in cfg:
+        atoms[i].symbol = 'Pd'
+'''
 #+END_SRC
 
 #+RESULTS:
@@ -2449,16 +2424,18 @@ from timeit import timeit
 func = '''
 from itertools import product
 from ase.lattice.surface import fcc111_root
-#from asap3 import EMT
+from asap3 import EMT
 from ase import Atoms
 #from ase.db import connect
-from neural.bp import BPNeural
+#from neural.bp import BPNeural
+from ase.io import write
+from ase.visualize import view
 
 #save = connect('traj/unique-1layer.db')
-calc = BPNeural(load='./networks/db2-surf/l3n35i1/parameters-checkpoint.json')
+#calc = BPNeural(json='networks/db2-surf/l3n30i0/parameters-checkpoint.json')
 
-base = fcc111_root('Pd', 7, size=(1, 1, 5), vacuum=6.0, a=3.939)
-natoms = [a.index for a in base if a.tag <= 3]
+base = fcc111_root('Cu', 7, size=(1, 1, 5), vacuum=6.0, a=3.634)
+natoms = [a.index for a in base if a.tag <= 1]  + [25]
 metals = ['Cu', 'Pd']
 
 nrgs = set()
@@ -2468,12 +2445,12 @@ for i, c in enumerate(product(metals, repeat=len(natoms))):
         atoms0[s].symbol = c[j]
 
     atoms = Atoms.copy(atoms0)
-    atoms.set_calculator(calc)
+    atoms.set_calculator(EMT())
     nrg = round(atoms.get_potential_energy(), 3)
 
     if nrg not in nrgs:
         nrgs.add(nrg)
-        #save.write(atoms0)
+        write('./images/cfg{0}.png'.format(i), atoms0*(3, 3, 1))
 print len(nrgs)
 '''
 
@@ -2481,7 +2458,8 @@ print timeit(func, number=1)
 #+END_SRC
 
 #+RESULTS:
-: 3406
+: 38
+: 3.84333300591
 
 Number of unique permutations predicted for 3 layers of root 7 x root 7 slab.
 
@@ -2526,4 +2504,3 @@ for base in basis:
             except(VaspQueued, VaspSubmitted):
                 print wd, 'Queued'
 #+END_SRC
-
