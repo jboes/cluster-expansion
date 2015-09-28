@@ -2467,7 +2467,10 @@ Number of unique permutations predicted for 3 layers of root 7 x root 7 slab.
 from ase.lattice.surface import fcc111_root
 from ase.db import connect
 from jasp import *
+from ase.constraints import FixAtoms
+from ase.visualize import view
 JASPRC['queue.ppn'] = 4
+JASPRC['queue.walltime'] = '24:00:00'
 
 db = connect('traj/unique-2layer.db')
 
@@ -2480,12 +2483,15 @@ for base in basis:
 
     for i, d in enumerate(db.select()):
 
-        atoms = fcc111_root(b, 7, [1, 1, 5], a=a)
+        atoms = fcc111_root(b, 7, [1, 1, 5], a=a, vacuum=6.0)
         n = [atom.index for atom in atoms if atom.tag <= 2]
         cfg = d.symbols[21:]
 
         for j, s in enumerate(n):
             atoms[s].symbol = cfg[j]
+
+        constraint = FixAtoms(mask=[atom.tag > 3 for atom in atoms])
+        atoms.set_constraint(constraint)
 
         wd = 'DFT/surf=fcc/host={0}/lattice={1:1.3f}/type=layers2/cfg={2}/xy=1.00'.format(b, a, i)
 
@@ -2499,8 +2505,11 @@ for base in basis:
                   ediff=1e-5,
                   atoms=atoms) as calc:
             try:
-                atoms = calc.get_atoms()
-                nrg = atoms.get_potential_energy()
+                calc.get_required_memory()
+                calc.calculate()
             except(VaspQueued, VaspSubmitted):
                 print wd, 'Queued'
 #+END_SRC
+
+#+RESULTS:
+
