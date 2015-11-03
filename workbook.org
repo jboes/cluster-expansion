@@ -2469,14 +2469,18 @@ from ase.db import connect
 from jasp import *
 from ase.constraints import FixAtoms
 from ase.visualize import view
+import jbutil as jb
 JASPRC['queue.ppn'] = 4
-JASPRC['queue.walltime'] = '24:00:00'
+#JASPRC['queue.walltime'] = '24:00:00'
+JASPRC['restart_unconverged'] = False
 
 db = connect('traj/unique-2layer.db')
 
-basis = [['Cu', 3.634],
-         ['Pd', 3.939]]
+basis = [['Cu', 3.634]]
 
+# ,['Pd', 3.939]
+
+UF = []
 for base in basis:
 
     b, a = base
@@ -2495,21 +2499,104 @@ for base in basis:
 
         wd = 'DFT/surf=fcc/host={0}/lattice={1:1.3f}/type=layers2/cfg={2}/xy=1.00'.format(b, a, i)
 
-        with jasp(wd,
-                  xc='PBE',
-                  encut=400,
-                  kpts=(5, 5, 1),
-                  ibrion=2,
-                  isif=2,
-                  nsw=40,
-                  ediff=1e-5,
-                  atoms=atoms) as calc:
-            try:
-                calc.get_required_memory()
-                calc.calculate()
-            except(VaspQueued, VaspSubmitted):
-                print wd, 'Queued'
+        try:
+            with jasp(wd,
+                      xc='PBE',
+                      encut=400,
+                      kpts=(5, 5, 1),
+                      ibrion=2,
+                      isif=2,
+                      nsw=40,
+                      ediff=1e-5,
+                      atoms=atoms) as calc:
+                try:
+                    calc.get_required_memory()
+                    atoms = calc.get_atoms()
+                    nrg = atoms.get_potential_energy()
+                    print nrg
+                except(VaspQueued, VaspSubmitted):
+                    pass
+        except(VaspNotFinished):
+            UF += [wd]
+            jb.reset(wd)
+
+JASPRC['restart_unconverged'] = True
+
+for wd in UF:
+    with jasp(wd) as calc:
+        try:
+            calc.get_required_memory()
+            calc.calculate()
+        except(VaspQueued, VaspSubmitted):
+            pass
 #+END_SRC
 
 #+RESULTS:
+
+#+BEGIN_SRC python
+from jasp import *
+import jbutil as jb
+from ase.db import connect
+JASPRC['queue.ppn'] = 4
+
+
+db = connect('traj/unique-2layer.db')
+
+basis = [['Cu', 3.634]]
+for base in basis:
+
+    b, a = base
+
+    for i, d in enumerate(db.select()):
+
+        wd = 'DFT/surf=fcc/host={0}/lattice={1:1.3f}/type=layers2/cfg={2}/xy=1.00'.format(b, a, i)
+
+        with jasp(wd) as calc:
+            try:
+                calc.get_required_memory()
+                atoms = calc.get_atoms()
+                nrg = atoms.get_potential_energy()
+            except(VaspQueued, VaspSubmitted):
+                pass
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC python
+from glob import glob
+import os
+from jasp import *
+import jbutil as jb
+JASPRC['restart_unconverged'] = False
+
+nrg, UF = [], []
+for r, d, f in os.walk('./DFT/surf=fcc/'):
+    if f:
+        try:
+            with jasp(r) as calc:
+                try:
+                    atoms = calc.get_atoms()
+                    nrg += [atoms.get_potential_energy()]
+                except(VaspQueued, VaspSubmitted):
+                    pass
+        except(VaspNotFinished):
+            UF += [r]
+            jb.reset(r)
+print '{0} calculations complete'.format(len(nrg))
+
+
+JASPRC['restart_unconverged'] = True
+JASPRC['queue.ppn'] = 8
+
+for wd in UF:
+    with jasp(wd) as calc:
+        try:
+            calc.get_required_memory()
+            calc.calculate()
+        except(VaspQueued, VaspSubmitted):
+            pass
+#+END_SRC
+
+#+RESULTS:
+: 661 calculations complete
 
