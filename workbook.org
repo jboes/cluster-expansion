@@ -1289,35 +1289,9 @@ Converged: False
 * Database tools
 ** database generation
 #+BEGIN_SRC python :results silent
-import os, sys
 import jbutil as jb
-from jasp import *
-from ase.io.trajectory import Trajectory
-JASPRC['restart_unconverged'] = False
 
-wd = '~/research/cluster-expansion/networks/db2-surf/data.db'
-
-if os.path.exists(wd):
-    os.unlink(wd)
-
-for r, d, f in os.walk('DFT/surf=fcc'):
-    if 'out.traj' in f:
-        try:
-            with jasp(r) as calc:
-                traj = Trajectory('out.traj')
-                n = len(traj)
-                for i, atoms in enumerate(traj):
-
-                    jb.makedb(calc,
-                              atoms=atoms,
-                              dbname=wd,
-                              keys={'traj': int(n-i-1)})
-        except(RuntimeError):
-            os.unlink(os.path.join(r, 'out.traj'))
-        except:
-            print(r)
-            print(sys.exc_info()[0])
-            print('')
+jb.write_database('DFT/surf=fcc')
 #+END_SRC
 
 ** Data visualization 
@@ -2064,15 +2038,16 @@ for i, d in enumerate(db.select(['config=3', 'bulk=fcc'])):
 
 
    
-* Surface calculations
-
-** Relaxations of root 7 slab
+* Surface calculations / manually selected configurations
+  
+** Relaxations of root 7 x root 7 slab
 #+BEGIN_SRC python
 from jasp import *
 from ase.lattice.surface import fcc111_root
 from ase.visualize import view
 import numpy as np
 
+# Energy unique onfigurations were manually determined 
 configurations = {0:[[]],
                   1:[[32]],
                   2:[[32, 31]],
@@ -2228,8 +2203,6 @@ pos = atoms.get_positions()
 z = pos[12][-1] - pos[5][-1]
 lat = np.linalg.norm(pos[5] - pos[12])
 print lat, z
-
-
 #+END_SRC
 
 #+RESULTS:
@@ -2284,64 +2257,6 @@ plt.legend(loc='best')
 plt.tight_layout()
 plt.show()
 #+END_SRC
-
-#+RESULTS:
-
-#+BEGIN_SRC python
-from ase.lattice.surface import fcc111_root
-from ase.visualize import view
-from itertools import product, combinations, permutations
-import numpy as np
-
-# 25 - central atom
-# 1' = [31, 32, 33]
-# 2' = [29, 30, 34]
-# 3' = [28]
-
-d = {0: 3, # 28
-     1: 2,
-     2: 2,
-     3: 1,
-     4: 1,
-     5: 1,
-     6: 2} # 34
-
-#print np.array(list(set(product([0, 1, 2], repeat=3))))
-
-n = []
-for i, l in enumerate(product(['Cu', 'Pd'], repeat=7)):
-    n[i] = []
-    for j, v in enumerate(l):
-       n[i].append(d[])j
-
-cfgs = [[],
-        [28],
-        [29],
-        [31],
-        [31, 32],
-        [31, 28],
-        [31, 30],
-        [31, 34],
-        [31, 32, 33],
-        [31, 32, 29],
-        [31, 32, 28],
-        [31, 32, 34],
-        [31, 29, 30],
-        [31, 29, 28],
-        [31, 34, 28],
-        [31, 29, 34],
-        [29, 30, 34],
-        [29, 30, 28]]
-
-'''
-for cfg in cfgs:
-    atoms = fcc111_root('Cu', 7, size=(1, 1, 5), vacuum=6.0, a=3.787)
-    for a in cfg:
-        atoms[i].symbol = 'Pd'
-'''
-#+END_SRC
-
-#+RESULTS:
 
 ** training set residuals
 #+attr_org: :width 500
@@ -2417,7 +2332,10 @@ plt.subplots_adjust(left=0.11,
 plt.savefig('./images/db2-surf.png')
 #+END_SRC
 
-* playing with permutations
+* Surface calculations via EMT permutation
+
+** Unique structure calculator
+This code uses ASAPs EMT calculator to calculate the energy of /all/ permutations given to it. It will then add the energy unique permutations to a trajectory file for later reference. 
 #+BEGIN_SRC python
 from timeit import timeit
 
@@ -2471,14 +2389,12 @@ from ase.constraints import FixAtoms
 from ase.visualize import view
 import jbutil as jb
 JASPRC['queue.ppn'] = 4
-#JASPRC['queue.walltime'] = '24:00:00'
 JASPRC['restart_unconverged'] = False
 
 db = connect('traj/unique-2layer.db')
 
-basis = [['Cu', 3.634]]
+basis = [['Cu', 3.634], ['Pd', 3.939]]
 
-# ,['Pd', 3.939]
 
 UF = []
 for base in basis:
@@ -2531,72 +2447,80 @@ for wd in UF:
             pass
 #+END_SRC
 
-#+RESULTS:
 
+** single point calculations for xy and isotropic strain effects
 #+BEGIN_SRC python
-from jasp import *
-import jbutil as jb
-from ase.db import connect
-JASPRC['queue.ppn'] = 4
-
-
-db = connect('traj/unique-2layer.db')
-
-basis = [['Cu', 3.634]]
-for base in basis:
-
-    b, a = base
-
-    for i, d in enumerate(db.select()):
-
-        wd = 'DFT/surf=fcc/host={0}/lattice={1:1.3f}/type=layers2/cfg={2}/xy=1.00'.format(b, a, i)
-
-        with jasp(wd) as calc:
-            try:
-                calc.get_required_memory()
-                atoms = calc.get_atoms()
-                nrg = atoms.get_potential_energy()
-            except(VaspQueued, VaspSubmitted):
-                pass
-#+END_SRC
-
-#+RESULTS:
-
-#+BEGIN_SRC python
-from glob import glob
+import numpy as np
 import os
 from jasp import *
-import jbutil as jb
-JASPRC['restart_unconverged'] = False
+from ase.visualize import view
+from ase import Atoms
+JASPRC['queue.ppn'] = 4
+JASPRC['queue.walltime'] = '24:00:00'
 
-nrg, UF = [], []
-for r, d, f in os.walk('./DFT/surf=fcc/'):
-    if f:
-        try:
-            with jasp(r) as calc:
-                try:
-                    atoms = calc.get_atoms()
-                    nrg += [atoms.get_potential_energy()]
-                except(VaspQueued, VaspSubmitted):
-                    pass
-        except(VaspNotFinished):
-            UF += [r]
-            jb.reset(r)
-print '{0} calculations complete'.format(len(nrg))
+basis = [['Cu', 3.634, np.linspace(1.00, 1.08392955421, 4)],
+         ['Pd', 3.939, np.linspace(1.00, 1.0/1.08392955421, 4)]]
 
+for M, a, factors in basis:
 
-JASPRC['restart_unconverged'] = True
-JASPRC['queue.ppn'] = 8
+    for cfg in range(343): # The number of unique 2-layer configurations
 
-for wd in UF:
-    with jasp(wd) as calc:
-        try:
-            calc.get_required_memory()
-            calc.calculate()
-        except(VaspQueued, VaspSubmitted):
-            pass
+        wd0 = 'DFT/surf=fcc/host={0}/lattice={1}/type=layers2/cfg={2}/xy=1.00'.format(M, a, cfg)
+
+        for f in factors:
+
+            delta = np.array([[f, 0, 0],
+                              [0, f, 0],
+                              [0, 0, f]])
+
+            with jasp(wd0) as calc:
+                atoms0 = calc.get_atoms()
+                cell0 = atoms0.get_cell()
+
+            atoms0.set_cell(np.dot(cell0, delta), scale_atoms=True)
+            lat = atoms0.get_distance(2, 10)
+
+            for xy in [0.98, 1.00, 1.02]:
+
+                atoms = Atoms.copy(atoms0)
+                cell = atoms.get_cell()
+
+                d2 = np.array([[xy, 0, 0],
+                               [0, xy, 0],
+                               [0, 0, 0]])
+                atoms.set_cell(np.dot(cell0, d2), scale_atoms=True)
+
+                wd = './DFT/surf=fcc/host={0}/lattice={1:1.3f}/type=layers2/cfg={2}/xy={3:1.2f}'.format(M, lat, cfg, xy)
+
+                if not os.path.exists(wd):
+                    with jasp(wd,
+                              xc='PBE',
+                              encut=400,
+                              kpts=(5, 5, 1),
+                              ibrion=-1,
+                              ediff=1e-5,
+                              atoms=atoms) as calc:
+                        try:
+                            calc.get_required_memory()
+                            calc.calculate()
+                        except(VaspSubmitted, VaspQueued):
+                            pass
 #+END_SRC
 
 #+RESULTS:
-: 661 calculations complete
+: 44
+
+#+BEGIN_SRC python
+from jasp import *
+from ase.visualize import view
+
+wd = 'DFT/surf=fcc/host=Cu/lattice=3.634/type=layers2/cfg=0/xy=1.00'
+
+with jasp(wd) as calc:
+    atoms = calc.get_atoms()
+
+view(atoms)
+#+END_SRC
+
+#+RESULTS:
 
