@@ -2455,11 +2455,12 @@ import os
 from jasp import *
 from ase.visualize import view
 from ase import Atoms
-JASPRC['queue.ppn'] = 4
+JASPRC['queue.ppn'] = 5
 JASPRC['queue.walltime'] = '24:00:00'
 
-basis = [['Cu', 3.634, np.linspace(1.00, 1.08392955421, 4)],
-         ['Pd', 3.939, np.linspace(1.00, 1.0/1.08392955421, 4)]]
+# Fraction determined by hand, but could also be calculated from fcc lattice geometry
+basis = [['Cu', 3.634, np.linspace(1.00, 1.08392955421, 4)],]
+#         ['Pd', 3.939, np.linspace(1.00, 1.0/1.08392955421, 4)]]
 
 for M, a, factors in basis:
 
@@ -2469,57 +2470,32 @@ for M, a, factors in basis:
 
         for f in factors:
 
+            # For each configurations, start from relaxed geom and ally isotropic strain
             delta = np.array([[f, 0, 0],
                               [0, f, 0],
                               [0, 0, f]])
 
             with jasp(wd0) as calc:
-                atoms0 = calc.get_atoms()
-                cell0 = atoms0.get_cell()
-
-            atoms0.set_cell(np.dot(cell0, delta), scale_atoms=True)
-            lat = atoms0.get_distance(2, 10)
-
-            for xy in [0.98, 1.00, 1.02]:
-
-                atoms = Atoms.copy(atoms0)
+                atoms = calc.get_atoms()
                 cell = atoms.get_cell()
 
-                d2 = np.array([[xy, 0, 0],
-                               [0, xy, 0],
-                               [0, 0, 0]])
-                atoms.set_cell(np.dot(cell0, d2), scale_atoms=True)
+            atoms.set_cell(np.dot(cell, delta), scale_atoms=True)
+            lat = atoms.get_distance(2, 10)
 
-                wd = './DFT/surf=fcc/host={0}/lattice={1:1.3f}/type=layers2/cfg={2}/xy={3:1.2f}'.format(M, lat, cfg, xy)
+            wd = './DFT/surf=fcc/host={0}/lattice={1:1.3f}/type=layers2/cfg={2}/xy=1.00'.format(M, lat, cfg)
 
-                if not os.path.exists(wd):
-                    with jasp(wd,
-                              xc='PBE',
-                              encut=400,
-                              kpts=(5, 5, 1),
-                              ibrion=-1,
-                              ediff=1e-5,
-                              atoms=atoms) as calc:
-                        try:
-                            calc.get_required_memory()
-                            calc.calculate()
-                        except(VaspSubmitted, VaspQueued):
-                            pass
-#+END_SRC
-
-#+RESULTS:
-: 44
-
-#+BEGIN_SRC python
-from jasp import *
-from ase.visualize import view
-
-wd = 'DFT/surf=fcc/host=Cu/lattice=3.634/type=layers2/cfg=0/xy=1.00'
-
-with jasp(wd) as calc:
-    atoms = calc.get_atoms()
-
-view(atoms)
+            if not os.path.exists(wd):
+                with jasp(wd,
+                          xc='PBE',
+                          encut=400,
+                          kpts=(5, 5, 1),
+                          ibrion=-1,
+                          atoms=atoms) as calc:
+                    try:
+                        calc.get_required_memory()
+                        calc.calculate()
+                    except(VaspSubmitted, VaspQueued):
+                        pass
 #+END_SRC
 
 #+RESULTS:
