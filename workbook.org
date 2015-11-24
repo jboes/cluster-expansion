@@ -1326,24 +1326,22 @@ for d in db.select(['train_set=True']):
 from amp import Amp
 from amp.descriptor import *
 from amp.regression import *
-import os
 
-for n in [2, 3]:
-    label = '{0}-{0}'.format(n)
-    wd = os.path.join(os.getcwd(), 'networks/' + label)
+for n in [10]:
+    label = '40-{0}-{0}-1'.format(n)
 
-    if not os.path.exists(wd):
-        os.makedirs(wd)
-
-    calc = Amp(label="./networks/{0}/".format(label),
+    calc = Amp(label="./networks/db2/{0}/".format(label),
                descriptor=Behler(cutoff=6.0),
                regression=NeuralNetwork(hiddenlayers=(2, '{0}'.format(n))))
 
-    calc.train("./train.db", # The training data
-               cores=1,
-               global_search=None, # not found the simulated annealing feature useful
+    calc.train("./train.db",
+               cores=8,
+               #global_search=None,
                extend_variables=False) # feature does not work properly and will crash
 #+END_SRC
+
+#+RESULTS: 
+: 90fe55fc-bfec-4f44-9fbc-098f035db7a3
 
 ** Data visualization 
 This is a tool which allows one to visualize the data set via the number of atoms and volume of atoms in the structure.

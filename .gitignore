@@ -4,6 +4,7 @@ child-fingerprints/
 *neighborlists*
 *fingerprint-derivatives*
 *fingerprints*
+py-*
 
 # Ignore DFT calculations
 DFT/
