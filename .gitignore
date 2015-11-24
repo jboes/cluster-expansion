@@ -1,11 +1,9 @@
-# Ignore files generated from Neural fitting
-*parameters-checkpoint-*
-*child-fingerprint-derivatives/
-*child-fingerprints/
-*neighborlists.json
-*fingerprint-derivatives.json
-*fingerprints.json
-frames/
+# Ignore large AMP files
+child-fingerprint-derivatives/
+child-fingerprints/
+*neighborlists*
+*fingerprint-derivatives*
+*fingerprints*
 
 # Ignore DFT calculations
 DFT/

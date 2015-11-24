@@ -1289,9 +1289,60 @@ Converged: False
 * Database tools
 ** database generation
 #+BEGIN_SRC python :results silent
-import jbutil as jb
+import jbtools.gilgamesh as jb
 
 jb.write_database('DFT/surf=fcc')
+#+END_SRC
+
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+import os
+import random
+import numpy as np
+
+db = connect('data.db')
+
+n = db.count()
+n_train = int(round(n * 0.9))
+
+n_ids =  np.array(range(n)) + 1
+
+# This will sudo-randomly select 10% of the calculations
+# Which is useful for reproducing our results.
+random.seed(256)
+train_samples = random.sample(n_ids, n_train)
+valid_samples = set(n_ids) - set(train_samples)
+
+db.update(list(train_samples), train_set=True)
+db.update(list(valid_samples), train_set=False)
+
+db0 = connect('train.db')
+
+for d in db.select(['train_set=True']):
+    db0.write(d, key_value_pairs=d.key_value_pairs)
+#+END_SRC
+
+#+BEGIN_SRC python :results silent
+from amp import Amp
+from amp.descriptor import *
+from amp.regression import *
+import os
+
+for n in [2, 3]:
+    label = '{0}-{0}'.format(n)
+    wd = os.path.join(os.getcwd(), 'networks/' + label)
+
+    if not os.path.exists(wd):
+        os.makedirs(wd)
+
+    calc = Amp(label="./networks/{0}/".format(label),
+               descriptor=Behler(cutoff=6.0),
+               regression=NeuralNetwork(hiddenlayers=(2, '{0}'.format(n))))
+
+    calc.train("./train.db", # The training data
+               cores=1,
+               global_search=None, # not found the simulated annealing feature useful
+               extend_variables=False) # feature does not work properly and will crash
 #+END_SRC
 
 ** Data visualization 
@@ -2459,8 +2510,8 @@ JASPRC['queue.ppn'] = 5
 JASPRC['queue.walltime'] = '24:00:00'
 
 # Fraction determined by hand, but could also be calculated from fcc lattice geometry
-basis = [['Cu', 3.634, np.linspace(1.00, 1.08392955421, 4)],]
-#         ['Pd', 3.939, np.linspace(1.00, 1.0/1.08392955421, 4)]]
+# basis = [['Cu', 3.634, np.linspace(1.00, 1.08392955421, 4)],]
+basis = [['Pd', 3.939, np.linspace(1.00, 1.0/1.08392955421, 4)]]
 
 for M, a, factors in basis:
 
