@@ -1340,8 +1340,47 @@ for n in [10]:
                extend_variables=False) # feature does not work properly and will crash
 #+END_SRC
 
-#+RESULTS: 
-: 90fe55fc-bfec-4f44-9fbc-098f035db7a3
+#+BEGIN_SRC python
+import os
+import shutil
+import subprocess
+import time
+
+home = os.getcwd()
+
+# We will try an iteration for 2 and 3 nodes with 2 hidden layers.
+for n in [12, 15, 18, 20]:
+
+    label = '40-{0}-{0}-1'.format(n)
+    wd = os.path.join(home, 'networks/db2/' + label)
+
+    if not os.path.exists(wd):
+        os.makedirs(wd)
+    os.chdir(wd)
+
+    run_amp = '''#!/usr/bin/env python
+from amp import Amp
+from amp.descriptor import *
+from amp.regression import *
+
+calc = Amp(label="./",
+           descriptor=Behler(cutoff=6.0),
+           regression=NeuralNetwork(hiddenlayers=(2, {0})))
+
+calc.train("../../../train.db",
+           cores=12,
+           extend_variables=False)
+'''.format(n)
+
+    with open('submit.py', 'w') as f:
+        f.write(run_amp)
+    os.chmod('submit.py', 0777)
+
+    shutil.copyfile('../../../run.sh', 'submit.sh')
+    os.chdir(wd)
+#+END_SRC
+
+#+RESULTS:
 
 ** Data visualization 
 This is a tool which allows one to visualize the data set via the number of atoms and volume of atoms in the structure.
@@ -2503,7 +2542,6 @@ import numpy as np
 import os
 from jasp import *
 from ase.visualize import view
-from ase import Atoms
 JASPRC['queue.ppn'] = 5
 JASPRC['queue.walltime'] = '24:00:00'
 
@@ -2519,7 +2557,7 @@ for M, a, factors in basis:
 
         for f in factors:
 
-            # For each configurations, start from relaxed geom and ally isotropic strain
+            # For each configurations, start from relaxed geom and apply isotropic strain
             delta = np.array([[f, 0, 0],
                               [0, f, 0],
                               [0, 0, f]])
