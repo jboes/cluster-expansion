@@ -1300,7 +1300,7 @@ import os
 import random
 import numpy as np
 
-db = connect('data.db')
+db = connect('networks/db2/data.db')
 
 n = db.count()
 n_train = int(round(n * 0.9))
@@ -1316,10 +1316,10 @@ valid_samples = set(n_ids) - set(train_samples)
 db.update(list(train_samples), train_set=True)
 db.update(list(valid_samples), train_set=False)
 
-db0 = connect('train.db')
+#db0 = connect('train.db')
 
-for d in db.select(['train_set=True']):
-    db0.write(d, key_value_pairs=d.key_value_pairs)
+#for d in db.select(['train_set=True']):
+#    db0.write(d, key_value_pairs=d.key_value_pairs)
 #+END_SRC
 
 #+BEGIN_SRC python :results silent
@@ -2125,7 +2125,7 @@ for i, d in enumerate(db.select(['config=3', 'bulk=fcc'])):
 : /home-research/jboes/research/cluster-expansion/DFT/bulk=fcc/config=3/xc=PBE/gga=None 0
 
 
-   
+
 * Surface calculations / manually selected configurations
   
 ** Relaxations of root 7 x root 7 slab
@@ -2425,47 +2425,36 @@ plt.savefig('./images/db2-surf.png')
 ** Unique structure calculator
 This code uses ASAPs EMT calculator to calculate the energy of /all/ permutations given to it. It will then add the energy unique permutations to a trajectory file for later reference. 
 #+BEGIN_SRC python
-from timeit import timeit
-
-func = '''
 from itertools import product
 from ase.lattice.surface import fcc111_root
 from asap3 import EMT
 from ase import Atoms
-#from ase.db import connect
-#from neural.bp import BPNeural
-from ase.io import write
-from ase.visualize import view
-
-#save = connect('traj/unique-1layer.db')
-#calc = BPNeural(json='networks/db2-surf/l3n30i0/parameters-checkpoint.json')
+from ase.db import connect
+from amp.utilities import hash_image
 
 base = fcc111_root('Cu', 7, size=(1, 1, 5), vacuum=6.0, a=3.634)
-natoms = [a.index for a in base if a.tag <= 1]  + [25]
+natoms = [a.index for a in base if a.tag <= 1]
 metals = ['Cu', 'Pd']
 
-nrgs = set()
-for i, c in enumerate(product(metals, repeat=len(natoms))):
-    atoms0 = Atoms.copy(base)
-    for j, s in enumerate(natoms):
-        atoms0[s].symbol = c[j]
+with connect('traj/unique-1layer.db') as db:
+    nrgs = set()
+    for i, c in enumerate(product(metals, repeat=len(natoms))):
+        atoms0 = Atoms.copy(base)
+        for j, s in enumerate(natoms):
+            atoms0[s].symbol = c[j]
 
-    atoms = Atoms.copy(atoms0)
-    atoms.set_calculator(EMT())
-    nrg = round(atoms.get_potential_energy(), 3)
+        atoms = Atoms.copy(atoms0)
+        atoms.set_calculator(EMT())
+        nrg = round(atoms.get_potential_energy(), 3)
+        atoms.set_calculator(None)
 
-    if nrg not in nrgs:
-        nrgs.add(nrg)
-        write('./images/cfg{0}.png'.format(i), atoms0*(3, 3, 1))
-print len(nrgs)
-'''
-
-print timeit(func, number=1)
+        if nrg not in nrgs:
+            nrgs.add(nrg)
+            db.write(atoms)
 #+END_SRC
 
 #+RESULTS:
-: 38
-: 3.84333300591
+: 21
 
 Number of unique permutations predicted for 3 layers of root 7 x root 7 slab.
 
@@ -2587,3 +2576,246 @@ for M, a, factors in basis:
 
 #+RESULTS:
 
+* Analysis of first NN
+
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+from amp import Amp
+from amp.utilities import hash_image
+
+#db = connect('networks/db2/data.db')
+db = connect('traj/unique-3layer.db')
+
+for d in db.select():
+    atoms = db.get_atoms(d.id)
+
+    H = hash_image(atoms)
+
+    calc = Amp('networks/db2/40-10-10-1/')
+    atoms.set_calculator(calc)
+    nrg10 = atoms.get_potential_energy()
+
+    calc = Amp('networks/db2/40-12-12-1/')
+    atoms.set_calculator(calc)
+    nrg12 = atoms.get_potential_energy()
+
+    db.update(d.id, NN10=nrg10, NN12=nrg12, amp_hash=H)
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC python
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import norm
+from matplotlib import gridspec
+import matplotlib.mlab as mlab
+
+db = connect('networks/db2/data.db')
+
+E = {}
+E[1], E[0] = [], []
+tags = []
+for d in db.select([]):
+    
+    if d.train_set:
+        E[1] += [[d.energy / d.natoms,
+                  d.NN10 / d.natoms,
+                  d.NN12 / d.natoms,
+                  d.NN14 / d.natoms,
+                  d.NN16 / d.natoms]]
+    else:
+        E[0] += [[d.energy / d.natoms,
+                  d.NN10 / d.natoms,
+                  d.NN12 / d.natoms,
+                  d.NN14 / d.natoms,
+                  d.NN16 / d.natoms]]
+
+E[1] = np.array(E[1])
+E[0] = np.array(E[0])
+
+Qe = E[1].T[0]
+Ne = E[1].T[1]
+
+vQe = E[0].T[0]
+vNe = E[0].T[1]
+
+RMSE = np.sqrt(((Ne - Qe) ** 2).mean())
+vRMSE = np.sqrt(((vNe - vQe) ** 2).mean())
+
+(mu, sig) = norm.fit(Ne - Qe)
+(vmu, vsig) = norm.fit(vNe - vQe)
+
+fig = plt.figure(figsize=(6, 4)) 
+gs = gridspec.GridSpec(1, 2, width_ratios=[2, 1])
+ax0 = plt.subplot(gs[0])
+ax0.plot([min(Qe), max(Qe)], [0, 0], 'k--', lw=2)
+ax0.scatter(Qe, Ne - Qe, marker='o', color='b')
+ax0.scatter(vQe, vNe - vQe, marker='o', color='r')
+ax0.text(min(Qe) + 0.1, 0.014,
+         'RMSE: {0:1.3f}'.format(RMSE),
+         fontsize=12, va='top', ha='left', color='b')
+ax0.text(min(vQe) + 0.1, -0.014,
+         'RMSE: {0:1.3f}'.format(RMSE),
+         fontsize=12, va='bottom', ha='left', color='r')
+ax0.set_xlim(min(Qe), max(Qe))
+ax0.set_ylim(-0.015, 0.015)
+ax0.set_xlabel('DFT potential energy (eV/atom)')
+ax0.set_ylabel('Residual error (eV/atom)')
+#ax0.legend(loc='best', handles=hdl, fontsize=12, frameon=False)
+
+ax1 = plt.subplot(gs[1])
+
+n, bins, patches = ax1.hist(Ne - Qe, 60,
+                            range=(-0.015, 0.015),
+                            weights=np.ones_like(Ne - Qe)/len(Ne),
+                            facecolor='b',
+                            alpha=0.3,
+                            orientation='horizontal')
+
+vn, vbins, vpatches = ax1.hist(vNe - vQe, 60,
+                               range=(-0.015, 0.015),
+                               weights=np.ones_like(vNe - vQe)/len(vNe),
+                               facecolor='r',
+                               alpha=0.3,
+                               orientation='horizontal')
+
+y = mlab.normpdf(bins, mu, sig)
+ax1.text(0.05, 0.0142, '$\mu$: {0:1.3f}'.format(mu), fontsize=12, va='top', ha='left')
+ax1.text(0.05, 0.0122, '$\sigma$: {0:1.3f}'.format(sig), fontsize=12, va='top', ha='left')
+ax1.plot(y / sum(y), bins, 'k--', lw=2)
+ax1.plot([0, 0.5], [0, 0], 'k--', lw=2)
+ax1.set_xlabel('Probability')
+# ax1.set_ylim(-0.015, 0.015)
+# ax1.set_xlim(0, 0.6)
+ax1.set_yticklabels([])
+ax1.set_xticks(ax1.get_xticks()[1::2])
+plt.tight_layout(w_pad=-0.5)
+plt.show()
+#plt.savefig('./images/fig-neural-train.png')
+print (np.abs(Ne - Qe) > sig*3).sum()
+print (np.abs(vNe - vQe) > vsig*3).sum()
+print (np.abs(Ne - E[1].T[2]) > vsig*6).sum()
+print '-----'
+print len(Qe)
+print len(vQe)
+print vsig*6
+#+END_SRC
+
+#+RESULTS:
+: 278
+: 27
+: 79
+: -----
+: 17417
+: 1935
+: 0.00587838138904
+
+** Predictions of 3-layer configurations
+
+[[./images/db0-2layer.png]]
+
+[[./images/db0-3layer.png]]
+
+#+BEGIN_SRC python
+from ase.db import connect
+from amp import Amp
+import numpy as np
+import matplotlib.pyplot as plt
+
+db = connect('traj/unique-3layer.db')
+
+E = []
+for d in db.select():
+    E += [abs(d.NN10 / d.natoms - d.NN12 / d.natoms)]
+E = np.array(E)
+
+print (E > 0.03).sum()
+
+def nbins(x):
+    from math import log10, floor, ceil
+    p = -int(floor(log10(x)) - 1)
+    w = ceil(x*10**p) / ceil(x*10**p)*10**-p
+    m = ceil(x*10**p)
+    return np.arange(0, m*w, w)
+
+plt.figure(figsize=(6, 4))
+n, bins, patches = plt.hist(E, bins=nbins(max(E)))
+plt.xlabel('Predicted energy difference (eV)')
+plt.ylabel('Probability')
+plt.xlim(0, nbins(max(E)).max())
+plt.title('{0} total calculations'.format(len(E)))
+plt.tight_layout()
+plt.savefig('./images/db0-3layer.png')
+#+END_SRC
+
+#+RESULTS:
+: 2879
+
+** Predictions for stress changes
+
+#+BEGIN_SRC python
+from ase.db import connect
+from ase.io import read
+import numpy as np
+from ase.visualize import view
+
+images = read('traj/unique-3layer.db')
+
+with connect('traj/unique-3layer.db') as db:
+    for atoms in images:
+        cell = atoms.get_cell()
+        f = 1.0/1.08392955421
+
+        delta = np.array([[f, 0, 0],
+                          [0, f, 0],
+                          [0, 0, f]])
+
+        atoms.set_cell(np.dot(cell, delta), scale_atoms=True)
+
+        # symbols = []
+        # for atom in atoms:
+        #     if atom.symbol == 'Pd':
+        #         symbols += ['Cu']
+        #     else:
+        #         symbols += ['Pd']
+        # atoms.set_chemical_symbols(symbols)
+
+        db.write(atoms)
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC python
+from ase.db import connect
+import numpy as np
+from ase.visualize import view
+import os
+from jasp import *
+JASPRC['queue.ppn'] = 5
+JASPRC['queue.walltime'] = '24:00:00'
+
+db = connect('traj/unique-3layer.db')
+
+for cfg, d in enumerate(db.select()):
+    E = abs(d.NN10 / d.natoms - d.NN12 / d.natoms)
+    if E > 0.11:
+        atoms = db.get_atoms(d.id)
+        lat = atoms.get_distance(5, 12)
+        M = atoms[0].symbol
+
+        wd = './DFT/surf=fcc/host={0}/lattice={1:1.3f}/type=layers3/cfg={2}/xy=1.00'.format(M, lat, cfg)
+        if not os.path.exists(wd):
+            with jasp(wd,
+                      xc='PBE',
+                      encut=400,
+                      kpts=(5, 5, 1),
+                      ibrion=-1,
+                      atoms=atoms) as calc:
+                try:
+                    calc.get_required_memory()
+                    calc.calculate()
+                except(VaspSubmitted, VaspQueued):
+                    pass
+#+END_SRC
