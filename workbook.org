@@ -2456,8 +2456,7 @@ with connect('traj/unique-1layer.db') as db:
 #+RESULTS:
 : 21
 
-Number of unique permutations predicted for 3 layers of root 7 x root 7 slab.
-
+** JASP calculations of unique configurations
 #+BEGIN_SRC python
 from ase.lattice.surface import fcc111_root
 from ase.db import connect
@@ -2524,7 +2523,6 @@ for wd in UF:
             pass
 #+END_SRC
 
-
 ** single point calculations for xy and isotropic strain effects
 #+BEGIN_SRC python
 import numpy as np
@@ -2577,32 +2575,6 @@ for M, a, factors in basis:
 #+RESULTS:
 
 * Analysis of first NN
-
-#+BEGIN_SRC python :results silent
-from ase.db import connect
-from amp import Amp
-from amp.utilities import hash_image
-
-#db = connect('networks/db2/data.db')
-db = connect('traj/unique-3layer.db')
-
-for d in db.select():
-    atoms = db.get_atoms(d.id)
-
-    H = hash_image(atoms)
-
-    calc = Amp('networks/db2/40-10-10-1/')
-    atoms.set_calculator(calc)
-    nrg10 = atoms.get_potential_energy()
-
-    calc = Amp('networks/db2/40-12-12-1/')
-    atoms.set_calculator(calc)
-    nrg12 = atoms.get_potential_energy()
-
-    db.update(d.id, NN10=nrg10, NN12=nrg12, amp_hash=H)
-#+END_SRC
-
-#+RESULTS:
 
 #+BEGIN_SRC python
 from ase.db import connect
@@ -2712,26 +2684,228 @@ print vsig*6
 : 1935
 : 0.00587838138904
 
-** Predictions of 3-layer configurations
+* Second NN iteration
+** Predictions
+*** Update unique configurations
+Each of the unique configurations produced above will also have an Cu based equivalent. We generate those here:
+
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+from ase.io import read
+import numpy as np
+from ase.visualize import view
+
+images = read('traj/unique-1layer.db')
+
+with connect('traj/unique-1layer.db') as db:
+    for atoms in images:
+        symbols = []
+        for atom in atoms:
+            if atom.symbol == 'Pd':
+                symbols += ['Cu']
+            else:
+                symbols += ['Pd']
+        atoms.set_chemical_symbols(symbols)
+
+        db.write(atoms)
+#+END_SRC
+
+*** Producing files for predictions
+**** Creating lattice constant perturbations
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+from ase.io import read
+import numpy as np
+from amp.utilities import hash_image
+from amp import Amp
+import os
+
+images = read('traj/unique-1layer.db')
+factors = np.linspace(3.634, 3.939, 5)
+
+rp = connect('temp/rep-1layer.db')
+
+hashs = set()
+with connect('temp/pred-1layer.db') as db:
+
+    for d in db.select():
+        hashs.add(d.hash)
+
+    for x in factors:
+        for atoms in images:
+            cell = atoms.get_cell()
+            f = x / np.linalg.norm(cell[0] / np.sqrt(7) / (0.5**0.5))
+
+            delta = np.array([[f, 0, 0],
+                              [0, f, 0],
+                              [0, 0, f]])
+
+            atoms.set_cell(np.dot(cell, delta),
+                           scale_atoms=True)
+
+            H = hash_image(atoms)
+            if H not in hashs:
+                hashs.add(H)
+
+                calc = Amp('networks/db2/40-10-10-1/')
+                atoms.set_calculator(calc)
+                nrg10 = atoms.get_potential_energy()
+
+                calc = Amp('networks/db2/40-12-12-1/')
+                atoms.set_calculator(calc)
+                nrg12 = atoms.get_potential_energy()
+                atoms.set_calculator(None)
+
+                db.write(atoms, hash=H,
+                         data={'NN10': nrg10,
+                               'NN12': nrg12})
+            else:
+                rp.write(atoms, hash=H)
+#+END_SRC
+
+*** Analysis of prediction files
+In this section, we analyze the difference between energies predicted for various structures between two different neural network frameworks. Each figure demonstrates this effect for a different set of structures. Each set of structures is based on a root(7) \times root(7) fcc(111) surface lattice which is 5 layers deep. The only differences between these structures is the identity of the atoms filling the lattice positions, and also the lattice constant of the unit cell.
+
+#+caption: Demonstration of the lattice structures utilized in the following section. The darker the atom, the deeper the layer.
+#+label: structure-types
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 800
+[[./images/structure-types.png]]    
+
+#+BEGIN_SRC python :results silent
+from ase.visualize import view
+from ase.lattice.surface import fcc111_root
+from ase.io import write
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+import matplotlib.image as mpimg
+import os
+
+lat = np.linspace(3.634, 3.939, 5)
+
+p = np.linspace(0.05, 0.9, 5)
+
+fig = plt.figure(figsize=(8, 3))
+ax = fig.add_subplot(111)
+for i, a in enumerate(lat):
+    atoms = fcc111_root('Cu', root=7,
+                        size=(1, 1, 5),
+                        vacuum=6.0, a=a)
+
+    col = abs((atoms.get_tags() / 5.0) - 1.0)
+
+    kwargs = {
+        'rotation': "-75x",
+        'show_unit_cell': 2,
+        'colors': np.array([col, col, col]).T,
+        'radii': [0.3] * len(atoms)}
+
+    write('images/temp.png', atoms, **kwargs)
+
+    image = mpimg.imread('./images/temp.png')
+    imagebox = OffsetImage(image, zoom=0.5)
+
+    ax.add_artist(AnnotationBbox(imagebox,
+                                 xy=(0, 0),
+                                 xybox=(p[i], 0.5),
+                                 pad=-0.2,
+                                 frameon=False,
+                                 arrowprops=None)
+                 )
+    ax.text(p[i], -0.13, '{0:1.3f} $\AA$'.format(a),
+            va='center', ha='center')
+    os.unlink('./images/temp.png')
+
+fig.patch.set_visible(False)
+ax.axis('off')
+plt.tight_layout()
+plt.savefig('images/structure-types.png')
+#+END_SRC
+
+For a particular lattice (3.939 $\AA$), all combinations of Cu and Pd atoms were created for a particular number of layers. In Figure ref:composition-types, this is demonstrated 
+
+#+caption: Demonstration of the lattice structures utilized in the following section. The darker the atom, the deeper the layer.
+#+label: composition-types
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/composition-types.png]]
+
+#+BEGIN_SRC python :results silent
+from ase.visualize import view
+from ase.lattice.surface import fcc111_root
+from ase.io import write
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+import matplotlib.image as mpimg
+import os
+
+p = np.linspace(0.2, 0.8, 2)
+
+fig = plt.figure(figsize=(4, 3))
+ax = fig.add_subplot(111)
+for i, M in enumerate(['Cu', 'Pd']):
+    atoms = fcc111_root(M, root=7,
+                        size=(1, 1, 5),
+                        vacuum=6.0,
+                        a=3.787)
+
+    C = [200/255., 129/255., 51/255.] 
+    B = [0/255., 105/255., 134/255.]
+
+    if i == 0:
+        col = [C] * 31 + [B] * 4
+    else:
+        col = [B] * 31 + [C] * 4
+
+    kwargs = {
+        'rotation': "-75x",
+        'show_unit_cell': 2,
+        'colors': col,
+        'radii': None}
+
+    write('images/temp.png', atoms, **kwargs)
+
+    image = mpimg.imread('./images/temp.png')
+    imagebox = OffsetImage(image, zoom=0.6)
+
+    ax.add_artist(AnnotationBbox(imagebox,
+                                 xy=(0, 0),
+                                 xybox=(p[i], 0.5),
+                                 pad=-0.2,
+                                 frameon=False,
+                                 arrowprops=None))
+    os.unlink('./images/temp.png')
+
+fig.patch.set_visible(False)
+ax.axis('off')
+plt.tight_layout()
+plt.savefig('images/composition-types.png')
+#+END_SRC
+
+#+caption: 
+#+label: fig-1layer-db0
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db0-1layer.png]]
 
 [[./images/db0-2layer.png]]
 
 [[./images/db0-3layer.png]]
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results silent
 from ase.db import connect
 from amp import Amp
 import numpy as np
 import matplotlib.pyplot as plt
 
-db = connect('traj/unique-3layer.db')
+db = connect('temp/pred-1layer.db')
 
 E = []
 for d in db.select():
-    E += [abs(d.NN10 / d.natoms - d.NN12 / d.natoms)]
+    E += [abs(d.data.NN10 / d.natoms - d.data.NN12 / d.natoms)]
 E = np.array(E)
-
-print (E > 0.03).sum()
 
 def nbins(x):
     from math import log10, floor, ceil
@@ -2742,51 +2916,16 @@ def nbins(x):
 
 plt.figure(figsize=(6, 4))
 n, bins, patches = plt.hist(E, bins=nbins(max(E)))
-plt.xlabel('Predicted energy difference (eV)')
+plt.xlabel('Predicted energy difference (eV/atom)')
 plt.ylabel('Probability')
 plt.xlim(0, nbins(max(E)).max())
 plt.title('{0} total calculations'.format(len(E)))
 plt.tight_layout()
-plt.savefig('./images/db0-3layer.png')
+plt.savefig('./images/db0-1layer.png')
 #+END_SRC
 
-#+RESULTS:
-: 2879
 
-** Predictions for stress changes
-
-#+BEGIN_SRC python
-from ase.db import connect
-from ase.io import read
-import numpy as np
-from ase.visualize import view
-
-images = read('traj/unique-3layer.db')
-
-with connect('traj/unique-3layer.db') as db:
-    for atoms in images:
-        cell = atoms.get_cell()
-        f = 1.0/1.08392955421
-
-        delta = np.array([[f, 0, 0],
-                          [0, f, 0],
-                          [0, 0, f]])
-
-        atoms.set_cell(np.dot(cell, delta), scale_atoms=True)
-
-        # symbols = []
-        # for atom in atoms:
-        #     if atom.symbol == 'Pd':
-        #         symbols += ['Cu']
-        #     else:
-        #         symbols += ['Pd']
-        # atoms.set_chemical_symbols(symbols)
-
-        db.write(atoms)
-#+END_SRC
-
-#+RESULTS:
-
+** Beginning additional calculations
 #+BEGIN_SRC python
 from ase.db import connect
 import numpy as np
