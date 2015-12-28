@@ -2454,7 +2454,6 @@ with connect('traj/unique-1layer.db') as db:
 #+END_SRC
 
 #+RESULTS:
-: 21
 
 ** JASP calculations of unique configurations
 #+BEGIN_SRC python
@@ -2825,8 +2824,6 @@ plt.savefig('images/structure-types.png')
 
 For a particular lattice (3.939 \AA), all combinations of Cu and Pd atoms were created for certain numbers of layers starting from the top. This was done for: 1, 2, and 3 layers. In Figure ref:composition-types, one possible configuration for a system where only the top most layer of atoms were allowed to be either Cu or Pd. Once all such configurations were enumerated on a Pd substrate (such a substrate is demonstrated on the right of Figure ref:composition-types), each structures energy was calculated using ASAP (https://wiki.fysik.dtu.dk/asap). Finally, only structures who ASAP energies are unique are kept.
 
-
-
 #+caption: Demonstration of the lattice structures utilized in the following section. The darker the atom, the deeper the layer.
 #+label: composition-types
 #+attr_latex: :width 4in :placement [H]
@@ -2971,3 +2968,35 @@ for cfg, d in enumerate(db.select()):
                 except(VaspSubmitted, VaspQueued):
                     pass
 #+END_SRC
+
+#+BEGIN_SRC python
+from ase.db import connect
+import numpy as np
+from ase.visualize import view
+import os
+from jasp import *
+from glob import glob
+JASPRC['restart_unconverged'] = False
+
+dirs = glob.glob('DFT/surf=fcc/host=*/lattice=3.634/type=layers3')
+
+cnt = 0
+for wd in dirs:
+    try:
+        with jasp(wd) as calc:
+            try:
+                atoms = calc.get_atoms()
+                nrg = atoms.get_potential_energy()
+                cnt += 1
+            except(VaspSubmitted, VaspQueued):
+                pass
+    except(VaspNotFinished):
+        d += [wd]
+
+print('{0} total complete'.format(cnt + len(d)))
+print('{0} jobs incomplete'.format(len(d)))
+print('{0} jobs complete'.format(cnt))
+#+END_SRC
+
+#+RESULTS:
+
