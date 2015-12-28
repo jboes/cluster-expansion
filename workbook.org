@@ -2694,9 +2694,9 @@ from ase.io import read
 import numpy as np
 from ase.visualize import view
 
-images = read('traj/unique-1layer.db')
+images = read('traj/unique-4layer.db')
 
-with connect('traj/unique-1layer.db') as db:
+with connect('traj/unique-4layer.db') as db:
     for atoms in images:
         symbols = []
         for atom in atoms:
@@ -2719,13 +2719,13 @@ from amp.utilities import hash_image
 from amp import Amp
 import os
 
-images = read('traj/unique-1layer.db')
+images = read('traj/unique-4layer.db')
 factors = np.linspace(3.634, 3.939, 5)
 
-rp = connect('temp/rep-1layer.db')
+rp = connect('temp/rep-4layer.db')
 
 hashs = set()
-with connect('temp/pred-1layer.db') as db:
+with connect('temp/pred-4layer.db') as db:
 
     for d in db.select():
         hashs.add(d.hash)
@@ -2968,35 +2968,3 @@ for cfg, d in enumerate(db.select()):
                 except(VaspSubmitted, VaspQueued):
                     pass
 #+END_SRC
-
-#+BEGIN_SRC python
-from ase.db import connect
-import numpy as np
-from ase.visualize import view
-import os
-from jasp import *
-from glob import glob
-JASPRC['restart_unconverged'] = False
-
-dirs = glob.glob('DFT/surf=fcc/host=*/lattice=3.634/type=layers3')
-
-cnt = 0
-for wd in dirs:
-    try:
-        with jasp(wd) as calc:
-            try:
-                atoms = calc.get_atoms()
-                nrg = atoms.get_potential_energy()
-                cnt += 1
-            except(VaspSubmitted, VaspQueued):
-                pass
-    except(VaspNotFinished):
-        d += [wd]
-
-print('{0} total complete'.format(cnt + len(d)))
-print('{0} jobs incomplete'.format(len(d)))
-print('{0} jobs complete'.format(cnt))
-#+END_SRC
-
-#+RESULTS:
-
