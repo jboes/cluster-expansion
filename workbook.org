@@ -2968,3 +2968,74 @@ for cfg, d in enumerate(db.select()):
                 except(VaspSubmitted, VaspQueued):
                     pass
 #+END_SRC
+* Renaming
+#+BEGIN_SRC python
+import os
+import numpy as np
+
+for r, d, f in os.walk('DFT/surf=fcc'):
+    if f:
+        k = [x for x in r.split('/') 
+             if '=' in x
+             and 'host' in x
+             or 'lattice' in x
+             or 'type' in x]
+        k[0] = {k[0].split('=')[0]: str(k[0].split('=')[1])}
+        k[1] = {k[1].split('=')[0]: float(k[1].split('=')[1])}
+        k[2] = {'layers': int(k[2][-1])}
+print k
+#+END_SRC
+
+#+RESULTS:
+: [{'host': 'Pd'}, {'lattice': 3.842}, {'layers': 2}]
+
+#+BEGIN_SRC python
+import os
+from ase.io.trajectory import Trajectory
+from jasp import *
+JASPRC['restart_unconverged'] = False
+
+db = 'data.db'
+wd = 'DFT/surf=fcc'
+
+db = os.path.join(os.path.abspath(os.getcwd()), db)
+
+if os.path.exists(db):
+    os.unlink(db)
+
+for r, d, f in os.walk(wd):
+    if 'OUTCAR' in f and 'XDATCAR' in f:
+        try:
+            with jasp(r) as calc:
+                try:
+                    compile_trajectory(calc)
+                    traj = Trajectory('out.traj')
+                    n = len(traj)
+
+                    kv = {}
+                    k = [x for x in r.split('/') 
+                         if '=' in x
+                         and 'host' in x
+                         or 'lattice' in x
+                         or 'type' in x]
+                    kv[k[0].split('=')[0]] = str(k[0].split('=')[1])
+                    kv[k[1].split('=')[0]] = float(k[1].split('=')[1])
+                    kv['layers'] = int(k[2][-1])
+
+                    for i, atoms in enumerate(traj):
+
+                        keys = kv
+                        keys.update({'traj': int(n-i-1)})
+
+                        makedb(calc,
+                               atoms=atoms,
+                               dbname=db,
+                               keys=keys)
+                except(VaspQueued, VaspSubmitted):
+                    pass
+        except(RuntimeError):
+            print('{0}: {1}\n'.format(sys.exc_info()[0], r))
+            os.unlink(os.path.join(r, 'out.traj'))
+        except:
+            print('{0}: {1}\n'.format(sys.exc_info()[0], r))
+#+END_SRC
