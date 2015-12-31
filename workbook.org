@@ -1300,7 +1300,7 @@ import os
 import random
 import numpy as np
 
-db = connect('networks/db2/data.db')
+db = connect('networks/db3/data.db')
 
 n = db.count()
 n_train = int(round(n * 0.9))
@@ -1316,10 +1316,10 @@ valid_samples = set(n_ids) - set(train_samples)
 db.update(list(train_samples), train_set=True)
 db.update(list(valid_samples), train_set=False)
 
-#db0 = connect('train.db')
+db0 = connect('networks/db3/train.db')
 
-#for d in db.select(['train_set=True']):
-#    db0.write(d, key_value_pairs=d.key_value_pairs)
+for d in db.select(['train_set=True']):
+    db0.write(d, key_value_pairs=d.key_value_pairs)
 #+END_SRC
 
 #+BEGIN_SRC python :results silent
@@ -2905,13 +2905,19 @@ From the neural network trained
 #+attr_org: :width 400
 [[./images/db0-3layer.png]]
 
+#+caption: 
+#+label: fig-3layer-db0
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db0-4layer.png]]
+
 #+BEGIN_SRC python :results silent
 from ase.db import connect
 from amp import Amp
 import numpy as np
 import matplotlib.pyplot as plt
 
-db = connect('temp/pred-1layer.db')
+db = connect('temp/pred-4layer.db')
 
 E = []
 for d in db.select():
@@ -2932,7 +2938,7 @@ plt.ylabel('Probability')
 plt.xlim(0, nbins(max(E)).max())
 plt.title('{0} total calculations'.format(len(E)))
 plt.tight_layout()
-plt.savefig('./images/db0-1layer.png')
+plt.savefig('./images/db0-4layer.png')
 #+END_SRC
 
 ** Beginning additional calculations
@@ -2983,7 +2989,6 @@ for r, d, f in os.walk('DFT/surf=fcc'):
         k[0] = {k[0].split('=')[0]: str(k[0].split('=')[1])}
         k[1] = {k[1].split('=')[0]: float(k[1].split('=')[1])}
         k[2] = {'layers': int(k[2][-1])}
-print k
 #+END_SRC
 
 #+RESULTS:
@@ -2993,6 +2998,9 @@ print k
 import os
 from ase.io.trajectory import Trajectory
 from jasp import *
+from jbtools.gilgamesh import makedb
+from jbtools.gilgamesh import compile_trajectory
+from amp.utilities import hash_image
 JASPRC['restart_unconverged'] = False
 
 db = 'data.db'
@@ -3025,7 +3033,8 @@ for r, d, f in os.walk(wd):
                     for i, atoms in enumerate(traj):
 
                         keys = kv
-                        keys.update({'traj': int(n-i-1)})
+                        keys.update({'traj': int(n-i-1),
+                                     'hash': hash_image(atoms)})
 
                         makedb(calc,
                                atoms=atoms,
@@ -3039,3 +3048,28 @@ for r, d, f in os.walk(wd):
         except:
             print('{0}: {1}\n'.format(sys.exc_info()[0], r))
 #+END_SRC
+
+#+RESULTS:
+: <type 'exceptions.ValueError'>: DFT/surf=fcc/host=Cu/lattice=3.634/type=layers2/cfg=314/xy=1.00
+: 
+
+#+BEGIN_SRC python
+import os
+from ase.io.trajectory import Trajectory
+from jasp import *
+from jbtools.gilgamesh import makedb
+from jbtools.gilgamesh import compile_trajectory
+from amp.utilities import hash_image
+from ase.db import connect
+
+wd = 'DFT/surf=fcc'
+
+db = connect('data.db')
+
+for d in db.select(['id=1']):
+    print d.hash
+#+END_SRC
+
+#+RESULTS:
+: 17be6af70f12f49af619de2b9a72695d
+
