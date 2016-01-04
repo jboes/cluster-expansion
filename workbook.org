@@ -2906,7 +2906,7 @@ From the neural network trained
 [[./images/db0-3layer.png]]
 
 #+caption: 
-#+label: fig-3layer-db0
+#+label: fig-4layer-db0
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
 [[./images/db0-4layer.png]]
@@ -3055,21 +3055,44 @@ for r, d, f in os.walk(wd):
 
 #+BEGIN_SRC python
 import os
-from ase.io.trajectory import Trajectory
-from jasp import *
-from jbtools.gilgamesh import makedb
-from jbtools.gilgamesh import compile_trajectory
-from amp.utilities import hash_image
+import numpy as np
+from ase.io import read
 from ase.db import connect
 
-wd = 'DFT/surf=fcc'
 
-db = connect('data.db')
+mdb = connect('temp/master.db')
 
-for d in db.select(['id=1']):
-    print d.hash
+hashs = []
+for f in os.listdir('temp'):
+    db = connect('temp/' + f)
+    for d in db.select():
+        if d.hash not in hashs:
+            hashs += [d.hash]
+            data = d.data
+            data.update({'hash': d.hash})
+            mdb.write(d, data=d.data)
 #+END_SRC
 
 #+RESULTS:
-: 17be6af70f12f49af619de2b9a72695d
+
+#+BEGIN_SRC python
+import os
+import numpy as np
+from ase.io import read
+from ase.db import connect
+
+db = connect('temp/pred-4layer.db')
+
+for d in db.select(['id<=5']):
+    data = d.data
+    data.update({'hash': d.hash})
+    print data
+#+END_SRC
+
+#+RESULTS:
+: {u'NN12': -124.0128352084126, u'NN10': -124.05190576982467, 'hash': u'6de1471905e9fc073ed94d3a442c4ef8'}
+: {u'NN12': -125.98583428205852, u'NN10': -126.0117982174777, 'hash': u'15896e94868dc62fe74851ae653bc5d1'}
+: {u'NN12': -127.75829229726118, u'NN10': -127.77166324045552, 'hash': u'd83a579814f1be70f08c9d4787b038ff'}
+: {u'NN12': -129.41069015743577, u'NN10': -129.40386527602988, 'hash': u'869139452a1217aa3961c39ec0362b95'}
+: {u'NN12': -130.89038691106876, u'NN10': -130.87507637543385, 'hash': u'edddc8aa98494a75932bc88baf75a775'}
 
