@@ -2911,13 +2911,19 @@ From the neural network trained
 #+attr_org: :width 400
 [[./images/db0-4layer.png]]
 
+#+caption: 
+#+label: fig-alayer-db0
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db0-alayer.png]]
+
 #+BEGIN_SRC python :results silent
 from ase.db import connect
 from amp import Amp
 import numpy as np
 import matplotlib.pyplot as plt
 
-db = connect('temp/pred-4layer.db')
+db = connect('temp/pred-all.db')
 
 E = []
 for d in db.select():
@@ -2926,7 +2932,7 @@ E = np.array(E)
 
 def nbins(x):
     from math import log10, floor, ceil
-    p = -int(floor(log10(x)) - 1)
+    p = -int(floor(log10(x)) - 2)
     w = ceil(x*10**p) / ceil(x*10**p)*10**-p
     m = ceil(x*10**p)
     return np.arange(0, m*w, w)
@@ -2938,7 +2944,7 @@ plt.ylabel('Probability')
 plt.xlim(0, nbins(max(E)).max())
 plt.title('{0} total calculations'.format(len(E)))
 plt.tight_layout()
-plt.savefig('./images/db0-4layer.png')
+plt.savefig('./images/db0-alayer.png')
 #+END_SRC
 
 ** Beginning additional calculations
@@ -3095,4 +3101,34 @@ for d in db.select(['id<=5']):
 : {u'NN12': -127.75829229726118, u'NN10': -127.77166324045552, 'hash': u'd83a579814f1be70f08c9d4787b038ff'}
 : {u'NN12': -129.41069015743577, u'NN10': -129.40386527602988, 'hash': u'869139452a1217aa3961c39ec0362b95'}
 : {u'NN12': -130.89038691106876, u'NN10': -130.87507637543385, 'hash': u'edddc8aa98494a75932bc88baf75a775'}
+
+
+* Creating new database
+#+BEGIN_SRC python
+from ase.db import connect
+from ase.io import read
+from amp import Amp
+
+images = read('traj/unique-config.db')
+
+with connect('temp/db3-config.db') as db:
+ 
+    for atoms in images:
+
+        data = {}
+        for d, l in [[2, 10], [2, 12],
+                     [3, 6], [3, 7], [3, 8]]:
+
+            key = 'db{0}-{1}'.format(d, l)
+            calc = Amp('networks/db{0}/40-{1}-{1}-1/'.format(d, l))
+            atoms.set_calculator(calc)
+            data[key] = atoms.get_potential_energy()
+
+        atoms.set_calculator(None)
+
+        db.write(atoms, data=data)
+#+END_SRC
+
+#+RESULTS:
+: {'db3-7': -145.4988296599197, 'db3-6': -145.70377985147238, 'db2-10': -145.46757047772155, 'db2-12': -147.22481869781907, 'db3-8': -145.67327524825865}
 
