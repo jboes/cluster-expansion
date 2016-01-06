@@ -2883,35 +2883,37 @@ plt.tight_layout()
 plt.savefig('images/composition-types.png')
 #+END_SRC
 
-For a single layer of configurations then, there are $2^{7}$ (128) possible configurations of atoms of the top most layer. Only 8 of these configurations are predicted to be energy unique by ASAP. Each of those configurations is energy unique for a Pd substrate, so we end up with twice as many unique configurations if we consider a Cu substrate as well. The result is 8 \times 2 (16) energy unique configurations on Cu and Pd substrate, and 16 \times 5 (80) total configurations with lattice constant ranging from 3.634-3.939 \AA.
+For a single layer of configurations then, there are $2^{7}$ (128) possible configurations of atoms of the top most layer. Only 8 of these configurations are predicted to be energy unique by ASAP. Each of those configurations is energy unique for a Pd substrate, so we end up with twice as many unique configurations if we consider a Cu substrate as well. The result is 8 \times 2 (16) energy unique configurations on Cu and Pd substrate, and 16 \times 5 (80) total configurations with lattice constant ranging from 3.634 - 3.939 \AA.
 
-From the neural network trained 
+From the two neural network trained, the difference between the energies predicted by the two systems can then be taken and used to determine the dependability of the fit for a wide range of different configurations.
 
-#+caption: 
+#+caption: NN predicted energy differences for unique energy configurations of a root(7) \times root(7) slab. 1 layer is allowed to change its chemical composition.
 #+label: fig-1layer-db0
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
 [[./images/db0-1layer.png]]
 
-#+caption: 
+#+caption: NN predicted energy differences for unique energy configurations of a root(7) \times root(7) slab. 2 layers are allowed to change their chemical composition.
 #+label: fig-2layer-db0
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
 [[./images/db0-2layer.png]]
 
-#+caption: 
+#+caption: NN predicted energy differences for unique energy configurations of a root(7) \times root(7) slab. 3 layers are allowed to change their chemical composition.
 #+label: fig-3layer-db0
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
 [[./images/db0-3layer.png]]
 
-#+caption: 
+#+caption: NN predicted energy differences for unique energy configurations of a root(7) \times root(7) slab. 4 layers are allowed to change their chemical composition.
 #+label: fig-4layer-db0
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
 [[./images/db0-4layer.png]]
 
-#+caption: 
+To determine which structures AMP considers to be unique, we use the hashing method it utilizes to assign a simple hash to each atoms object. If we combine all of the unique hashes from the unique configurations shown above, Figure ref:fig-alayer-db0 is produced. We observe that the ASAP-EMT calculator eliminates a large number of unique configurations when the data set becomes quite large. Regardless, we observe that the results are well predicted in most cases.
+
+#+caption: NN predicted energy differences for all unique energy configurations shown above which have a unique hash.
 #+label: fig-alayer-db0
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
@@ -3130,5 +3132,4 @@ with connect('temp/db3-config.db') as db:
 #+END_SRC
 
 #+RESULTS:
-: {'db3-7': -145.4988296599197, 'db3-6': -145.70377985147238, 'db2-10': -145.46757047772155, 'db2-12': -147.22481869781907, 'db3-8': -145.67327524825865}
 
