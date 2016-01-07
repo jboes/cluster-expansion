@@ -3002,6 +3002,76 @@ for r, d, f in os.walk('DFT/surf=fcc'):
 #+RESULTS:
 : [{'host': 'Pd'}, {'lattice': 3.842}, {'layers': 2}]
 
+* Creating new database
+#+BEGIN_SRC python
+from ase.db import connect
+from ase.io import read
+from amp import Amp
+
+images = read('traj/unique-config.db')
+
+with connect('temp/db3-config.db') as db:
+ 
+    for atoms in images:
+
+        data = {}
+        for d, l in [[2, 10], [2, 12],
+                     [3, 6], [3, 7], [3, 8]]:
+
+            key = 'db{0}-{1}'.format(d, l)
+            calc = Amp('networks/db{0}/40-{1}-{1}-1/'.format(d, l))
+            atoms.set_calculator(calc)
+            data[key] = atoms.get_potential_energy()
+
+        atoms.set_calculator(None)
+
+        db.write(atoms, data=data)
+#+END_SRC
+
+#+RESULTS:
+: {'db3-7': -145.4988296599197, 'db3-6': -145.70377985147238, 'db2-10': -145.46757047772155, 'db2-12': -147.22481869781907, 'db3-8': -145.67327524825865}
+
+* Starting ASAP screening approach for bulk structures
+
+#+BEGIN_SRC python
+from ase.lattice.cubic import FaceCenteredCubic
+from itertools import product
+from asap3 import EMT
+from ase import Atoms
+from ase.db import connect
+import numpy as np
+
+base = FaceCenteredCubic('Cu',
+                         directions=[[0, 1, 1],
+                                     [1, 0, 1],
+                                     [1, 1, 0]],
+                         size=(3, 3, 3),
+                         latticeconstant=3.939)
+
+natoms = [a.index for a in base]
+metals = ['Cu', 'Pd']
+
+with connect('traj/unique-bulk.db') as db:
+    nrgs = set()
+    for i, c in enumerate(product(metals, repeat=len(natoms))):
+
+        atoms0 = Atoms.copy(base)
+        for j, s in enumerate(natoms):
+            atoms0[s].symbol = c[j]
+
+        atoms = Atoms.copy(atoms0)
+        atoms.set_calculator(EMT())
+        nrg = round(atoms.get_potential_energy(), 3)
+
+        atoms.set_calculator(None)
+
+        if nrg not in nrgs:
+            nrgs.add(nrg)
+            db.write(atoms)
+#+END_SRC
+
+#+RESULTS:
+
 #+BEGIN_SRC python
 import os
 from ase.io.trajectory import Trajectory
@@ -3105,8 +3175,8 @@ for d in db.select(['id<=5']):
 : {u'NN12': -130.89038691106876, u'NN10': -130.87507637543385, 'hash': u'edddc8aa98494a75932bc88baf75a775'}
 
 
-* Creating new database
-#+BEGIN_SRC python
+* Second iteration
+#+BEGIN_SRC python :results silent
 from ase.db import connect
 from ase.io import read
 from amp import Amp
@@ -3131,5 +3201,207 @@ with connect('temp/db3-config.db') as db:
         db.write(atoms, data=data)
 #+END_SRC
 
+[[./images/db0-alayer.png]]
+
+#+caption: Second iteration of NN predicted energy differences for all unique energy configurations shown above which have a unique hash.
+#+label: fig-alayer-db1
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db1-alayer.png]]
+
+#+BEGIN_SRC python ;results silent
+from ase.db import connect
+from amp import Amp
+import numpy as np
+import matplotlib.pyplot as plt
+
+db = connect('temp/db3-config.db')
+
+E = []
+for d in db.select():
+    E += [abs(d.data['db3-6'] / d.natoms - d.data['db3-7'] / d.natoms)]
+E = np.array(E)
+
+def nbins(x):
+    from math import log10, floor, ceil
+    w = ceil(x*10**3) / ceil(x*10**3)*10**-3
+    m = ceil(x*10**3)
+    return np.arange(0, (m*w)+w, w)
+
+plt.figure(figsize=(6, 4))
+n, bins, patches = plt.hist(E, bins=nbins(max(E)))
+plt.xlabel('Predicted energy difference (eV/atom)')
+plt.ylabel('Probability')
+plt.xlim(0, 0.111)
+plt.ylim(0, 15000)
+plt.title('{0} total calculations'.format(len(E)))
+plt.tight_layout()
+plt.savefig('./images/db1-alayer.png')
+#+END_SRC
+
+#+BEGIN_SRC python
+from itertools import product
+from ase.lattice.surface import fcc111_root
+from ase.lattice.surface import fcc111
+from asap3 import EMT
+from ase import Atoms
+from ase.db import connect
+from amp.utilities import hash_image
+from ase.visualize import view
+from amp import Amp
+import numpy as np
+
+factors = np.linspace(3.634, 3.939, 5)
+
+for f in factors:
+    for M in ['Cu', 'Pd']:
+
+        #atoms = fcc111_root(M, 7, size=(1, 1, 1), vacuum=6.0, a=f)
+        atoms = fcc111(M, size=(1, 1, 5), vacuum=6.0, a=f)
+        n = len(atoms)
+
+        calc = Amp('networks/db3/40-6-6-1/')
+        atoms.set_calculator(calc)
+        nrg1 = atoms.get_potential_energy()
+
+        calc = Amp('networks/db3/40-7-7-1/')
+        atoms.set_calculator(calc)
+        nrg2 = atoms.get_potential_energy()
+        atoms.set_calculator(None)
+
+        print '{0:1.6f}'.format(abs(nrg2 - nrg1) / n)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+0.000015
+0.004847
+0.001136
+0.004403
+0.004607
+0.003826
+0.008297
+0.004022
+0.006005
+0.000821
+#+end_example
+
+#+BEGIN_SRC python :results silent
+from itertools import product
+from ase.lattice.surface import fcc111
+from asap3 import EMT
+from ase import Atoms
+from ase.db import connect
+
+base = fcc111('Cu', size=(2, 2, 5), vacuum=6.0, a=3.634)
+natoms = [a.index for a in base]
+metals = ['Cu', 'Pd']
+
+with connect('traj/cfg2x2-5layer.db') as db:
+    nrgs = set()
+    for i, c in enumerate(product(metals, repeat=len(natoms))):
+        atoms0 = Atoms.copy(base)
+        for j, s in enumerate(natoms):
+            atoms0[s].symbol = c[j]
+
+        atoms = Atoms.copy(atoms0)
+        atoms.set_calculator(EMT())
+        nrg = round(atoms.get_potential_energy(), 3)
+        atoms.set_calculator(None)
+
+        if nrg not in nrgs:
+            nrgs.add(nrg)
+            db.write(atoms)
+#+END_SRC
+
+#+BEGIN_SRC python
+from ase.db import connect
+from ase.io import read
+from amp import Amp
+
+images = read('traj/cfg2x2-5layer.db')
+
+with connect('temp/cfg2x2-5layer-db3.db') as db:
+    data = {}
+    for atoms in images:
+        for l in [6, 7]:
+
+            key = 'db3-{0}'.format(l)
+            calc = Amp('networks/db3/40-{0}-{0}-1/'.format(l))
+            atoms.set_calculator(calc)
+            data[key] = atoms.get_potential_energy()
+
+        atoms.set_calculator(None)
+        db.write(atoms, data=data)
+#+END_SRC
+
 #+RESULTS:
 
+** Predictions with 5 layer 2 \times 2 slab
+In Figure ref:fig-db3-2x2-5layer we demonstrate that every unique configuration predicted by ASAP-EMT is for a 2x2 fcc(111) slab is well predicted by the db3 NNs as well. This demonstrates that we can accurately reproduce the energies of any simpler configuration of atoms. Interestingly, this also demonstrates the NNs ability to extrapolate to configurations which differ in the 5th layer as well, at least for small, relatively simple configurations.
+
+#+caption: db3 NN predicted differences in energy for all 2 \times 2 unique energy configurations of a 5 layer fcc(111) slab.
+#+label: fig-db3-2x2-5layer
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/cfg2x2-5layer-db3.png]]
+
+#+BEGIN_SRC python ;results silent
+from ase.db import connect
+from amp import Amp
+import numpy as np
+import matplotlib.pyplot as plt
+
+db = connect('temp/cfg2x2-5layer-db3.db')
+
+E = []
+for d in db.select():
+    E += [abs(d.data['db3-6'] / d.natoms - d.data['db3-7'] / d.natoms)]
+E = np.array(E)
+
+def nbins(x):
+    from math import log10, floor, ceil
+    w = ceil(x*10**3) / ceil(x*10**3)*10**-3
+    m = ceil(x*10**3)
+    return np.arange(0, (m*w)+w, w)
+
+plt.figure(figsize=(6, 4))
+n, bins, patches = plt.hist(E, bins=nbins(max(E)))
+plt.xlabel('Predicted energy difference (eV/atom)')
+plt.ylabel('Probability')
+#plt.xlim(0, 0.111)
+#plt.ylim(0, 15000)
+plt.title('{0} total calculations'.format(len(E)))
+plt.tight_layout()
+plt.savefig('./images/cfg2x2-5layer-db3.png')
+#+END_SRC
+
+** Predictions with 5 layer root(21) \times root(21) slab
+#+BEGIN_SRC python :results silent
+from itertools import product
+from ase.lattice.surface import fcc111_root
+from asap3 import EMT
+from ase import Atoms
+from ase.db import connect
+from ase.visualize import view
+
+base = fcc111_root('Cu', 21, size=(1, 1, 5), vacuum=6.0, a=3.634)
+natoms = [a.index for a in base if a.tag <= 1]
+
+with connect('traj/cfgr21x5-1crl.db') as db:
+    nrgs = set()
+    for i, c in enumerate(product(['Cu', 'Pd'],
+                                  repeat=len(natoms))):
+        atoms0 = Atoms.copy(base)
+        for j, s in enumerate(natoms):
+            atoms0[s].symbol = c[j]
+
+        atoms = Atoms.copy(atoms0)
+        atoms.set_calculator(EMT())
+        nrg = round(atoms.get_potential_energy(), 3)
+        atoms.set_calculator(None)
+
+        if nrg not in nrgs:
+            nrgs.add(nrg)
+            db.write(atoms)
+#+END_SRC
