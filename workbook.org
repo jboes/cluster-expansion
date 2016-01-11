@@ -3286,6 +3286,8 @@ for f in factors:
 0.000821
 #+end_example
 
+** Predictions with 5 layer 2 \times 2 slab
+
 #+BEGIN_SRC python :results silent
 from itertools import product
 from ase.lattice.surface import fcc111
@@ -3314,7 +3316,7 @@ with connect('traj/cfg2x2-5layer.db') as db:
             db.write(atoms)
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results silent
 from ase.db import connect
 from ase.io import read
 from amp import Amp
@@ -3335,9 +3337,8 @@ with connect('temp/cfg2x2-5layer-db3.db') as db:
         db.write(atoms, data=data)
 #+END_SRC
 
-#+RESULTS:
 
-** Predictions with 5 layer 2 \times 2 slab
+
 In Figure ref:fig-db3-2x2-5layer we demonstrate that every unique configuration predicted by ASAP-EMT is for a 2x2 fcc(111) slab is well predicted by the db3 NNs as well. This demonstrates that we can accurately reproduce the energies of any simpler configuration of atoms. Interestingly, this also demonstrates the NNs ability to extrapolate to configurations which differ in the 5th layer as well, at least for small, relatively simple configurations.
 
 #+caption: db3 NN predicted differences in energy for all 2 \times 2 unique energy configurations of a 5 layer fcc(111) slab.
@@ -3388,7 +3389,7 @@ from ase.visualize import view
 base = fcc111_root('Cu', 21, size=(1, 1, 5), vacuum=6.0, a=3.634)
 natoms = [a.index for a in base if a.tag <= 1]
 
-with connect('traj/cfgr21x5-1crl.db') as db:
+with connect('traj/cfgr21x5-1LE.db') as db:
     nrgs = set()
     for i, c in enumerate(product(['Cu', 'Pd'],
                                   repeat=len(natoms))):
@@ -3405,3 +3406,105 @@ with connect('traj/cfgr21x5-1crl.db') as db:
             nrgs.add(nrg)
             db.write(atoms)
 #+END_SRC
+
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+from ase.io import read
+from amp import Amp
+
+images = read('traj/cfgr21x5-1LE.db')
+
+with connect('temp/cfgr21x5-1LE-db3.db') as db:
+    data = {}
+    for atoms in images:
+        for l in [6, 7]:
+
+            key = 'db3-{0}'.format(l)
+            calc = Amp('networks/db3/40-{0}-{0}-1/'.format(l))
+            atoms.set_calculator(calc)
+            data[key] = atoms.get_potential_energy()
+
+        atoms.set_calculator(None)
+        db.write(atoms, data=data)
+#+END_SRC
+
+#+caption: db3 NN predicted differences in energy for all root(21) \times root(21) unique energy configurations of a 5 layer fcc(111) slab.
+#+label: fig-db3-cfgr21x5-1LE
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/cfgr21x5-1LE-db3.png]]
+
+** Predictions with 5 layer 3 \times 3 slab
+#+BEGIN_SRC python :results silent
+from itertools import product
+from ase.lattice.surface import fcc111
+from asap3 import EMT
+from ase import Atoms
+from ase.db import connect
+
+base = fcc111('Cu', size=(3, 3, 5), vacuum=6.0, a=3.634)
+natoms = [a.index for a in base if a.tag <= 3]
+
+with connect('traj/cfg3x5-3LE.db') as db:
+    nrgs = set()
+    for i, c in enumerate(product(['Cu', 'Pd'],
+                                  repeat=len(natoms))):
+        atoms0 = Atoms.copy(base)
+        for j, s in enumerate(natoms):
+            atoms0[s].symbol = c[j]
+
+        atoms = Atoms.copy(atoms0)
+        atoms.set_calculator(EMT())
+        nrg = round(atoms.get_potential_energy(), 3)
+        atoms.set_calculator(None)
+
+        if nrg not in nrgs:
+            nrgs.add(nrg)
+            db.write(atoms)
+#+END_SRC
+
+** Predictions with 6 layer root(7) \times root(7) slab
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+from ase.io import read
+from ase.lattice.surface import fcc111_root
+
+images = read('traj/unique-config.db')
+
+with connect('traj/cfgr7x6-4LE.db') as db:
+    for atoms in images:
+
+        sym = atoms.get_chemical_symbols()
+
+        base = fcc111_root(sym[0], 7,
+                           size=(1, 1, 6),
+                           vacuum=6.0, a=3.634)
+        natoms = [a.index for a in base if a.tag <= 5]
+        for i, s in enumerate(natoms):
+            base[s].symbol = sym[i]
+        db.write(base)
+#+END_SRC
+
+#+BEGIN_SRC python
+from ase.db import connect
+from ase.io import read
+from amp import Amp
+
+images = read('traj/cfgr7x6-4LE.db')
+
+with connect('temp/cfgr7x6-4LE-db3.db') as db:
+    data = {}
+    for atoms in images:
+        for l in [6, 7]:
+
+            key = 'db3-{0}'.format(l)
+            calc = Amp('networks/db3/40-{0}-{0}-1/'.format(l))
+            atoms.set_calculator(calc)
+            data[key] = atoms.get_potential_energy()
+
+        atoms.set_calculator(None)
+        db.write(atoms, data=data)
+#+END_SRC
+
+#+RESULTS:
+
