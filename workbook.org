@@ -3070,7 +3070,33 @@ with connect('traj/unique-bulk.db') as db:
             db.write(atoms)
 #+END_SRC
 
+#+BEGIN_SRC python
+from jasp import *
+from ase.io import read
+JASPRC['queue.walltime'] = '24:00:00'
+JASPRC['queue.ppn'] = 4
+
+images = read('traj/unique-bulk.db')
+
+for i, atoms in enumerate(images):
+
+    wd = 'DFT/bulk=fcc/lattice=3.939/config={0}'.format(i)
+
+    with jasp(wd,
+              xc='PBE',
+              encut=400,
+              kpts=(int(12/3), int(12/3), int(12/3)),
+              ibrion=-1,
+              atoms=atoms) as calc:
+        try:
+            calc.get_required_memory()
+            calc.calculate()
+        except(VaspSubmitted, VaspQueued):
+            pass        
+#+END_SRC
+
 #+RESULTS:
+
 
 #+BEGIN_SRC python
 import os
