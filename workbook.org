@@ -1288,10 +1288,26 @@ Converged: False
 
 * Database tools
 ** database generation
+
 #+BEGIN_SRC python :results silent
 import jbtools.gilgamesh as jb
+from ase.db import connect
 
-jb.write_database('DFT/surf=fcc')
+#jb.write_database('DFT/bulk=fcc/lattice=3.634', db='data36.db')
+
+with connect('networks/db4-bulk/data.db') as mdb:
+
+    db = connect('data.db')
+
+    for d in db.select():
+        atoms = db.get_atoms(d.id)
+        mdb.write(atoms, key_value_pairs=d.key_value_pairs)
+
+    db = connect('data36.db')
+
+    for d in db.select():
+        atoms = db.get_atoms(d.id)
+        mdb.write(atoms, key_value_pairs=d.key_value_pairs)
 #+END_SRC
 
 #+BEGIN_SRC python :results silent
@@ -1300,7 +1316,7 @@ import os
 import random
 import numpy as np
 
-db = connect('networks/db3/data.db')
+db = connect('networks/db4-bulk/data.db')
 
 n = db.count()
 n_train = int(round(n * 0.9))
@@ -1316,7 +1332,7 @@ valid_samples = set(n_ids) - set(train_samples)
 db.update(list(train_samples), train_set=True)
 db.update(list(valid_samples), train_set=False)
 
-db0 = connect('networks/db3/train.db')
+db0 = connect('networks/db4-bulk/train.db')
 
 for d in db.select(['train_set=True']):
     db0.write(d, key_value_pairs=d.key_value_pairs)
@@ -3070,7 +3086,7 @@ with connect('traj/unique-bulk.db') as db:
             db.write(atoms)
 #+END_SRC
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results silent
 from jasp import *
 from ase.io import read
 JASPRC['queue.walltime'] = '24:00:00'
@@ -3078,9 +3094,16 @@ JASPRC['queue.ppn'] = 4
 
 images = read('traj/unique-bulk.db')
 
-for i, atoms in enumerate(images):
+f =  3.634 / 3.939
+delta = np.array([[f, 0, 0],
+                  [0, f, 0],
+                  [0, 0, f]])
 
-    wd = 'DFT/bulk=fcc/lattice=3.939/config={0}'.format(i)
+for i, atoms in enumerate(images):
+    cell0 = atoms.get_cell()
+    atoms.set_cell(np.dot(cell0, delta), scale_atoms=True)
+
+    wd = 'DFT/bulk=fcc/lattice=3.634/config={0}'.format(i)
 
     with jasp(wd,
               xc='PBE',
@@ -3092,7 +3115,7 @@ for i, atoms in enumerate(images):
             calc.get_required_memory()
             calc.calculate()
         except(VaspSubmitted, VaspQueued):
-            pass        
+            pass
 #+END_SRC
 
 #+RESULTS:
