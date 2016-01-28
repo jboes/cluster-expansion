@@ -3557,3 +3557,54 @@ with connect('temp/cfgr7x6-4LE-db3.db') as db:
 
 #+RESULTS:
 
+
+* Comparing 
+
+#+BEGIN_SRC python :results raw
+import os
+import json
+
+print('|Hidden layers|Iteration|Time|Cost Function|Energy RMSE|')
+print('|-')
+
+for r, d, f in os.walk('networks/db4/'):
+    if 'train-log.txt' in f:
+        with open(os.path.join(r, 'train-log.txt'), 'r') as fi:
+            v = fi.readlines()[-5].split()
+
+    if 'trained-parameters.json' in f:
+        with open(os.path.join(r, 'trained-parameters.json'), 'r') as fi:
+            p = json.load(fi)
+        n = p['hiddenlayers']
+        print('|{0}|{1}|{2}|{3}|{4}|'.format(n, v[0], v[1], v[2], v[3]))
+#+END_SRC
+
+#+RESULTS:
+| Hidden layers                    | Iteration | Time                | Cost Function | Energy RMSE |
+|----------------------------------+-----------+---------------------+---------------+-------------|
+| {u'Cu': [2, 10], u'Pd': [2, 10]} |     21925 | 2016-01-23T22:36:19 |     1.528e-02 |   8.182e-04 |
+| {u'Cu': [2, 8], u'Pd': [2, 8]}   |     18925 | 2016-01-22T22:00:40 |     1.166e-02 |   7.148e-04 |
+
+#+BEGIN_SRC python
+from ase.db import connect
+from ase.io import read
+from amp import Amp
+
+images = read('traj/unique-config.db')
+
+with connect('temp/db3-config.db') as db:
+ 
+    for atoms in images:
+
+        data = {}
+        for d, l in [[2, 10], [2, 12]]:
+
+            key = 'db{0}-{1}'.format(d, l)
+            calc = Amp('networks/db{0}/40-{1}-{1}-1/'.format(d, l))
+            atoms.set_calculator(calc)
+            data[key] = atoms.get_potential_energy()
+
+        atoms.set_calculator(None)
+
+        db.write(atoms, data=data)
+#+END_SRC
