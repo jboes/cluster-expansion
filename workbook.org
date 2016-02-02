@@ -3426,136 +3426,67 @@ plt.tight_layout()
 plt.savefig('./images/cfg2x2-5layer-db3.png')
 #+END_SRC
 
-** Predictions with 5 layer root(21) \times root(21) slab
+* 4th NN iteration
 #+BEGIN_SRC python :results silent
-from itertools import product
-from ase.lattice.surface import fcc111_root
-from asap3 import EMT
-from ase import Atoms
-from ase.db import connect
-from ase.visualize import view
-
-base = fcc111_root('Cu', 21, size=(1, 1, 5), vacuum=6.0, a=3.634)
-natoms = [a.index for a in base if a.tag <= 1]
-
-with connect('traj/cfgr21x5-1LE.db') as db:
-    nrgs = set()
-    for i, c in enumerate(product(['Cu', 'Pd'],
-                                  repeat=len(natoms))):
-        atoms0 = Atoms.copy(base)
-        for j, s in enumerate(natoms):
-            atoms0[s].symbol = c[j]
-
-        atoms = Atoms.copy(atoms0)
-        atoms.set_calculator(EMT())
-        nrg = round(atoms.get_potential_energy(), 3)
-        atoms.set_calculator(None)
-
-        if nrg not in nrgs:
-            nrgs.add(nrg)
-            db.write(atoms)
-#+END_SRC
-
-#+BEGIN_SRC python :results silent
-from ase.db import connect
-from ase.io import read
 from amp import Amp
+from amp.descriptor import Behler
+from amp.regression import NeuralNetwork
 
-images = read('traj/cfgr21x5-1LE.db')
+for n in [6]:
+    label = "./networks/db4-bulk/"
 
-with connect('temp/cfgr21x5-1LE-db3.db') as db:
-    data = {}
-    for atoms in images:
-        for l in [6, 7]:
+    calc = Amp(label=label + "40-{0}-{0}-1/".format(n),
+               descriptor=Behler(cutoff=6.5),
+               regression=NeuralNetwork(hiddenlayers=(2, n)))
 
-            key = 'db3-{0}'.format(l)
-            calc = Amp('networks/db3/40-{0}-{0}-1/'.format(l))
-            atoms.set_calculator(calc)
-            data[key] = atoms.get_potential_energy()
-
-        atoms.set_calculator(None)
-        db.write(atoms, data=data)
+    calc.train(label + "train.db",
+               cores=3,
+               energy_goal=0.0005,
+               extend_variables=False)
 #+END_SRC
 
-#+caption: db3 NN predicted differences in energy for all root(21) \times root(21) unique energy configurations of a 5 layer fcc(111) slab.
-#+label: fig-db3-cfgr21x5-1LE
-#+attr_latex: :width 4in :placement [H]
-#+attr_org: :width 400
-[[./images/cfgr21x5-1LE-db3.png]]
-
-** Predictions with 5 layer 3 \times 3 slab
 #+BEGIN_SRC python :results silent
-from itertools import product
-from ase.lattice.surface import fcc111
-from asap3 import EMT
-from ase import Atoms
-from ase.db import connect
-
-base = fcc111('Cu', size=(3, 3, 5), vacuum=6.0, a=3.634)
-natoms = [a.index for a in base if a.tag <= 3]
-
-with connect('traj/cfg3x5-3LE.db') as db:
-    nrgs = set()
-    for i, c in enumerate(product(['Cu', 'Pd'],
-                                  repeat=len(natoms))):
-        atoms0 = Atoms.copy(base)
-        for j, s in enumerate(natoms):
-            atoms0[s].symbol = c[j]
-
-        atoms = Atoms.copy(atoms0)
-        atoms.set_calculator(EMT())
-        nrg = round(atoms.get_potential_energy(), 3)
-        atoms.set_calculator(None)
-
-        if nrg not in nrgs:
-            nrgs.add(nrg)
-            db.write(atoms)
-#+END_SRC
-
-** Predictions with 6 layer root(7) \times root(7) slab
-#+BEGIN_SRC python :results silent
-from ase.db import connect
-from ase.io import read
-from ase.lattice.surface import fcc111_root
-
-images = read('traj/unique-config.db')
-
-with connect('traj/cfgr7x6-4LE.db') as db:
-    for atoms in images:
-
-        sym = atoms.get_chemical_symbols()
-
-        base = fcc111_root(sym[0], 7,
-                           size=(1, 1, 6),
-                           vacuum=6.0, a=3.634)
-        natoms = [a.index for a in base if a.tag <= 5]
-        for i, s in enumerate(natoms):
-            base[s].symbol = sym[i]
-        db.write(base)
-#+END_SRC
-
-#+BEGIN_SRC python
-from ase.db import connect
-from ase.io import read
 from amp import Amp
+from amp.descriptor import Behler
+from amp.regression import NeuralNetwork
 
-images = read('traj/cfgr7x6-4LE.db')
+for n in [8]:
+    label = "./networks/db4-bulk/"
 
-with connect('temp/cfgr7x6-4LE-db3.db') as db:
-    data = {}
-    for atoms in images:
-        for l in [6, 7]:
+    calc = Amp(label=label + "40-{0}-{0}-1/".format(n),
+               descriptor=Behler(cutoff=6.5),
+               regression=NeuralNetwork(hiddenlayers=(2, n)))
 
-            key = 'db3-{0}'.format(l)
-            calc = Amp('networks/db3/40-{0}-{0}-1/'.format(l))
-            atoms.set_calculator(calc)
-            data[key] = atoms.get_potential_energy()
+    calc.train(label + "train.db",
+               cores=3,
+               energy_goal=0.0005,
+               extend_variables=False)
+#+END_SRC
 
-        atoms.set_calculator(None)
-        db.write(atoms, data=data)
+#+BEGIN_SRC python :results raw
+import os
+import json
+
+print('|Hidden layers|Iteration|Time|Cost Function|Energy RMSE|Force RMSE|')
+print('|-')
+
+for r, d, f in os.walk('networks/db4-bulk/'):
+    if 'train-log.txt' in f:
+        with open(os.path.join(r, 'train-log.txt'), 'r') as fi:
+            v = fi.readlines()[-5].split()
+
+    if 'trained-parameters.json' in f:
+        with open(os.path.join(r, 'trained-parameters.json'), 'r') as fi:
+            p = json.load(fi)
+        n = p['hiddenlayers']
+        print('|{0}|{1}|{2}|{3}|{4}|{5}|'.format(n, v[0], v[1], v[2], v[3], v[4]))
 #+END_SRC
 
 #+RESULTS:
+| Hidden layers                  | Iteration | Time                | Cost Function | Energy RMSE | Force RMSE |
+|--------------------------------+-----------+---------------------+---------------+-------------+------------|
+| {u'Cu': [2, 8], u'Pd': [2, 8]} |      5146 | 2016-01-25T00:09:08 |     4.787e+00 |   2.539e-03 |  4.025e-01 |
+| {u'Cu': [2, 6], u'Pd': [2, 6]} |      6159 | 2016-01-25T07:23:57 |     4.819e+00 |   2.169e-03 |  4.040e-01 |
 
 
 * Comparing 
@@ -3597,10 +3528,10 @@ with connect('temp/db3-config.db') as db:
     for atoms in images:
 
         data = {}
-        for d, l in [[2, 10], [2, 12]]:
+        for l in [8, 10]:
 
             key = 'db{0}-{1}'.format(d, l)
-            calc = Amp('networks/db{0}/40-{1}-{1}-1/'.format(d, l))
+            calc = Amp('networks/db4/40-{0}-{0}-1/'.format(l))
             atoms.set_calculator(calc)
             data[key] = atoms.get_potential_energy()
 
@@ -3608,3 +3539,39 @@ with connect('temp/db3-config.db') as db:
 
         db.write(atoms, data=data)
 #+END_SRC
+
+#+BEGIN_SRC python
+import numpy as np
+from ase.db import connect
+from ase.io import read
+from amp import Amp
+
+images = read('traj/unique-bulk.db')
+
+with connect('temp/bulk-3x3-10lat.db') as db:
+    for f in np.linspace(3.634, 3.939, 10):
+        keys = {'a': '{0:1.3f}'.format(f)}
+
+        delta = np.array([[f, 0, 0],
+                          [0, f, 0],
+                          [0, 0, f]])
+
+        for i, atoms in enumerate(images):
+            cell0 = atoms.get_cell()
+            atoms.set_cell(np.dot(cell0, delta), scale_atoms=True)
+
+            data = {}
+            for l in [8, 10]:
+
+                key = 'NN{0}'.format(l)
+                calc = Amp('networks/db4/40-{0}-{0}-1/'.format(l))
+                atoms.set_calculator(calc)
+                data[key] = atoms.get_potential_energy()
+
+            atoms.set_calculator(None)
+
+            db.write(atoms, key_value_pairs=keys, data=data)
+#+END_SRC
+
+#+RESULTS:
+
