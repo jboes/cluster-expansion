@@ -2129,9 +2129,9 @@ def ising(N, T):
 
     # Evaluate the system for a fixed number of steps
 
-    print('\ngrid')
-    print(grid)
-    for i in range(1):
+    #print('\ngrid')
+    #print(grid)
+    for i in range(500):
         # Calculate the number of neighbors for each cell
         neighbors = np.roll(grid, 1, axis=1) + \
                     np.roll(grid, -1, axis=1) + \
@@ -2139,46 +2139,56 @@ def ising(N, T):
                     np.roll(grid, -1, axis=0)
 
 
-        print('\nneighbors')
-        print(neighbors)
+        #print('\nneighbors')
+        #print(neighbors)
         # Calculate energy change from spin flip
         dE = 2 * J * (grid * neighbors)
 
-        print('\ndE')
-        print(dE)
+        #print('\ndE')
+        #print(dE)
         # Calculate the transition probability
         P = np.exp(-dE/(k * T))
 
-        print('\nprobability')
-        print(P)
+        #print('\nprobability')
+        #print(P)
         # Transition which will occur
-        transitions = (np.random.random(size=(N, N)) < P)
-        screen = (np.random.random(size=(N, N)) < 0.1) * -2 + 1
+        transitions = np.random.random(size=(N, N)) < P
 
-        print('\ntransitions')
-        print(transitions)
+        #print('\ntransitions')
+        #print(transitions)
+
+        # Screen all but 10% of transitions
+        screen = (np.random.random(size=(N, N)) < 0.1)
+
+        #print('\nscreen')
+        #print(screen)
+
+        transitions = (transitions * screen) * -2 + 1
+
+        #print('\nnew transitions')
+        #print(transitions)
         # Perform the transitions
         grid = grid * transitions
 
-        print('\nnew grid')
-        print(grid)
+        #print('\nnew grid')
+        #print(grid)
 
         # Sum variables of interest
         M = grid.sum() / (N**2.)
         E = -dE.sum() / 2 / (N**2.)
 
-        return M, E
+    return M, E
 
 
-n_grid = 4
+n_grid = 150
 Ms, Ts, Es = [], [], []
 
-for i in range(1):
+for i in range(1000):
     # Random temperature from 0 - 5
     T = np.random.random() * 5 + 1e-10
 
-    print('temperature')
-    print(T)
+    #print('temperature')
+    #print(T)
 
     M, E = ising(n_grid, T)
 
@@ -2190,50 +2200,12 @@ plt.figure()
 plt.scatter(Ts, Ms)
 plt.xlim(0, 5)
 plt.ylim(-1, 1)
-plt.show()
+plt.xlabel('$\Beta$ (J)')
+plt.ylabel('$Average spin$ (J)')
+plt.savefig('images/MC-spin.png')
 #+END_SRC
 
 #+RESULTS:
-#+begin_example
-temperature
-0.0171904241206
-
-grid
-[[-1 -1 -1 -1]
- [ 1  1 -1  1]
- [-1 -1  1 -1]
- [ 1  1 -1  1]]
-
-neighbors
-[[ 0  0 -4  0]
- [ 0 -2  2 -2]
- [ 0  2 -4  2]
- [ 0 -2  2 -2]]
-
-dE
-[[ 0  0  8  0]
- [ 0 -4 -4 -4]
- [ 0 -4 -8 -4]
- [ 0 -4 -4 -4]]
-
-probability
-[[  1.00000000e+000   1.00000000e+000   7.76326537e-203   1.00000000e+000]
- [  1.00000000e+000   1.13495276e+101   1.13495276e+101   1.13495276e+101]
- [  1.00000000e+000   1.13495276e+101   1.28811776e+202   1.13495276e+101]
- [  1.00000000e+000   1.13495276e+101   1.13495276e+101   1.13495276e+101]]
-
-transitions
-[[ 1  1  1  1]
- [ 1  1  1  1]
- [ 1 -1  1  1]
- [ 1  1  1  1]]
-
-new grid
-[[-1 -1 -1 -1]
- [ 1  1 -1  1]
- [-1  1  1 -1]
- [ 1  1 -1  1]]
-#+end_example
 
 #+BEGIN_SRC python
 import numpy as np
@@ -2266,9 +2238,9 @@ plt.show()
 import numpy as np
 import matplotlib.pyplot as plt
 
-
-SIZE = 150
-STEPS = int(1e3)
+SIZE = 5
+STEPS = 1
+T = 1
 
 def bc(i):
     if i+1 > SIZE-1:
@@ -2277,7 +2249,7 @@ def bc(i):
         return SIZE-1
     else:
         return i
-
+    
 
 def delta_energy(system, N, M):
     return -1 * system[N,M] * (system[bc(N-1), M] \
@@ -2307,5 +2279,22 @@ def main(T):
         elif np.exp(-1./ T * dE) > np.random.rand():
             system[N, M] *= -1
 
-main(0.1)
+system = build_system()
+print system
+M = np.random.randint(0, SIZE)
+N = np.random.randint(0, SIZE)
+print M
+print N
+print delta_energy(system, N, M)
 #+END_SRC
+
+#+RESULTS:
+: [[ 1 -1 -1 -1  1]
+:  [-1  1  1 -1  1]
+:  [-1  1 -1  1 -1]
+:  [ 1  1 -1 -1  1]
+:  [ 1  1 -1 -1 -1]]
+: 3
+: 4
+: -2
+
