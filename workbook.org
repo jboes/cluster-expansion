@@ -2269,13 +2269,22 @@ def build_system():
 
 
 def main(T):
-    system = build_system()
+    ## define the initial atoms object
+    # system = atoms
+    # index = atoms.get_index()
 
-    for step, x in enumerate(range(STEPS)):
-        M = np.random.randint(0, SIZE)
-        N = np.random.randint(0, SIZE)
+    ## Calculate the initial energy and store it
+    # Ei = atoms.get_potential_energy()
 
-        dE = -2. * delta_energy(system, N, M)
+    ## Perform MC steps
+    # for step, x in enumerate(range(STEPS)):
+
+        ## Choose a random atom
+        # n = random.choice(index)
+
+        # Calculate the energy of the new system
+        # Ef = atoms.get_potential_energy()
+        # dE = Ef - Ei
 
         if dE <= 0.:
             system[N, M] *= -1
@@ -2283,21 +2292,44 @@ def main(T):
             system[N, M] *= -1
 
 system = build_system()
-print system
+
 M = np.random.randint(0, SIZE)
 N = np.random.randint(0, SIZE)
-print M
-print N
+print M, N
+print('\nsystem')
+print system
+print('\nrandom point')
+print system[N, M]
+print('\nneighbors')
+print system[bc(N - 1), M]
+print system[bc(N + 1), M]
+print system[N, bc(M - 1)]
+print system[N, bc(M + 1)]
+print('\ndE')
 print delta_energy(system, N, M)
 #+END_SRC
 
 #+RESULTS:
-: [[ 1 -1 -1 -1  1]
-:  [-1  1  1 -1  1]
-:  [-1  1 -1  1 -1]
-:  [ 1  1 -1 -1  1]
-:  [ 1  1 -1 -1 -1]]
-: 3
-: 4
-: -2
+#+begin_example
+0 2
+
+system
+[[ 1  1  1  1  1]
+ [ 1 -1  1  1 -1]
+ [ 1  1 -1  1  1]
+ [ 1 -1  1 -1  1]
+ [ 1 -1 -1 -1  1]]
+
+random point
+1
+
+neighbors
+1
+1
+1
+1
+
+dE
+-4
+#+end_example
 
