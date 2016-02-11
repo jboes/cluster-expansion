@@ -2333,3 +2333,170 @@ dE
 -4
 #+end_example
 
+** BCT via EMT
+
+#+caption: EMT predicted equation of states for the fcc and bcc configurations.
+#+label: fig-emt-eos
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/EMT-EOS.png]]
+
+#+name: EMT-minimum-lattice-constants
+#+BEGIN_SRC python
+from ase.lattice.tetragonal import CenteredTetragonal as bct
+import numpy as np
+from asap3 import EMT
+import matplotlib.pyplot as plt
+
+A = np.linspace(2.4, 3.2, 1000)
+CA = {'fcc':np.sqrt(2), 'bcc':1.0}
+
+plt.figure()
+nrg = {}
+for name, ca in CA.iteritems():
+
+    nrg[name] = []
+
+    for a in A:
+        atoms = bct('Cu', latticeconstant={'a': a, 'c/a': ca})
+        atoms[1].symbol = 'Pd'
+
+        atoms.set_calculator(EMT())
+        nrg[name] += [atoms.get_potential_energy()]
+
+Emin = [min(l) for l in nrg.values()]
+dEmin = (max(Emin) - min(Emin))
+
+Amin = [A[Es.index(min(Es))] for Es in nrg.values()]
+print(Amin)
+
+plt.plot(A, nrg['fcc'], 'g-')
+plt.text(Amin[0], Emin[0], 'fcc', ha='center', va='top', color='g', size=20)
+plt.plot(A, nrg['bcc'], 'b-')
+plt.text(Amin[1], Emin[1], 'bcc', ha='center', va='top', color='b', size=20)
+plt.xlim(2.55, 3.05)
+plt.ylim(-0.08, -0.02)
+plt.xlabel('bcc lattice constant, a ($\AA$)')
+plt.ylabel('Potential energy (eV)')
+plt.tight_layout()
+plt.savefig('./images/EMT-EOS.png')
+#+END_SRC
+
+#+caption: 3D Minimum energy pathway of transition through bct geometry space as predicted by EMT.
+#+label: fig-3d-cupd-min-emt
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/3D-EMT-pathway.png]]
+
+#+caption: 2D Minimum energy pathway of transition through bct geometry space as predicted by EMT.
+#+label: fig-2d-cupd-min-emt
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/2D-EMT-pathway.png]]
+
+#+RESULTS: EMT-minimum-lattice-constants
+: [2.6506506506506504, 2.9709709709709711]
+
+#+BEGIN_SRC python :results silent :var eos=EMT-minimum-lattice-constants
+from ase.lattice.tetragonal import CenteredTetragonal as bct
+import numpy as np
+from asap3 import EMT
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import axes3d
+from matplotlib import cm
+
+aref = [float(eos) for eos in eos[1:-2].split(',')]
+
+# Create a list of sample points
+ca0 = np.linspace(0.9, 1.5, 98)
+ca0 = np.append(ca0, [1.0, np.sqrt(2)])
+a0 = np.linspace(2.5, 3.1, 98)
+a0 = np.append(a0, [aref[0], aref[1]])
+
+a0 = np.unique(a0)
+ca0 = np.unique(ca0)
+
+X, Y = np.meshgrid(a0, ca0)
+
+xifcc = list(X[0]).index(aref[0])
+yifcc = list(Y.T[0]).index(np.sqrt(2))
+
+xibcc = list(X[0]).index(aref[1])
+yibcc = list(Y.T[0]).index(1.0)
+
+Z = np.zeros(X.shape)
+
+for i, a in enumerate(a0):
+
+    for j, ca in enumerate(ca0):
+
+        # Generate structure based on sample points
+        atoms = bct('Cu', latticeconstant={'a': a, 'c/a': ca})
+        atoms[1].symbol = 'Pd'
+
+        atoms.set_calculator(EMT())
+        Z[j][i] += [atoms.get_potential_energy()]
+
+eminZ, cminZ, aminZ = [], [], []
+for i, c in enumerate(ca0[yibcc:yifcc+1]):
+    data = Z[i+yibcc, :]
+    ind = list(data).index(min(data))
+
+    eminZ.append(min(data))
+    cminZ.append(c)
+    aminZ.append(a0[ind])
+
+delta = (max(eminZ) - min(eminZ))
+rng = [min(eminZ), max(eminZ) + delta]
+
+Z[Z > rng[1]] = np.nan
+
+fig = plt.figure(figsize=(8, 6))
+ax = fig.gca(projection='3d')
+CM = cm.autumn
+cset = ax.contourf(X, Y, Z, zdir='z', offset=rng[0] - delta, cmap=CM, vmin=rng[0], vmax=rng[1])
+
+ax.plot_surface(X, Y, Z,
+                rstride=1,
+                cstride=1,
+                cmap=CM,
+                linewidth=0,
+                vmin=rng[0],
+                vmax=rng[1])
+
+ax.scatter(aminZ[1:-1], cminZ[1:-1], eminZ[1:-1], c='k')
+
+ax.plot([aref[0], aref[0]], [np.sqrt(2), np.sqrt(2)], [rng[0] - delta, eminZ[-1]], 'go-', zorder=99)
+ax.text(aref[0], np.sqrt(2), eminZ[-1]+0.01, 'fcc', color='g', zorder=99, size='large')
+
+ax.plot([aref[1], aref[1]], [1.0, 1.0], [rng[0] - delta, eminZ[0]], 'bo-', zorder=99)
+ax.text(aref[1], 1.0, eminZ[0]+0.01, 'bcc', color='b', zorder=99, size='large')
+
+ax.set_xlabel('a')
+ax.set_xlim(2.4, 3.2)
+ax.set_ylabel('c/a')
+ax.set_ylim(0.8, 1.6)
+ax.set_zlabel('Total energy (eV)')
+ax.set_zlim(rng[0] - delta, rng[1])
+plt.tight_layout()
+plt.savefig('./images/3D-EMT-pathway.png')
+
+plt.figure()
+plt.plot(cminZ, eminZ, 'k-')
+plt.xlim(min(cminZ), max(cminZ))
+
+plt.annotate('bcc', xy=(cminZ[0], eminZ[0]),
+             xytext=(cminZ[0] + .02, eminZ[0] - .005),
+             size=20, ha='left', arrowprops=dict(arrowstyle='->'))
+
+plt.annotate('fcc', xy=(cminZ[-1], eminZ[-1]),
+             xytext=(cminZ[-1] - .02, eminZ[-1] + .005),
+             size=20, ha='right', arrowprops=dict(arrowstyle='->'))
+
+plt.xlabel('c/a ratio')
+plt.ylabel('Total energy (eV)')
+
+plt.savefig('./images/2D-EMT-pathway.png')
+#+END_SRC
+
+
