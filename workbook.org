@@ -2268,27 +2268,36 @@ def build_system():
     return system
 
 
-def main(T):
+def main(T, N=500):
+    B = 1. / (k * T)
+
     ## define the initial atoms object
-    # system = atoms
+    # atoms = [DEFINE ATOMS]
     # index = atoms.get_index()
 
     ## Calculate the initial energy and store it
     # Ei = atoms.get_potential_energy()
 
     ## Perform MC steps
-    # for step, x in enumerate(range(STEPS)):
+    for i in range(N):
 
         ## Choose a random atom
         # n = random.choice(index)
 
-        # Calculate the energy of the new system
-        # Ef = atoms.get_potential_energy()
-        # dE = Ef - Ei
+        # new_atoms = Atoms.copy(atoms)
 
-        if dE <= 0.:
+        ## Change atom chemical symbol
+        # if new_atoms[n].symbol == 'Cu':
+        #     new_atoms[n].symbol == 'Pd'
+        # else:
+        #     new_atoms[n].symbol == 'Cu'
+
+        ## Calculate the energy of the new system
+        # Ef = new_atoms.get_potential_energy()
+
+        if Ef <= Ei:
             system[N, M] *= -1
-        elif np.exp(-1./ T * dE) > np.random.rand():
+        elif np.exp(-Ef * B) > np.random.rand():
             system[N, M] *= -1
 
 system = build_system()
@@ -2498,5 +2507,3 @@ plt.ylabel('Total energy (eV)')
 
 plt.savefig('./images/2D-EMT-pathway.png')
 #+END_SRC
-
-
