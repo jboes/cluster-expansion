@@ -754,6 +754,61 @@ for cfg, d in enumerate(db.select()):
                     pass
 #+END_SRC
 
+** Bulk configurations
+Need to start running the worst of these calculations. (i.e. everything above 0.5 eV/atom should be a good number)
+
+#+BEGIN_SRC python
+import numpy as np
+from ase.db import connect
+from ase.io import read
+from amp import Amp
+from ase import Atoms
+
+db0 = connect('traj/unique-bulk.db')
+
+l = []
+# Create a new temporary database
+with connect('temp/bulk-3x3.db') as db:
+
+    # Generate structures at 5 different lattice constants
+    for lat in np.linspace(1, 5, 5):
+        for i, data in enumerate(db0.select()):
+            l += [i]
+
+    for j, d in enumerate(db.select()):
+        d.update(config=l[j])
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC python
+from ase.db import connect
+import numpy as np
+from amp import Amp
+
+db = connect('temp/bulk-3x3.db')
+
+dE, ids = [], []
+a, cfg = [], []
+for d in db.select():
+    a += [d.a]
+    print d.key_value_pairs
+    ids += [d.id]
+    dE += [abs(d.data['NN8'] / d.natoms - d.data['NN10'] / d.natoms)]
+
+ids = np.array(ids)
+
+# The index of energy differences greater than 0.03
+ind = np.array([True if d > 0.03 else False for d in dE])
+
+#for i in ids[ind]:
+#    atoms = db.get_atoms(i)
+
+    #wd = 'DFT/bulk=fcc/lattice={0:1.3f}/config={1}'.format(a[i], cfg[i])
+    #print wd
+    #with jasp
+#+END_SRC
+
 * AMP
 Section for AMP related utilities.
 
@@ -877,16 +932,16 @@ import numpy as np
 from ase.db import connect
 from ase.io import read
 from amp import Amp
-
+from ase import Atoms
 # Pull unique bulk structures predicted from EMT
 images = read('traj/unique-bulk.db')
 
 # Create a new temporary database
-with connect('temp/bulk-3x3-10lat.db') as db:
+with connect('temp/bulk-3x3.db') as db:
 
-    # Geenrate structures at 10 different lattice constants
-    for lat in np.linspace(3.634, 3.939, 10):
-        keys = {'a': '{0:1.3f}'.format(lat)}
+    # Generate structures at 5 different lattice constants
+    for lat in np.linspace(3.634, 3.939, 5):
+        keys = {'a': lat}
 
         f = lat / 3.939
 
@@ -894,13 +949,13 @@ with connect('temp/bulk-3x3-10lat.db') as db:
                           [0, f, 0],
                           [0, 0, f]])
 
-        for i, atoms in enumerate(images):
+        for i, atoms0 in enumerate(images):
+            atoms = Atoms.copy(atoms0)
             cell0 = atoms.get_cell()
             atoms.set_cell(np.dot(cell0, delta), scale_atoms=True)
 
             data = {}
             for l in [8, 10]:
-
                 key = 'NN{0}'.format(l)
                 calc = Amp('networks/db4/40-{0}-{0}-1/'.format(l))
                 atoms.set_calculator(calc)
@@ -1800,19 +1855,19 @@ plt.tight_layout()
 plt.savefig('./images/db4_bulk.png')
 #+END_SRC
 
-*** Bulk configurations at 10 lattice constants
+*** Bulk configurations at 5 lattice constants
 #+caption: Energy differences between db4 NN frameworks for energy unique bulk configurations at 10 lattice constants.
 #+label: fig-db4_bulk_10lat
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
 [[./images/db4_bulk_10lat.png]]
 
-#+BEGIN_SRC python :results silent
+#+BEGIN_SRC python
 from ase.db import connect
 import numpy as np
 import matplotlib.pyplot as plt
 
-db = connect('temp/bulk-3x3-10lat.db')
+db = connect('temp/bulk-3x3.db')
 
 E = []
 for d in db.select():
@@ -1826,14 +1881,20 @@ def nbins(x):
     m = ceil(x*10**n)
     return np.arange(0, (m*w)+w, w)
 
+
+
 plt.figure(figsize=(6, 4))
 n, bins, patches = plt.hist(E, bins=nbins(max(E)))
+print n
 plt.xlabel('Predicted energy difference (eV/atom)')
 plt.ylabel('Probability')
 plt.title('{0} total calculations'.format(len(E)))
 plt.tight_layout()
 plt.savefig('./images/db4_bulk_10lat.png')
 #+END_SRC
+
+#+RESULTS:
+: [ 4931.  1037.   556.   124.   124.   248.   628.   526.     6.]
 
 * Scratch Pad
 ** Making temp file for db4 NN predictions
