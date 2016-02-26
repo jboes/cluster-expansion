@@ -2465,17 +2465,19 @@ Section for AMP related utilities.
 Generate a database from a set of DFT calculations and creates the necessary training set from it.
 
 #+BEGIN_SRC python :results silent
-import jbtools.gilgamesh as jb
-# import jbtools.neural as jbn
+#import jbtools.gilgamesh as jb
+import jbtools.neural as jbn
 
 # Create the database from the DFT directory
+'''
 jb.write_database('DFT/bulk=fcc/lattice=3.634', db='networks/db5-bulk/data.db')
 jb.write_database('DFT/bulk=fcc/lattice=3.787', db='networks/db5-bulk/data.db')
 jb.write_database('DFT/bulk=fcc/lattice=3.863', db='networks/db5-bulk/data.db')
 jb.write_database('DFT/bulk=fcc/lattice=3.939', db='networks/db5-bulk/data.db')
+'''
 
 # Produce a trainset with 90% of the database calculations
-#jbn.produce_trainset('networks/db4-bulk/data.db', fraction=0.9)
+jbn.produce_trainset('networks/db5-bulk/data.db', fraction=0.9)
 #+END_SRC
 
 ** Running AMP locally
