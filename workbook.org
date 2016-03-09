@@ -2591,7 +2591,7 @@ from ase import Atoms
 images = read('traj/unique-bulk.db')
 
 # Create a new temporary database
-with connect('temp/bulk-3x3.db') as db:
+with connect('temp/bulk5-3x3.db') as db:
 
     # Generate structures at 5 different lattice constants
     for lat in np.linspace(3.634, 3.939, 5):
@@ -2611,9 +2611,9 @@ with connect('temp/bulk-3x3.db') as db:
             keys = {'a': lat, 'config':i}
 
             data = {}
-            for l in [8, 10]:
+            for l in [6, 8]:
                 key = 'NN{0}'.format(l)
-                calc = Amp('networks/db4/40-{0}-{0}-1/'.format(l))
+                calc = Amp('networks/db5-bulk/40-{0}-{0}-1/'.format(l))
                 atoms.set_calculator(calc)
                 data[key] = atoms.get_potential_energy()
 
@@ -3537,8 +3537,6 @@ def nbins(x):
     m = ceil(x*10**n)
     return np.arange(0, (m*w)+w, w)
 
-
-
 plt.figure(figsize=(6, 4))
 n, bins, patches = plt.hist(E, bins=nbins(max(E)))
 print n
@@ -3551,6 +3549,49 @@ plt.savefig('./images/db4_bulk_10lat.png')
 
 #+RESULTS:
 : [ 4931.  1037.   556.   124.   124.   248.   628.   526.     6.]
+
+** Database db5
+Calculations for the next iteration of the bulk-only database.
+
+*** 
+[[./images/db5_bulk.png]]
+
+#+BEGIN_SRC python :results silent
+from ase.io import read
+from amp import Amp
+import numpy as np
+import matplotlib.pyplot as plt
+
+images = read('networks/db5-bulk/data.db')
+
+dE = []
+for atoms in images:
+    calc = Amp('networks/db5-bulk/40-6-6-1/')
+    atoms.set_calculator(calc)
+    E1 = atoms.get_potential_energy()
+
+    calc = Amp('networks/db5-bulk/40-8-8-1/')
+    atoms.set_calculator(calc)
+    E2 = atoms.get_potential_energy()
+
+    dE += [abs(E1 / len(atoms) - E2 / len(atoms))]
+dE = np.array(dE)
+
+def nbins(x):
+    from math import log10, floor, ceil
+    n = 3
+    w = ceil(x*10**n) / ceil(x*10**n)*10**-n
+    m = ceil(x*10**n)
+    return np.arange(0, (m*w)+w, w)
+
+plt.figure(figsize=(6, 4))
+n, bins, patches = plt.hist(dE, bins=nbins(max(dE)))
+plt.xlabel('Predicted energy difference (eV/atom)')
+plt.ylabel('Probability')
+plt.title('{0} total calculations'.format(len(dE)))
+plt.tight_layout()
+plt.savefig('./images/db5_bulk.png')
+#+END_SRC
 
 * Scratch Pad
 ** Making temp file for db4 NN predictions
@@ -4096,6 +4137,7 @@ dEmin = (max(Emin) - min(Emin))
 Amin = [A[Es.index(min(Es))] for Es in nrg.values()]
 print(Amin)
 
+
 plt.plot(A, nrg['fcc'], 'g-')
 plt.text(Amin[0], Emin[0], 'fcc', ha='center', va='top', color='g', size=20)
 plt.plot(A, nrg['bcc'], 'b-')
@@ -4114,14 +4156,13 @@ plt.savefig('./images/EMT-EOS.png')
 #+attr_org: :width 400
 [[./images/3D-EMT-pathway.png]]
 
-#+caption: 2D Minimum energy pathway of transition through bct geometry space as predicted by EMT.q
+#+caption: 2D Minimum energy pathway of transition through bct geometry space as predicted by EMT.
 #+label: fig-2d-cupd-min-emt
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
 [[./images/2D-EMT-pathway.png]]
 
 #+RESULTS: EMT-minimum-lattice-constants
-: [2.6506506506506504, 2.9709709709709711]
 
 #+BEGIN_SRC python :results silent :var eos=EMT-minimum-lattice-constants
 from ase.lattice.tetragonal import CenteredTetragonal as bct
@@ -4223,11 +4264,4 @@ plt.xlabel('c/a ratio')
 plt.ylabel('Total energy (eV)')
 
 plt.savefig('./images/2D-EMT-pathway.png')
-#+END_SRC
-
-** Next set of bulk calculations
-#+BEGIN_SRC python
-from ase.atoms import Atoms
-
-
 #+END_SRC
