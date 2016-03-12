@@ -3554,7 +3554,15 @@ plt.savefig('./images/db4_bulk_10lat.png')
 ** Database db5
 Calculations for the next iteration of the bulk-only database.
 
+<<<<<<< Updated upstream
 #+BEGIN_SRC python
+=======
+*** Fits to database data
+[[./images/db5_bulk.png]]
+
+#+BEGIN_SRC python :results silent
+from ase.io import read
+>>>>>>> Stashed changes
 from amp import Amp
 from ase.db import connect
 
@@ -3614,23 +3622,40 @@ plt.tight_layout()
 plt.savefig('./images/db5_bulk.png')
 #+END_SRC
 
+<<<<<<< Updated upstream
 *** for multi-lattice constants
 #+caption: Energy differences between db5 NN frameworks for energy unique bulk configurations at 5 lattice constants.
 #+label: fig-db5_bulk_5lat
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
 [[./images/db5_bulk_5lat.png]]
+=======
+*** Bulk configurations at 5 lattice constants
+#+caption: Energy differences between db4 NN frameworks for energy unique bulk configurations at 10 lattice constants.
+#+label: fig-db4_bulk_10lat
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db4_bulk_10lat.png]]
+>>>>>>> Stashed changes
 
 #+BEGIN_SRC python
 from ase.db import connect
 import numpy as np
 import matplotlib.pyplot as plt
 
+<<<<<<< Updated upstream
 db = connect('temp/bulk5-3x3.db')
 
 E = []
 for d in db.select():
     E += [abs(d.data['NN6'] / d.natoms - d.data['NN8'] / d.natoms)]
+=======
+db = connect('temp/bulk-3x3.db')
+
+E = []
+for d in db.select():
+    E += [abs(d.data['NN8'] / d.natoms - d.data['NN10'] / d.natoms)]
+>>>>>>> Stashed changes
 E = np.array(E)
 
 def nbins(x):
@@ -3642,12 +3667,17 @@ def nbins(x):
 
 plt.figure(figsize=(6, 4))
 n, bins, patches = plt.hist(E, bins=nbins(max(E)))
+<<<<<<< Updated upstream
 print n.astype(int)
 print bins
+=======
+print n
+>>>>>>> Stashed changes
 plt.xlabel('Predicted energy difference (eV/atom)')
 plt.ylabel('Probability')
 plt.title('{0} total calculations'.format(len(E)))
 plt.tight_layout()
+<<<<<<< Updated upstream
 plt.savefig('./images/db5_bulk_5lat.png')
 #+END_SRC
 
@@ -3696,6 +3726,11 @@ plt.savefig('./images/db5_bulk_5lat.png')
   2.64  2.65  2.66  2.67  2.68  2.69  2.7 ]
 #+end_example
 
+=======
+plt.savefig('./images/db4_bulk_10lat.png')
+#+END_SRC
+
+>>>>>>> Stashed changes
 * Scratch Pad
 ** Making temp file for db4 NN predictions
 Create a temporary database which will contain the NN calculations for all of the db4 data.
