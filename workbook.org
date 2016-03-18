@@ -2746,18 +2746,18 @@ fcc = FaceCenteredCubic('Cu',
                         latticeconstant=3.634)
 VOL = fcc.get_volume() / len(fcc)
 
-bcc = BodyCenteredCubic('Cu',
+base = BodyCenteredCubic('Cu',
                          directions=[[1, 1, 1],
                                      [-1, 1, 1],
                                      [-1, -1, 1]],
                         size=(3, 3, 3),
                         latticeconstant=1.0)
 
-v0 = bcc.get_volume()
-cell0 = bcc.get_cell()
+v0 = base.get_volume()
+cell0 = base.get_cell()
 
-f = (VOL*len(bcc) / v0)**(1. / 3.)
-bcc.set_cell(f*cell0, scale_atoms=True)
+f = (VOL*len(base) / v0)**(1. / 3.)
+base.set_cell(f*cell0, scale_atoms=True)
 
 natoms = [a.index for a in base]
 metals = ['Cu', 'Pd']
@@ -2784,33 +2784,78 @@ with connect('traj/unique-bulk-bcc.db') as db:
 #+RESULTS:
 
 #+BEGIN_SRC python
-# Import all of the essential packages. More information about each structure can be found here:
-# https://wiki.fysik.dtu.dk/ase/epydoc/ase.lattice.cubic-module.html.
-from jasp import *
-from ase.lattice.cubic import FaceCenteredCubic
-from ase.lattice.cubic import BodyCenteredCubic
-from ase.lattice.cubic import SimpleCubic
-from ase.lattice.hexagonal import HexagonalClosedPacked
-from ase.lattice.cubic import Diamond
 from ase.visualize import view
+from ase.io import read
+from ase.lattice.cubic import FaceCenteredCubic
+import numpy as np
+from ase.db import connect
 
+images = read('traj/unique-bulk-bcc.db')
 
-# fcc is Au's standard bulk configuration. ASE's 'FaceCenteredCubic' function utilizes the experimentally 
-# determined lattice constant of Au as a starting point for relaxation.
-fcc = FaceCenteredCubic('Au',
-                        directions=[[0, 1, 1],
-                                    [1, 0, 1],
-                                    [1, 1, 0]],
-                        latticeconstant=4.156)
-VOL = fcc.get_volume() / len(fcc)
+# collect the volume/atom from fcc calculations
+lat = np.linspace(3.634, 3.939, 5)
+volumes = []
+for a in lat:
+    fcc = FaceCenteredCubic('Cu',
+			    directions=[[0, 1, 1],
+					[1, 0, 1],
+					[1, 1, 0]],
+			    latticeconstant=a)
+    VOL = fcc.get_volume() / len(fcc)
 
-# Uses the same volume per atom as the fcc configuration as a starting points for all structures.
-bcc = BodyCenteredCubic('Cu',
-                         directions=[[1, 1, 1],
-                                     [-1, 1, 1],
-                                     [-1, -1, 1]],
-                        latticeconstant=1.0)
-bcc.set_volume(VOL * len(bcc))
+    volumes += [VOL]
+
+with connect('temp/all-lat-bulk-bcc.db') as db:
+    for v in volumes:
+	for atoms in images:
+            v0 = atoms.get_volume() / len(atoms)
+            cell0 = atoms.get_cell()
+
+            f = (v / v0)**(1. / 3.)
+            atoms.set_cell(f*cell0, scale_atoms=True)
+
+            db.write(atoms)
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC python
+from ase.db import connect
+from asap3 import EMT
+
+db = connect('temp/all-lat-bulk-bcc.db')
+
+vols = set()
+for d in db.select():
+    vols.add(d.volume / 27.)
+
+vols = sorted(list(vols))
+
+nrgs = set()
+images = []
+
+for d in db.select():
+    if d.volume / 27. == vols[4]:
+
+	atoms = db.get_atoms(d.id)
+	atoms.set_calculator(EMT())
+	nrg = round(atoms.get_potential_energy(), 3)
+	atoms.set_calculator(None)
+
+	if nrg not in nrgs:
+	    nrgs.add(nrg)
+            images += [atoms]
+
+with connect('temp/lat5-bulk-bcc.db') as db:
+    for v in vols:
+	for atoms in images:
+            v0 = atoms.get_volume() / len(atoms)
+            cell0 = atoms.get_cell()
+
+            f = (v / v0)**(1. / 3.)
+            atoms.set_cell(f*cell0, scale_atoms=True)
+
+            db.write(atoms)
 #+END_SRC
 
 #+RESULTS:
