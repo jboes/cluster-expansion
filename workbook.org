@@ -2848,14 +2848,14 @@ for d in db.select():
 
 with connect('temp/lat5-bulk-bcc.db') as db:
     for v in vols:
-	for atoms in images:
+	for i, atoms in enumerate(images):
             v0 = atoms.get_volume() / len(atoms)
             cell0 = atoms.get_cell()
 
             f = (v / v0)**(1. / 3.)
             atoms.set_cell(f*cell0, scale_atoms=True)
 
-            db.write(atoms)
+            db.write(atoms, key_value_pairs={'aV': float(v), 'cfg': int(i)})
 #+END_SRC
 
 #+RESULTS:
@@ -3690,7 +3690,7 @@ plt.savefig('./images/db4_bulk_10lat.png')
 ** Database db5
 Calculations for the next iteration of the bulk-only database.
 
-*** Review of 
+*** Review of trained networks
 #+BEGIN_SRC python
 import os
 from glob import glob
