@@ -3140,7 +3140,7 @@ for d in db.select():
                        d.data.NN7,
                        (d.data.NN6 - d.data.NN7) / d.natoms])])
 
-
+mins = []
 plt.figure(figsize=(6, 4))
 plt.plot([3.634, 3.939], [0, 0], 'k--', lw=2)
 for lat, v in data.iteritems():
@@ -3152,12 +3152,16 @@ for lat, v in data.iteritems():
     try:
         mc1 = int(list(v.T[1]).index(v.T[1].min()))
         mc2 = int(list(v.T[2]).index(v.T[2].min()))
+        mins += [int(v.T[0][mc2])]
     except(TypeError):
         mc1, mc2 = 0, 0
+        mins += [int(v.T[0])]
 
-    plt.plot(np.zeros(error.shape) + lat, error, 'bo', label='')
-    plt.plot(lat, error[mc1], 'ro', label='NN6 predicted GS')
-    plt.plot(lat, error[mc2], 'go', label='')
+    plt.plot(np.zeros(error.shape) + lat, error, 'bo')
+    plt.plot(lat, error[mc1], 'ro')
+    plt.plot(lat, error[mc2], 'go')
+
+print sorted(mins)
 
 plt.xlim(3.634, 3.939)
 plt.xlabel('fcc lattice constant ($\AA$)')
@@ -3167,4 +3171,221 @@ plt.savefig('./images/vegard-error-bulk.png')
 #+END_SRC
 
 #+RESULTS:
+: [1, 2, 23, 389, 432, 576, 815, 816, 918, 1173, 1174, 1175, 1179, 1303, 1390, 1497, 1544, 1573, 1584, 1604, 1605, 1616, 1621, 1631, 1633, 1634, 1635, 1636]
+
+#+BEGIN_SRC python :results silent
+
+MES = [1, 2, 23, 389, 432, 576, 815, 816, 918, 1173, 1174, 1175, 1179, 1303, 1390, 1497, 1544, 1573, 1584, 1604, 1605, 1616, 1621, 1631, 1633, 1634, 1635, 1636]
+
+for n in MES:
+
+    script = '''#!/usr/bin/env python
+# from ase.db import connect
+from amp import Amp
+from ase.md.langevin import Langevin
+from ase.io.trajectory import Trajectory
+from ase import units
+
+images = Trajectory("/home-research/jboes/research/cluster-expansion/script/out-{0}.traj", "r")
+atoms = images[-1]
+
+# db = connect("/home-research/jboes/research/cluster-expansion/temp/vegard-3x3.db")
+# atoms = db.get_atoms({0})
+
+atoms.set_calculator(Amp("/home-research/jboes/research/cluster-expansion/networks/db5/40-7-7-1/"))
+
+T = 500
+dyn = Langevin(atoms, 5 * units.fs, T * units.kB, 0.002)
+
+def printenergy(a=atoms):  # store a reference to atoms in the definition.
+    """Function to print the potential, kinetic and total energy."""
+    epot = a.get_potential_energy()
+    ekin = a.get_kinetic_energy()
+
+# Record the energies in the trajectory file
+dyn.attach(printenergy, interval=1)
+
+# We also want to save the positions of all atoms after every 100th time step.
+traj = Trajectory("/home-research/jboes/research/cluster-expansion/script/out-{0}.traj", "a", atoms)
+dyn.attach(traj.write, interval=1)
+
+# Now run the dynamics
+dyn.run(5000)
+'''.format(n)
+
+    with open('script/run-{}.py'.format(n), 'w') as f:
+        f.write(script)
+#+END_SRC
+
+#+BEGIN_SRC python
+MES = [1, 2, 23, 389, 432, 576, 815, 816, 918, 1173, 1174, 1175, 1179, 1303, 1390, 1497, 1544, 1573, 1584, 1604, 1605, 1616, 1621, 1631, 1633, 1634, 1635, 1636]
+
+str_list = []
+for n in MES:
+    str_list += ['bpsh 30 -m ./run-{}.py &'.format(n)]
+
+print ' '.join(str_list)
+#+END_SRC
+
+#+RESULTS:
+: bpsh 30 -m ./run-1.py & bpsh 30 -m ./run-2.py & bpsh 30 -m ./run-23.py & bpsh 30 -m ./run-389.py & bpsh 30 -m ./run-432.py & bpsh 30 -m ./run-576.py & bpsh 30 -m ./run-815.py & bpsh 30 -m ./run-816.py & bpsh 30 -m ./run-918.py & bpsh 30 -m ./run-1173.py & bpsh 30 -m ./run-1174.py & bpsh 30 -m ./run-1175.py & bpsh 30 -m ./run-1179.py & bpsh 30 -m ./run-1303.py & bpsh 30 -m ./run-1390.py & bpsh 30 -m ./run-1497.py & bpsh 30 -m ./run-1544.py & bpsh 30 -m ./run-1573.py & bpsh 30 -m ./run-1584.py & bpsh 30 -m ./run-1604.py & bpsh 30 -m ./run-1605.py & bpsh 30 -m ./run-1616.py & bpsh 30 -m ./run-1621.py & bpsh 30 -m ./run-1631.py & bpsh 30 -m ./run-1633.py & bpsh 30 -m ./run-1634.py & bpsh 30 -m ./run-1635.py & bpsh 30 -m ./run-1636.py &
+
+** Analysis of the MD simulations
+#+BEGIN_SRC python :results raw
+from ase.visualize import view
+from glob import glob
+from ase.io.trajectory import Trajectory
+import matplotlib.pyplot as plt
+import numpy as np
+
+files = glob('script/out-*.traj')
+
+for f in files:
+    traj = Trajectory(f)
+    name = f.split('/')[-1].split('.')[0]
+
+    pE, kE, c = [], [], []
+    for i, atoms in enumerate(traj):
+        c += [i]
+        pE += [atoms.get_potential_energy()]
+        kE += [atoms.get_kinetic_energy()]
+
+    pE = np.array(pE) - pE[0]
+    kE = np.array(kE) - kE[0]
+
+    ind = [kE < 5.0] or [pE < 5.0]
+
+    pE = pE[ind]
+    kE = kE[ind]
+    c = np.array(c)[ind]
+    
+    plt.figure(figsize=(6, 4))
+    plt.plot(c, pE, 'b-', label='potential')
+    plt.plot(c, kE, 'r-', label='kinetic')
+    plt.xlabel('Step')
+    plt.ylabel('Energy (eV/atom)')
+    plt.legend(loc='best')
+    plt.tight_layout()
+    plt.savefig('./images/{}.png'.format(name))
+
+    if np.array(ind).all():
+        print('{} still running'.format(name))
+    else:
+        print('{} failure step: {}'.format(name, np.array(ind).sum()))
+    # print('[[./images/{}.png]]'.format(name))
+#+END_SRC
+
+#+RESULTS:
+out-1 failure step: 1808
+out-23 failure step: 1606
+out-1173 failure step: 270
+out-389 failure step: 857
+out-432 still running
+out-815 failure step: 1867
+out-1634 still running
+out-1175 failure step: 296
+out-576 failure step: 1526
+out-1544 failure step: 1776
+out-1636 still running
+out-1635 still running
+out-1303 failure step: 615
+out-1174 failure step: 271
+out-1497 failure step: 119
+out-1179 failure step: 410
+out-1573 failure step: 606
+out-1631 failure step: 2615
+out-2 failure step: 1228
+out-918 failure step: 719
+out-816 failure step: 961
+out-1621 still running
+out-1605 failure step: 2025
+out-1604 failure step: 2076
+out-1633 still running
+out-1584 failure step: 153
+out-1390 failure step: 674
+out-1616 failure step: 1211
+out-1 failure step: [1 1 1 ..., 0 0 0]
+out-23 failure step: [1 1 1 ..., 0 0 0]
+out-1173 failure step: [1 1 1 ..., 0 0 0]
+out-389 failure step: [1 1 1 ..., 0 0 0]
+out-432 still running
+out-815 failure step: [1 1 1 ..., 0 0 0]
+out-1634 still running
+out-1175 failure step: [1 1 1 ..., 0 0 0]
+out-576 failure step: [1 1 1 ..., 0 0 0]
+out-1544 failure step: [1 1 1 ..., 0 0 0]
+out-1636 still running
+out-1635 still running
+out-1303 failure step: [1 1 1 ..., 0 0 0]
+out-1174 failure step: [1 1 1 ..., 0 0 0]
+out-1497 failure step: [1 1 1 ..., 0 0 0]
+out-1179 failure step: [1 1 1 ..., 0 0 0]
+out-1573 failure step: [1 1 1 ..., 0 0 0]
+out-1631 still running
+out-2 failure step: [1 1 1 ..., 0 0 0]
+out-918 failure step: [1 1 1 ..., 0 0 0]
+out-816 failure step: [1 1 1 ..., 0 0 0]
+out-1621 still running
+out-1605 failure step: [1 1 1 ..., 0 0 0]
+out-1604 failure step: [1 1 1 ..., 0 0 0]
+out-1633 still running
+out-1584 failure step: [1 1 1 ..., 0 0 0]
+out-1390 failure step: [1 1 1 ..., 0 0 0]
+out-1616 failure step: [1 1 1 ..., 0 0 0]
+out-1 failure step: [1 1 1 ..., 0 0 0]
+out-23 failure step: [1 1 1 ..., 0 0 0]
+out-1173 failure step: [1 1 1 ..., 0 0 0]
+out-389 failure step: [1 1 1 ..., 0 0 0]
+out-432 still running
+out-815 failure step: [1 1 1 ..., 1 1 0]
+out-1634 still running
+out-1175 failure step: [1 1 1 ..., 0 0 0]
+out-576 failure step: [1 1 1 ..., 0 0 0]
+out-1544 failure step: [1 1 1 ..., 0 0 0]
+out-1636 still running
+out-1635 still running
+out-1303 failure step: [1 1 1 ..., 0 0 0]
+out-1174 failure step: [1 1 1 ..., 0 0 0]
+out-1497 failure step: [1 1 1 ..., 0 0 0]
+out-1179 failure step: [1 1 1 ..., 0 0 0]
+out-1573 failure step: [1 1 1 ..., 0 0 0]
+out-1631 still running
+out-2 failure step: [1 1 1 ..., 0 0 0]
+out-918 failure step: [1 1 1 ..., 0 0 0]
+out-816 failure step: [1 1 1 ..., 0 0 0]
+out-1621 still running
+out-1605 failure step: [1 1 1 ..., 0 0 0]
+out-1604 failure step: [1 1 1 ..., 0 0 0]
+out-1633 still running
+out-1584 failure step: [1 1 1 ..., 0 0 0]
+out-1390 failure step: [1 1 1 ..., 0 0 0]
+out-1616 failure step: [1 1 1 ..., 0 0 0]
+out-1 failure step: 1
+out-23 failure step: 1
+out-1173 failure step: 1
+out-389 failure step: 1
+out-432 still running
+out-815 failure step: 1
+out-1634 still running
+out-1175 failure step: 1
+out-576 failure step: 1
+out-1544 failure step: 1
+out-1636 still running
+out-1635 still running
+out-1303 failure step: 1
+out-1174 failure step: 1
+out-1497 failure step: 1
+out-1179 failure step: 1
+out-1573 failure step: 1
+out-1631 still running
+out-2 failure step: 1
+out-918 failure step: 1
+out-816 failure step: 1
+out-1621 still running
+out-1605 failure step: 1
+out-1604 failure step: 1
+out-1633 still running
+out-1584 failure step: 1
+out-1390 failure step: 1
+out-1616 failure step: 1
 
