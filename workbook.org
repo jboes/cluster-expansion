@@ -3124,12 +3124,20 @@ with connect('temp/vegard-3x3.db') as db:
 from ase.db import connect
 import matplotlib.pyplot as plt
 import numpy as np
+from ase.visualize import view
 
 db = connect('temp/vegard-3x3.db')
 
 data = {}
+ID, LAT, ERR = [], [], []
 for d in db.select():
+
+    ERR += [(d.data.NN6 - d.data.NN7) / d.natoms]
+    ID += [d.id]
+    LAT += [d.a]
+
     if d.a not in data.keys():
+
         data[d.a] = np.array([d.id,
                       d.data.NN6,
                       d.data.NN7,
@@ -3140,9 +3148,17 @@ for d in db.select():
                        d.data.NN7,
                        (d.data.NN6 - d.data.NN7) / d.natoms])])
 
+
+
+
 mins = []
-plt.figure(figsize=(6, 4))
-plt.plot([3.634, 3.939], [0, 0], 'k--', lw=2)
+fig = plt.figure(figsize=(6, 4))
+ax = fig.add_subplot(111)
+ax.plot([3.634, 3.939], [0, 0], 'k--', lw=2)
+
+ax.set_title('click on a point')
+ax.plot(LAT, ERR, 'bo', picker=5)
+
 for lat, v in data.iteritems():
     error = v.T[-1]
     if isinstance(error, float):
@@ -3157,21 +3173,30 @@ for lat, v in data.iteritems():
         mc1, mc2 = 0, 0
         mins += [int(v.T[0])]
 
-    plt.plot(np.zeros(error.shape) + lat, error, 'bo')
-    plt.plot(lat, error[mc1], 'ro')
-    plt.plot(lat, error[mc2], 'go')
+    # ax.plot(np.zeros(error.shape) + lat, error, 'bo')
+    ax.plot(lat, error[mc1], 'ro')
+    ax.plot(lat, error[mc2], 'go')
 
-print sorted(mins)
+def onpick(event):
+    ind = event.ind
+    ax.set_title('Data point {0} is labeled "{1}"'.format(ind, ID[ind]))
+    atoms = db.get_atoms(ID[ind])
+    view(atoms)
 
-plt.xlim(3.634, 3.939)
-plt.xlabel('fcc lattice constant ($\AA$)')
-plt.ylabel('Difference in neural networks (eV/atom)')
+    ax.figure.canvas.draw()  # this line is critical to change the linewidth
+    plt.savefig('./images/vegard-error-bulk.png')
+
+fig.canvas.mpl_connect('pick_event', onpick)
+
+ax.set_xlim(3.634, 3.939)
+ax.set_xlabel('fcc lattice constant ($\AA$)')
+ax.set_ylabel('Difference in neural networks (eV/atom)')
 plt.tight_layout()
-plt.savefig('./images/vegard-error-bulk.png')
+plt.show()
 #+END_SRC
 
 #+RESULTS:
-: [1, 2, 23, 389, 432, 576, 815, 816, 918, 1173, 1174, 1175, 1179, 1303, 1390, 1497, 1544, 1573, 1584, 1604, 1605, 1616, 1621, 1631, 1633, 1634, 1635, 1636]
+: 19
 
 #+BEGIN_SRC python :results silent
 
