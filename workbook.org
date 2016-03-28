@@ -3160,7 +3160,7 @@ ax = fig.add_subplot(111)
 ax.plot([3.634, 3.939], [0, 0], 'k--', lw=2)
 
 ax.set_title('click on a point')
-l, = ax.plot(LAT, ERR, 'bo', picker=5)
+l, = ax.plot(LAT, ERR, 'bo', picker=2)
 
 for lat, v in data.iteritems():
     error = v.T[-1]
@@ -3183,7 +3183,7 @@ for lat, v in data.iteritems():
 def onpick(event):
     ind = event.ind
 
-    ax.set_title('Data point {0} is labeled "{1}"'.format(ind, ID[ind]))
+    ax.set_title('Atom index {}'.format(ID[ind]))
     atoms = db.get_atoms(ID[ind])
 
     write('./images/temp-atoms.png', db.get_atoms(ID[ind]))
@@ -3270,6 +3270,7 @@ print ' '.join(str_list)
 : bpsh 30 -m ./run-1.py & bpsh 30 -m ./run-2.py & bpsh 30 -m ./run-23.py & bpsh 30 -m ./run-389.py & bpsh 30 -m ./run-432.py & bpsh 30 -m ./run-576.py & bpsh 30 -m ./run-815.py & bpsh 30 -m ./run-816.py & bpsh 30 -m ./run-918.py & bpsh 30 -m ./run-1173.py & bpsh 30 -m ./run-1174.py & bpsh 30 -m ./run-1175.py & bpsh 30 -m ./run-1179.py & bpsh 30 -m ./run-1303.py & bpsh 30 -m ./run-1390.py & bpsh 30 -m ./run-1497.py & bpsh 30 -m ./run-1544.py & bpsh 30 -m ./run-1573.py & bpsh 30 -m ./run-1584.py & bpsh 30 -m ./run-1604.py & bpsh 30 -m ./run-1605.py & bpsh 30 -m ./run-1616.py & bpsh 30 -m ./run-1621.py & bpsh 30 -m ./run-1631.py & bpsh 30 -m ./run-1633.py & bpsh 30 -m ./run-1634.py & bpsh 30 -m ./run-1635.py & bpsh 30 -m ./run-1636.py &
 
 ** Analysis of the MD simulations
+
 #+BEGIN_SRC python :results raw
 from ase.visualize import view
 from glob import glob
@@ -3315,7 +3316,6 @@ for f in files:
 	ax.figure.canvas.draw()  # this line is critical to change the linewidth
 	plt.savefig('./images/{}.png'.format(name))
 
-    
     fig = plt.figure(figsize=(6, 4))
     ax = fig.add_subplot(111)
     ax.plot(c, pE, 'bo-', label='potential', picker=5)
@@ -3335,3 +3335,6 @@ for f in files:
 
 plt.show()
 #+END_SRC
+
+#+RESULTS:
+
