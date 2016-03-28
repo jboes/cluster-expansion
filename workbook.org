@@ -3125,6 +3125,11 @@ from ase.db import connect
 import matplotlib.pyplot as plt
 import numpy as np
 from ase.visualize import view
+from matplotlib._png import read_png
+from ase.io import write
+from matplotlib.offsetbox import TextArea, DrawingArea, OffsetImage, \
+    AnnotationBbox
+from matplotlib.widgets import Slider
 
 db = connect('temp/vegard-3x3.db')
 
@@ -3149,15 +3154,13 @@ for d in db.select():
                        (d.data.NN6 - d.data.NN7) / d.natoms])])
 
 
-
-
 mins = []
 fig = plt.figure(figsize=(6, 4))
 ax = fig.add_subplot(111)
 ax.plot([3.634, 3.939], [0, 0], 'k--', lw=2)
 
 ax.set_title('click on a point')
-ax.plot(LAT, ERR, 'bo', picker=5)
+l, = ax.plot(LAT, ERR, 'bo', picker=5)
 
 for lat, v in data.iteritems():
     error = v.T[-1]
@@ -3179,12 +3182,23 @@ for lat, v in data.iteritems():
 
 def onpick(event):
     ind = event.ind
+
     ax.set_title('Data point {0} is labeled "{1}"'.format(ind, ID[ind]))
     atoms = db.get_atoms(ID[ind])
-    view(atoms)
+
+    write('./images/temp-atoms.png', db.get_atoms(ID[ind]))
+    arr_lena = read_png('./images/temp-atoms.png')
+    imagebox = OffsetImage(arr_lena, zoom=0.35)
+    ab = AnnotationBbox(imagebox, [3.85, 0.0055], frameon=False)
+
+    ax.add_artist(ab)
 
     ax.figure.canvas.draw()  # this line is critical to change the linewidth
     plt.savefig('./images/vegard-error-bulk.png')
+
+    if event.mouseevent.button == 3:
+        view(atoms)
+
 
 fig.canvas.mpl_connect('pick_event', onpick)
 
@@ -3192,11 +3206,11 @@ ax.set_xlim(3.634, 3.939)
 ax.set_xlabel('fcc lattice constant ($\AA$)')
 ax.set_ylabel('Difference in neural networks (eV/atom)')
 plt.tight_layout()
+# plt.savefig('./images/vegard-error-bulk.png')
 plt.show()
 #+END_SRC
 
 #+RESULTS:
-: 19
 
 #+BEGIN_SRC python :results silent
 
@@ -3265,6 +3279,8 @@ import numpy as np
 
 files = glob('script/out-*.traj')
 
+files = [files[0]]
+
 for f in files:
     traj = Trajectory(f)
     name = f.split('/')[-1].split('.')[0]
@@ -3283,134 +3299,39 @@ for f in files:
     pE = pE[ind]
     kE = kE[ind]
     c = np.array(c)[ind]
+
+
+    def onpick(event):
+	ind = event.ind
+	atoms = traj[ind]
+	view(atoms)
+
+	# write('./images/temp-atoms.png', db.get_atoms(ID[ind]))
+	# arr_lena = read_png('./images/temp-atoms.png')
+	# imagebox = OffsetImage(arr_lena, zoom=0.3)
+	# ab = AnnotationBbox(imagebox, [3.85, 0.0055], frameon=False)
+	# ax.add_artist(ab)
+
+	ax.figure.canvas.draw()  # this line is critical to change the linewidth
+	plt.savefig('./images/{}.png'.format(name))
+
     
-    plt.figure(figsize=(6, 4))
-    plt.plot(c, pE, 'b-', label='potential')
-    plt.plot(c, kE, 'r-', label='kinetic')
-    plt.xlabel('Step')
-    plt.ylabel('Energy (eV/atom)')
-    plt.legend(loc='best')
+    fig = plt.figure(figsize=(6, 4))
+    ax = fig.add_subplot(111)
+    ax.plot(c, pE, 'bo-', label='potential', picker=5)
+    ax.plot(c, kE, 'r-', label='kinetic')
+    ax.set_xlabel('Step')
+    ax.set_ylabel('Energy (eV/atom)')
+    ax.legend(loc='best')
     plt.tight_layout()
-    plt.savefig('./images/{}.png'.format(name))
+    fig.canvas.mpl_connect('pick_event', onpick)
 
-    if np.array(ind).all():
-        print('{} still running'.format(name))
-    else:
-        print('{} failure step: {}'.format(name, np.array(ind).sum()))
-    # print('[[./images/{}.png]]'.format(name))
+
+    #if np.array(ind).all():
+    #    print('{} still running'.format(name))
+    #else:
+    #    print('{} failure step: {}'.format(name, np.array(ind).sum()))
+    #print('[[./images/{}.png]]'.format(name))
+
+plt.show()
 #+END_SRC
-
-#+RESULTS:
-out-1 failure step: 1808
-out-23 failure step: 1606
-out-1173 failure step: 270
-out-389 failure step: 857
-out-432 still running
-out-815 failure step: 1867
-out-1634 still running
-out-1175 failure step: 296
-out-576 failure step: 1526
-out-1544 failure step: 1776
-out-1636 still running
-out-1635 still running
-out-1303 failure step: 615
-out-1174 failure step: 271
-out-1497 failure step: 119
-out-1179 failure step: 410
-out-1573 failure step: 606
-out-1631 failure step: 2615
-out-2 failure step: 1228
-out-918 failure step: 719
-out-816 failure step: 961
-out-1621 still running
-out-1605 failure step: 2025
-out-1604 failure step: 2076
-out-1633 still running
-out-1584 failure step: 153
-out-1390 failure step: 674
-out-1616 failure step: 1211
-out-1 failure step: [1 1 1 ..., 0 0 0]
-out-23 failure step: [1 1 1 ..., 0 0 0]
-out-1173 failure step: [1 1 1 ..., 0 0 0]
-out-389 failure step: [1 1 1 ..., 0 0 0]
-out-432 still running
-out-815 failure step: [1 1 1 ..., 0 0 0]
-out-1634 still running
-out-1175 failure step: [1 1 1 ..., 0 0 0]
-out-576 failure step: [1 1 1 ..., 0 0 0]
-out-1544 failure step: [1 1 1 ..., 0 0 0]
-out-1636 still running
-out-1635 still running
-out-1303 failure step: [1 1 1 ..., 0 0 0]
-out-1174 failure step: [1 1 1 ..., 0 0 0]
-out-1497 failure step: [1 1 1 ..., 0 0 0]
-out-1179 failure step: [1 1 1 ..., 0 0 0]
-out-1573 failure step: [1 1 1 ..., 0 0 0]
-out-1631 still running
-out-2 failure step: [1 1 1 ..., 0 0 0]
-out-918 failure step: [1 1 1 ..., 0 0 0]
-out-816 failure step: [1 1 1 ..., 0 0 0]
-out-1621 still running
-out-1605 failure step: [1 1 1 ..., 0 0 0]
-out-1604 failure step: [1 1 1 ..., 0 0 0]
-out-1633 still running
-out-1584 failure step: [1 1 1 ..., 0 0 0]
-out-1390 failure step: [1 1 1 ..., 0 0 0]
-out-1616 failure step: [1 1 1 ..., 0 0 0]
-out-1 failure step: [1 1 1 ..., 0 0 0]
-out-23 failure step: [1 1 1 ..., 0 0 0]
-out-1173 failure step: [1 1 1 ..., 0 0 0]
-out-389 failure step: [1 1 1 ..., 0 0 0]
-out-432 still running
-out-815 failure step: [1 1 1 ..., 1 1 0]
-out-1634 still running
-out-1175 failure step: [1 1 1 ..., 0 0 0]
-out-576 failure step: [1 1 1 ..., 0 0 0]
-out-1544 failure step: [1 1 1 ..., 0 0 0]
-out-1636 still running
-out-1635 still running
-out-1303 failure step: [1 1 1 ..., 0 0 0]
-out-1174 failure step: [1 1 1 ..., 0 0 0]
-out-1497 failure step: [1 1 1 ..., 0 0 0]
-out-1179 failure step: [1 1 1 ..., 0 0 0]
-out-1573 failure step: [1 1 1 ..., 0 0 0]
-out-1631 still running
-out-2 failure step: [1 1 1 ..., 0 0 0]
-out-918 failure step: [1 1 1 ..., 0 0 0]
-out-816 failure step: [1 1 1 ..., 0 0 0]
-out-1621 still running
-out-1605 failure step: [1 1 1 ..., 0 0 0]
-out-1604 failure step: [1 1 1 ..., 0 0 0]
-out-1633 still running
-out-1584 failure step: [1 1 1 ..., 0 0 0]
-out-1390 failure step: [1 1 1 ..., 0 0 0]
-out-1616 failure step: [1 1 1 ..., 0 0 0]
-out-1 failure step: 1
-out-23 failure step: 1
-out-1173 failure step: 1
-out-389 failure step: 1
-out-432 still running
-out-815 failure step: 1
-out-1634 still running
-out-1175 failure step: 1
-out-576 failure step: 1
-out-1544 failure step: 1
-out-1636 still running
-out-1635 still running
-out-1303 failure step: 1
-out-1174 failure step: 1
-out-1497 failure step: 1
-out-1179 failure step: 1
-out-1573 failure step: 1
-out-1631 still running
-out-2 failure step: 1
-out-918 failure step: 1
-out-816 failure step: 1
-out-1621 still running
-out-1605 failure step: 1
-out-1604 failure step: 1
-out-1633 still running
-out-1584 failure step: 1
-out-1390 failure step: 1
-out-1616 failure step: 1
-
