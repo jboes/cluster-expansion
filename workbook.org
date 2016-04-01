@@ -2003,7 +2003,7 @@ To determine which structures AMP considers to be unique, we use the hashing met
 #+label: fig-alayer-db0
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
-[[./images/db0-alayer.png]]
+[[./images/db1-alayer.png]]
 
 #+BEGIN_SRC python :results silent
 from ase.db import connect
@@ -2756,109 +2756,166 @@ print delta
 : [-0.004442877373188825, -0.059599315805680675, 9.522945089646129e-05, -0.019087544011419766, -0.025345979116320194, 0.01447687663729269, -0.011149054164117267, -0.015150699341703877, -0.005505132646609567, -0.013227297925100245, -0.014929814353989102, -0.02504895227412618, 0.00016171948147114534, -0.011441674548032132, -0.005635441144927533, -0.01213655547501613, -0.011378423119922765, -0.019507470996535048, -0.03003397730923041]
 
 #+BEGIN_SRC python
+import os
 import numpy as np
-import matplotlib.pyplot as plt
 
-SIZE = 5
-STEPS = 1
-T = 1
+cmd = ''
 
-def bc(i):
-    if i+1 > SIZE-1:
-        return 0
-    if i-1 < 0:
-        return SIZE-1
-    else:
-        return i
-    
+for A in np.linspace(12, 96, 8):
+    script = """#!/usr/bin/env python
 
-def delta_energy(system, N, M):
-    return -1 * system[N,M] * (system[bc(N-1), M] \
-                               + system[bc(N+1), M] \
-                               + system[N, bc(M-1)] \
-                               + system[N, bc(M+1)])
+import numpy as np
+from ase.atoms import Atoms
+import random
+from ase.units import kB
+from ase.db import connect
 
+def main(atoms, dbname, T=800, steps=10000):
 
-def build_system():
-    system = np.random.random_integers(0, 1, (SIZE, SIZE))
-    system[system==0] =- 1
+    db = connect(dbname)
 
-    return system
+    # Setting up variables for Cannonical MC
+    symbols = atoms.get_chemical_symbols()
+    chem_bins = {1}
 
+    for i, s in enumerate(symbols):
+	chem_bins[s] += [i]
 
-def main(T, N=500):
-    B = 1. / (k * T)
+    # Calculate the initial energy and store it
+    nrg = atoms.get_potential_energy()
 
-    ## define the initial atoms object
-    # atoms = [DEFINE ATOMS]
-    # index = atoms.get_index()
+    dummy = Atoms.copy(atoms)
+    db.write(dummy, nrg=nrg)
 
-    ## Calculate the initial energy and store it
-    # Ei = atoms.get_potential_energy()
+    # Perform MC steps
+    attempt, success = 0, 0
+    while success < steps:
 
-    ## Perform MC steps
-    for i in range(N):
+        # First, choose two chemicals to swap
+        sym1, sym2 = random.sample(chem_bins.keys(), 2)
+        random.shuffle(chem_bins[sym1])
+        ind1 = chem_bins[sym1][-1]
 
-        ## Choose a random atom
-        # n = random.choice(index)
+        random.shuffle(chem_bins[sym2])
+        ind2 = chem_bins[sym2][-1]
 
-        # new_atoms = Atoms.copy(atoms)
+        # Create new atoms object to test
+        new_atoms = Atoms.copy(atoms)
+        new_atoms.set_calculator(atoms.get_calculator())
 
-        ## Change atom chemical symbol
-        # if new_atoms[n].symbol == 'Cu':
-        #     new_atoms[n].symbol == 'Pd'
-        # else:
-        #     new_atoms[n].symbol == 'Cu'
+        # Update the atoms object
+        new_atoms[ind1].symbol, new_atoms[ind2].symbol = sym2, sym1
 
-        ## Calculate the energy of the new system
-        # Ef = new_atoms.get_potential_energy()
+        # Calculate the energy of the new system
+        new_nrg = new_atoms.get_potential_energy()
 
-        if Ef <= Ei:
-            system[N, M] *= -1
-        elif np.exp(-Ef * B) > np.random.rand():
-            system[N, M] *= -1
+        # Stores energy in continuously growing list
+        # potentially memory intensive, but faster than writing to disk
+        if new_nrg < nrg:
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
 
-system = build_system()
+            dummy = Atoms.copy(atoms)
+            db.write(dummy, nrg=nrg)
+            success += 1
 
-M = np.random.randint(0, SIZE)
-N = np.random.randint(0, SIZE)
-print M, N
-print('\nsystem')
-print system
-print('\nrandom point')
-print system[N, M]
-print('\nneighbors')
-print system[bc(N - 1), M]
-print system[bc(N + 1), M]
-print system[N, bc(M - 1)]
-print system[N, bc(M + 1)]
-print('\ndE')
-print delta_energy(system, N, M)
+        elif np.exp(-(new_nrg - nrg) / (kB * T)) > np.random.rand():
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = Atoms.copy(atoms)
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        attempt += 1
+
+    return success/attempt
+
+from ase.lattice.cubic import FaceCenteredCubic as fcc
+from amp import Amp
+
+atoms = fcc('Cu', size=(3, 3, 3),
+	    latticeconstant=(3.939-3.634)*({0}/108.) + 3.634)
+
+for i in range(int({0})):
+    atoms[i].symbol = 'Pd'
+
+atoms.set_calculator(Amp('/home/jacob/research/cluster-expansion/networks/db5/40-7-7-1/trained-parameters.json'))
+
+main(atoms, '/home/jacob/research/cluster-expansion/MC/108-{0}.db', steps=10000)
+""".format(int(A), '{sym: [] for sym in set(symbols)}')
+
+    name = 'MC/run-{}.py'.format(int(A))
+    cmd += '{} & '.format(name.replace('MC', '.'))
+
+    # No copied files
+    if os.path.exists(name):
+        os.unlink(name)
+
+    with open(name, 'w') as f:
+        f.write(script)
+    os.chmod(name, 0755)
+
+print(cmd)
 #+END_SRC
 
 #+RESULTS:
-#+begin_example
-0 2
+: ./run-12.py & ./run-24.py & ./run-36.py & ./run-48.py & ./run-60.py & ./run-72.py & ./run-84.py & ./run-96.py & 
 
-system
-[[ 1  1  1  1  1]
- [ 1 -1  1  1 -1]
- [ 1  1 -1  1  1]
- [ 1 -1  1 -1  1]
- [ 1 -1 -1 -1  1]]
+[[./images/boltzmann.png]]
 
-random point
-1
+#+BEGIN_SRC python :results silent
+import matplotlib.pyplot as plt
+from ase.units import kB
+import numpy as np
+from matplotlib.widgets import Slider, Button, RadioButtons
 
-neighbors
-1
-1
-1
-1
+fig, ax = plt.subplots()
+plt.subplots_adjust(bottom=0.2)
+dE = np.arange(0, 0.5, 0.001)
+T0 = 273.15
+E0 = 0
 
-dE
--4
-#+end_example
+def P(dE, T):
+    return np.exp(-dE / (kB * T))
+
+line, = plt.plot(dE, P(dE, T0), 'r-', lw=2)
+plt.axis([0, 0.5, 0, 1])
+
+marker, = plt.plot([E0], [P(E0, T0)], 'ro', ms=5)
+
+axT = plt.axes([0.15, 0.05, 0.72, 0.03])
+
+# Slider object
+sT = Slider(axT, 'Temp (K)', 0, 1000, valinit=T0)
+
+def update(val):
+    temp = sT.val
+    line.set_ydata(P(dE, temp))
+    fig.canvas.draw_idle()
+sT.on_changed(update)
+
+def onmove(event):
+    x = event.xdata
+    temp = sT.val
+
+    ax.set_title('dE: {0:1.3f}\nProbability: {1:1.3f}'.format(x, P(x, temp)))
+    marker.set_xdata(x)
+    marker.set_ydata(P(x, temp))
+
+    ax.figure.canvas.draw()
+
+mv = fig.canvas.mpl_connect('motion_notify_event', onmove)
+
+ax.set_xlabel('$\Delta$E (eV)')
+ax.set_ylabel('Probability')
+plt.savefig('./images/boltzmann.png')
+plt.show()
+#+END_SRC
 
 ** BCT via EMT
 
@@ -3160,7 +3217,7 @@ ax = fig.add_subplot(111)
 ax.plot([3.634, 3.939], [0, 0], 'k--', lw=2)
 
 ax.set_title('click on a point')
-l, = ax.plot(LAT, ERR, 'bo', picker=2)
+l, = ax.plot(LAT, ERR, 'bo', picker=5)
 
 for lat, v in data.iteritems():
     error = v.T[-1]

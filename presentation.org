@@ -1,0 +1,805 @@
+#+LATEX_CLASS: cmu-article
+#+LATEX_CLASS_OPTIONS: [12pt]
+#+LATEX_HEADER: \usepackage{setspace}
+#+LATEX_HEADER: \doublespacing
+#+STARTUP: hideblocks
+
+#+OPTIONS: toc:nil
+#+TITLE: Neural Networks for CuPd segregation analysis
+#+AUTHOR: Jacob Boes
+
+\maketitle
+
+* Introduction
+- Looking for a means of predicting segregation profiles accurately for CuPd and other metal systems.
+
+#+label: fig-experimental-segregation
+#+caption: (a) Composition of the Pd_{70}Cu_{30} alloy's near-surface region (X_{Cu}) determined by XPS as a function of anneal temperature. (b) Compositions of the alloy's topmost atomic layer (Determined by LEISS). (c) Composition estimates of the "immediate sub-surface". (d) Top layer compositions from the Langmuir-McLean equation with $\Delta G$ = -8.7 kJ/mol cite:miller-2008-surfac-segreg.
+#+attr_latex: :width 400 :placement [H]
+#+attr_org: :width 400
+[[./images/experimental-segregation.jpg]]
+
+- Top layer segregation of Pd_{70}Cu_{30} is well predicted by the Langmuir-McLean equation:
+
+$$\frac{y}{1-y} = \frac{x}{1-x} e^{\frac{-\Delta G}{k_{B}T}}$$
+
+- $y$ is top layer composition of Cu
+- $x$ is bulk composition of Cu
+- $\Delta G$ is the Gibbs free energy of segregation for Cu
+
+- Accurate computational representation of these
+
+#+label: fig-cupd-segregation
+#+caption: Experimental surface segregation of Cu_{x}Pd_{1-x}.
+#+attr_latex: :width 3in :placement [H]
+#+attr_org: :width 300
+[[./images/cupd-segregation.jpeg]]
+
+- Furthermore, experiments observe a Cu deficient second layer.
+
+- This is difficult to reproduce through basic simulations cite:dowben-1990-surfac-segreg-phenom.
+
+* Monte Carlo (MC) and kinetic Monte Carlo (kMC) techniques for predicting surface segregation
+- Simulation methods traditionally use Monte Carlo (MC) techniques.
+
+- DFT is poorly suited for predicting segregation due to computational expense of MC methods.
+
+- kMC methods have been recently implemented cite:cheng-2015-kinet-monte which accurately reproduces experimental surface compositions shown in Figure ref:fig-kmc-segregation.
+
+#+label: fig-kmc-segregation
+#+caption: Time evolution of surface Cu fraction of Cu_{x}Pd_{1-x} (x = 0.40, 0.52, 0.64) at 500 K. kMC simulations using pair-wise interaction potential.
+#+attr_latex: :width 3in :placement [H]
+#+attr_org: :width 300
+[[./images/kmc-segregation.jpg]]
+
+- Neural Networks (NN) are still an appealing solution, since they can be expanded upon.
+
+- NN are also not limited to fixed lattice sites (slabs can be relaxed).
+
+* EMT is an effective/cheap tool for exploring configuration space
+- NNs require a basis of calculations descriptive of all configurations of CuPd to begin training.
+
+- Training to cluster expansion structures is ineffective:
+-- Relatively small configuration space explored
+-- NNs struggle to predict "Needle" like structures
+#+attr_latex: :width 1in :placement [H]
+#+attr_org: :width 100
+[[./images/fcc-56-A.png]]
+
+- For a small unit cell of 100 atoms there are over 1.2 \times 10$^{30}$ configurations of Cu and Pd.
+-- Not all of these are energy unique
+-- CuPd has no appreciable long-range interactions, so many of these are irrelevant for training purposes.
+
+- NNs will only fit to configurations of relatively small unit cells because of $R_{c}$ 
+
+- Energy unique configurations can be determined manually, by unit cell geometry (not recommend).
+
+- Alternatively, _ANY_ system which predicts consistent energy output from identical position of atoms input will do the same. (i.e. any potential)
+
+* EMT is an effective/cheap tool for exploring configuration space
+
+- Effective medium theory (EMT) is a very cheap and simple potential, capable of predictions on CuPd.
+
+#+caption: Demonstration of the r7 \times r7 lattice structures utilized as a starting point calculations for the NN. The darker the atom, the deeper the layer. Bottom two layers are held fixed in most cases.
+#+label: structure-types
+#+attr_latex: :width 6in :placement [H]
+#+attr_org: :width 800
+[[./images/structure-types.png]]
+
+#+BEGIN_SRC python :results silent
+from ase.visualize import view
+from ase.lattice.surface import fcc111_root
+from ase.io import write
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+import matplotlib.image as mpimg
+import os
+
+lat = np.linspace(3.634, 3.939, 5)
+
+p = np.linspace(0.05, 0.9, 5)
+
+fig = plt.figure(figsize=(8, 3))
+ax = fig.add_subplot(111)
+for i, a in enumerate(lat):
+    atoms = fcc111_root('Cu', root=7,
+                        size=(1, 1, 5),
+                        vacuum=6.0, a=a)
+
+    col = abs((atoms.get_tags() / 5.0) - 1.0)
+
+    kwargs = {
+        'rotation': "-75x",
+        'show_unit_cell': 2,
+        'colors': np.array([col, col, col]).T,
+        'radii': [0.3] * len(atoms)}
+
+    write('images/temp.png', atoms, **kwargs)
+
+    image = mpimg.imread('./images/temp.png')
+    imagebox = OffsetImage(image, zoom=0.5)
+
+    ax.add_artist(AnnotationBbox(imagebox,
+                                 xy=(0, 0),
+                                 xybox=(p[i], 0.5),
+                                 pad=-0.2,
+                                 frameon=False,
+                                 arrowprops=None)
+                 )
+    ax.text(p[i], -0.13, '{0:1.3f} $\AA$'.format(a),
+            va='center', ha='center')
+    os.unlink('./images/temp.png')
+
+fig.patch.set_visible(False)
+ax.axis('off')
+plt.tight_layout()
+plt.savefig('images/structure-types.png')
+#+END_SRC
+
+#+caption: Representative composition of single-layer configuration search. All unique energy configurations of single-layer enumeration with EMT calculator.
+#+label: composition-types
+#+attr_latex: :width 3in :placement [H]
+#+attr_org: :width 300
+[[./images/composition-types.png]]
+
+#+BEGIN_SRC python :results silent
+from ase.visualize import view
+from ase.lattice.surface import fcc111_root
+from ase.io import write
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+import matplotlib.image as mpimg
+import os
+
+p = np.linspace(0.2, 0.8, 2)
+
+fig = plt.figure(figsize=(4, 3))
+ax = fig.add_subplot(111)
+for i, M in enumerate(['Cu', 'Pd']):
+    atoms = fcc111_root(M, root=7,
+                        size=(1, 1, 5),
+                        vacuum=6.0,
+                        a=3.787)
+
+    C = [200/255., 129/255., 51/255.] 
+    B = [0/255., 105/255., 134/255.]
+
+    if i == 0:
+        col = [C] * 31 + [B] * 4
+    else:
+        col = [B] * 31 + [C] * 4
+
+    kwargs = {
+        'rotation': "-75x",
+        'show_unit_cell': 2,
+        'colors': col,
+        'radii': None}
+
+    write('images/temp.png', atoms, **kwargs)
+
+    image = mpimg.imread('./images/temp.png')
+    imagebox = OffsetImage(image, zoom=0.6)
+
+    ax.add_artist(AnnotationBbox(imagebox,
+                                 xy=(0, 0),
+                                 xybox=(p[i], 0.5),
+                                 pad=-0.2,
+                                 frameon=False,
+                                 arrowprops=None))
+    os.unlink('./images/temp.png')
+
+fig.patch.set_visible(False)
+ax.axis('off')
+plt.tight_layout()
+plt.savefig('images/composition-types.png')
+#+END_SRC
+
+** Third iteration of NN trained to 2-layer unique energy configurations
+- Third NN iteration trained to \approx 15,000 images of up to 2-layer unique energy configurations.
+
+- Results to ground state structures shown in Figure ref:fig-2layer-db0.
+
+- Figures demonstrate the energy difference between NNs of different framework.
+-- Difference is proportional to the accuracy of the fit.
+
+#+caption: NN predicted energy differences for unique energy configurations of a root(7) \times root(7) slab. 2 layers are allowed to change their chemical composition.
+#+label: fig-2layer-db0
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db0-2layer.png]]
+
+- NN then used to predict energies of up to 4-layer unique energy configurations as shown in Figure ref:fig-4layer-db0.
+
+- Amazingly good agreement to "extrapolated" configurations.
+
+#+caption: NN predicted energy differences for unique energy configurations of a root(7) \times root(7) slab. 4 layers are allowed to change their chemical composition.
+#+label: fig-4layer-db0
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db0-4layer.png]]
+
+** Fourth iteration of NN
+
+- All structures NN differences above 0.04 eV/atom added to second 
+
+- Results shown in Figure ref:fig-alayer-db1.
+
+#+caption: NN predicted energy differences for all unique energy configurations shown above which have a unique hash.
+#+label: fig-alayer-db1
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db1-alayer.png]]
+
+- 5-layer unique energy configurations of 2 \times 2 slab are also well predicted as shown in Figure ref:fig-db3-2x2-5layer.
+
+#+caption: db3 NN predicted differences in energy for all 2 \times 2 unique energy configurations of a 5 layer fcc(111) slab.
+#+label: fig-db3-2x2-5layer
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/cfg2x2-5layer-db3.png]]
+
+- Significant improvement to energy predictions with addition of only \approx 2500 images to NN.
+
+- Although r7 \times r7 slab NN is robust for CuPd compositions at any width, adding or subtracting layers results in NN failure.
+
+- Slabs of more than 5 layers are necessary for Canonical Ensemble MC.
+
+- Bulk chemical potentials are needed for Grand Canonical Ensemble MC.
+
+- Enumeration of bulk configurations is the next logical step.
+
+* Fourth iteration of NN: Including bulk enumerations
+- Unique energy configurations of 3 \times 3 primitive fcc unit cell enumerated using EMT as described previously.
+#+attr_latex: :width 1in :placement [H]
+#+attr_org: :width 100
+[[./images/temp-atoms.png]]
+
+- Performed for Cu, Pd, and single intermediate lattice constant (\approx 5000 images). 
+
+- Initially unclear whether to separate bulk NN from slab NN.
+
+** Bulk NN _ONLY_ NN predictions
+- Predictions from NN trained only to bulk images did not interpolate to other lattice constants well.
+
+- Figure ref:fig-db4_bulk_5lat shows NN energy differences for all unique configurations at 5 linearly interpolated lattice constants.
+
+#+caption: Energy differences between db4 NN frameworks for energy unique bulk configurations at 5 lattice constants.
+#+label: fig-db4_bulk_5lat
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db4_bulk_10lat.png]]
+
+** Bulk _AND_ slab NN predictions
+- Figure ref:fig-db5_bulk_10lat demonstrates unique energy bulk configurations for NN trained with > 25,000 slab and bulk images.
+
+#+caption: Energy differences between db5 NN frameworks for energy unique bulk configurations at 10 lattice constants.
+#+label: fig-db5_bulk_10lat
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db5_bulk_5lat.png]]
+
+- All unique energy lattices were then scaled to alattice constant corresponding to their composition through linear interpolation.
+
+- Errors are very small, indicating the NN is ready for use at fixed lattice constant.
+
+#+caption: Energy differences of unique 3 x 3 primitive fcc unit cell configurations scaled to an appropriate lattice constant via Vegard's Law.
+#+label: fig-vegard-error
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/vegard-error-bulk.png]]
+
+#+BEGIN_SRC python
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+from ase.visualize import view
+from matplotlib._png import read_png
+from ase.io import write
+from matplotlib.offsetbox import TextArea, DrawingArea, OffsetImage, \
+    AnnotationBbox
+from matplotlib.widgets import Slider
+
+db = connect('temp/vegard-3x3.db')
+
+data = {}
+ID, LAT, ERR = [], [], []
+for d in db.select():
+
+    ERR += [(d.data.NN6 - d.data.NN7) / d.natoms]
+    ID += [d.id]
+    LAT += [d.a]
+
+    if d.a not in data.keys():
+
+        data[d.a] = np.array([d.id,
+                      d.data.NN6,
+                      d.data.NN7,
+                      (d.data.NN6 - d.data.NN7) / d.natoms])
+    else:
+        data[d.a] = np.vstack([data[d.a], np.array([d.id,
+                       d.data.NN6,
+                       d.data.NN7,
+                       (d.data.NN6 - d.data.NN7) / d.natoms])])
+
+
+mins = []
+fig = plt.figure(figsize=(6, 4))
+ax = fig.add_subplot(111)
+ax.plot([3.634, 3.939], [0, 0], 'k--', lw=2)
+
+ax.set_title('click on a point')
+l, = ax.plot(LAT, ERR, 'bo', picker=5)
+
+for lat, v in data.iteritems():
+    error = v.T[-1]
+    if isinstance(error, float):
+        error = np.array([error])
+
+    # find the minimum energy structure
+    try:
+        mc1 = int(list(v.T[1]).index(v.T[1].min()))
+        mc2 = int(list(v.T[2]).index(v.T[2].min()))
+        mins += [int(v.T[0][mc2])]
+    except(TypeError):
+        mc1, mc2 = 0, 0
+        mins += [int(v.T[0])]
+
+    # ax.plot(np.zeros(error.shape) + lat, error, 'bo')
+    ax.plot(lat, error[mc1], 'ro')
+    ax.plot(lat, error[mc2], 'go')
+
+def onpick(event):
+    ind = event.ind
+
+    ax.set_title('Atom index {}'.format(ID[ind]))
+    atoms = db.get_atoms(ID[ind])
+
+    write('./images/temp-atoms.png', db.get_atoms(ID[ind]))
+    arr_lena = read_png('./images/temp-atoms.png')
+    imagebox = OffsetImage(arr_lena, zoom=0.35)
+    ab = AnnotationBbox(imagebox, [3.85, 0.0055], frameon=False)
+
+    ax.add_artist(ab)
+
+    ax.figure.canvas.draw()  # this line is critical to change the linewidth
+    plt.savefig('./images/vegard-error-bulk.png')
+
+    if event.mouseevent.button == 3:
+        view(atoms)
+
+fig.canvas.mpl_connect('pick_event', onpick)
+
+ax.set_xlim(3.634, 3.939)
+ax.set_xlabel('fcc lattice constant ($\AA$)')
+ax.set_ylabel('Difference in neural networks (eV/atom)')
+plt.tight_layout()
+plt.savefig('./images/vegard-error-bulk.png')
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+
+* Extra material
+** Boltzmann distribution
+
+[[./images/boltzmann.png]]
+
+#+BEGIN_SRC python :results silent
+import matplotlib.pyplot as plt
+from ase.units import kB
+import numpy as np
+from matplotlib.widgets import Slider, Button, RadioButtons
+
+fig, ax = plt.subplots()
+plt.subplots_adjust(bottom=0.2)
+dE = np.arange(0, 0.5, 0.001)
+T0 = 273.15
+E0 = 0
+
+def P(dE, T):
+    return np.exp(-dE / (kB * T))
+
+line, = plt.plot(dE, P(dE, T0), 'r-', lw=2)
+plt.axis([0, 0.5, 0, 1])
+
+marker, = plt.plot([E0], [P(E0, T0)], 'ro', ms=5)
+
+axT = plt.axes([0.15, 0.05, 0.72, 0.03])
+
+# Slider object
+sT = Slider(axT, 'Temp (K)', 0, 1000, valinit=T0)
+
+def update(val):
+    temp = sT.val
+    line.set_ydata(P(dE, temp))
+    fig.canvas.draw_idle()
+sT.on_changed(update)
+
+def onmove(event):
+    x = event.xdata
+    temp = sT.val
+
+    ax.set_title('dE: {0:1.3f}\nProbability: {1:1.3f}'.format(x, P(x, temp)))
+    marker.set_xdata(x)
+    marker.set_ydata(P(x, temp))
+
+    ax.figure.canvas.draw()
+
+mv = fig.canvas.mpl_connect('motion_notify_event', onmove)
+
+ax.set_xlabel('$\Delta$E (eV)')
+ax.set_ylabel('Probability')
+plt.savefig('./images/boltzmann.png')
+plt.show()
+#+END_SRC
+
+** EMT fails to predict fcc/bcc phase behavior
+
+- Why not use EMT for all CuPd work?
+
+#+caption: 3D Minimum energy pathway of fcc to bcc transition through bct geometry space.
+#+label: fig-3d-cupd-min
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/3D-bcc-pathway.png]]
+
+#+BEGIN_SRC python :results silent
+from ase.lattice.tetragonal import CenteredTetragonal as bct
+from ase.db import connect
+from mpl_toolkits.mplot3d import axes3d
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from jasp import *
+from jbutil import makedb
+JASPRC['queue.walltime'] = '24:00:00'
+
+# Retrive the data
+db = connect('data.db')
+A, C = [], []
+E = {}
+for d in db.select([]):
+
+    if d.a not in E.keys():
+        E[d.a] = {}
+    if d.ca not in E[d.a].keys():
+        E[d.a][d.ca] = d.total_energy
+
+    A.append(d.a)
+    C.append(d.ca)
+
+with jasp('DFT/bulk=fcc/config=3/xc=PBE/gga=PS') as calc:
+    atoms = calc.get_atoms()
+    cell = atoms.get_cell()
+
+    efcc = atoms.get_potential_energy()
+    afcc = np.linalg.norm(cell[0])
+
+with jasp('DFT/bulk=bcc/config=3/xc=PBE/gga=PS') as calc:
+    atoms = calc.get_atoms()
+    cell = atoms.get_cell()
+
+    ebcc = atoms.get_potential_energy()
+    abcc = np.linalg.norm(cell[0])
+
+uA = np.unique(A)
+uC = np.unique(C)
+X, Y = np.meshgrid(uA, uC)
+Z = np.zeros(X.shape)
+
+for i, a in enumerate(uA):
+    for j, c in enumerate(uC):
+        Z[j][i] = E[a][c]
+
+fccZ, bccZ = [], []
+eminZ = []
+cminZ = []
+aminZ = []
+
+for i, c in enumerate(uC[5:-5]):
+    data = Z[i+5, :]
+    ind = data.tolist().index(min(data))
+
+    eminZ.append(min(data))
+    cminZ.append(c)
+    aminZ.append(uA[ind])
+
+
+rng = [ebcc, -10.2]
+
+Z[Z > rng[1]] = np.nan
+
+fig = plt.figure(figsize=(8, 6))
+ax = fig.gca(projection='3d')
+CM = cm.autumn
+
+cset = ax.contourf(X, Y, Z, zdir='z', offset=-10.8, cmap=CM, vmin=rng[0], vmax=rng[1])
+
+ax.plot_surface(X, Y, Z,
+                rstride=1,
+                cstride=1,
+                cmap=CM,
+                linewidth=0,
+                vmin=rng[0],
+                vmax=rng[1])
+
+
+ax.scatter(aminZ[1:-1], cminZ[1:-1], eminZ[1:-1], c='k')
+
+ax.plot([afcc, afcc], [np.sqrt(2), np.sqrt(2)], [-10.8, eminZ[-1]], 'go-', zorder=99)
+ax.text(afcc, np.sqrt(2), eminZ[-1]+0.01, 'fcc', color='g', zorder=99, size='large')
+
+ax.plot([abcc, abcc], [1.0, 1.0], [-10.8, eminZ[0]], 'bo-', zorder=99)
+ax.text(abcc, 1.0, eminZ[0]+0.01, 'bcc', color='b', zorder=99, size='large')
+
+ax.set_xlabel('a')
+ax.set_xlim(2.4, 3.2)
+ax.set_ylabel('c/a')
+ax.set_ylim(0.8, 1.6)
+ax.set_zlabel('Total energy (eV)')
+ax.set_zlim(-10.8, rng[1])
+plt.tight_layout()
+plt.savefig('images/3D-bcc-pathway.png')
+
+for i, ca in enumerate(cminZ):
+
+    atoms = bct('Cu', latticeconstant={'a': aminZ[i], 'c/a': ca})
+    atoms[1].symbol = 'Pd'
+
+    wd = 'DFT/bulk=bct/config=3/pathway=True/ca={0}/xc=PBE/gga=None'.format(ca)
+
+    with jasp(wd,
+              xc='PBE',
+              encut=400,
+              kpts=(12, 12, 12),
+              nsw=20,
+              ibrion=2,
+              isif=7,
+              ediff=1e-9,
+              atoms=atoms) as calc:
+        try:
+            calc.calculate()
+        except(VaspQueued, VaspSubmitted):
+            pass
+#+END_SRC
+
+#+caption: 3D Minimum energy pathway of transition through bct geometry space as predicted by EMT.
+#+label: fig-3d-cupd-min-emt
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/3D-EMT-pathway.png]]
+
+#+BEGIN_SRC python :results silent
+from ase.lattice.tetragonal import CenteredTetragonal as bct
+import numpy as np
+from asap3 import EMT
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import axes3d
+from matplotlib import cm
+
+aref = [float(eos) for eos in eos[1:-2].split(',')]
+
+# Create a list of sample points
+ca0 = np.linspace(0.9, 1.5, 98)
+ca0 = np.append(ca0, [1.0, np.sqrt(2)])
+a0 = np.linspace(2.5, 3.1, 98)
+a0 = np.append(a0, [aref[0], aref[1]])
+
+a0 = np.unique(a0)
+ca0 = np.unique(ca0)
+
+X, Y = np.meshgrid(a0, ca0)
+
+xifcc = list(X[0]).index(aref[0])
+yifcc = list(Y.T[0]).index(np.sqrt(2))
+
+xibcc = list(X[0]).index(aref[1])
+yibcc = list(Y.T[0]).index(1.0)
+
+Z = np.zeros(X.shape)
+
+for i, a in enumerate(a0):
+
+    for j, ca in enumerate(ca0):
+
+        # Generate structure based on sample points
+        atoms = bct('Cu', latticeconstant={'a': a, 'c/a': ca})
+        atoms[1].symbol = 'Pd'
+
+        atoms.set_calculator(EMT())
+        Z[j][i] += [atoms.get_potential_energy()]
+
+eminZ, cminZ, aminZ = [], [], []
+for i, c in enumerate(ca0[yibcc:yifcc+1]):
+    data = Z[i+yibcc, :]
+    ind = list(data).index(min(data))
+
+    eminZ.append(min(data))
+    cminZ.append(c)
+    aminZ.append(a0[ind])
+
+delta = (max(eminZ) - min(eminZ))
+rng = [min(eminZ), max(eminZ) + delta]
+
+Z[Z > rng[1]] = np.nan
+
+fig = plt.figure(figsize=(8, 6))
+ax = fig.gca(projection='3d')
+CM = cm.autumn
+cset = ax.contourf(X, Y, Z, zdir='z', offset=rng[0] - delta, cmap=CM, vmin=rng[0], vmax=rng[1])
+
+ax.plot_surface(X, Y, Z,
+                rstride=1,
+                cstride=1,
+                cmap=CM,
+                linewidth=0,
+                vmin=rng[0],
+                vmax=rng[1])
+
+ax.scatter(aminZ[1:-1], cminZ[1:-1], eminZ[1:-1], c='k')
+
+ax.plot([aref[0], aref[0]], [np.sqrt(2), np.sqrt(2)], [rng[0] - delta, eminZ[-1]], 'go-', zorder=99)
+ax.text(aref[0], np.sqrt(2), eminZ[-1]+0.01, 'fcc', color='g', zorder=99, size='large')
+
+ax.plot([aref[1], aref[1]], [1.0, 1.0], [rng[0] - delta, eminZ[0]], 'bo-', zorder=99)
+ax.text(aref[1], 1.0, eminZ[0]+0.01, 'bcc', color='b', zorder=99, size='large')
+
+ax.set_xlabel('a')
+ax.set_xlim(2.4, 3.2)
+ax.set_ylabel('c/a')
+ax.set_ylim(0.8, 1.6)
+ax.set_zlabel('Total energy (eV)')
+ax.set_zlim(rng[0] - delta, rng[1])
+plt.tight_layout()
+plt.savefig('./images/3D-EMT-pathway.png')
+
+plt.figure()
+plt.plot(cminZ, eminZ, 'k-')
+plt.xlim(min(cminZ), max(cminZ))
+
+plt.annotate('bcc', xy=(cminZ[0], eminZ[0]),
+             xytext=(cminZ[0] + .02, eminZ[0] - .005),
+             size=20, ha='left', arrowprops=dict(arrowstyle='->'))
+
+plt.annotate('fcc', xy=(cminZ[-1], eminZ[-1]),
+             xytext=(cminZ[-1] - .02, eminZ[-1] + .005),
+             size=20, ha='right', arrowprops=dict(arrowstyle='->'))
+
+plt.xlabel('c/a ratio')
+plt.ylabel('Total energy (eV)')
+
+plt.savefig('./images/2D-EMT-pathway.png')
+#+END_SRC
+
+** Statistical analysis
+
+#+caption: Statisitcal analysis of the db4 data. 3 Standard deviations of the data are shown for the residual errors of two frameworks and the difference between the predictions made by those frameworks. The actual outliers (~A), predicted outliers (~B), and outliers that are correctly predicted (~A & ~B) are shown in the lower left for \pm 3 \sigma.
+#+label: fig-pred-corr
+#+attr_latex: :width 5in :placement [H]
+#+attr_org: :width 500
+[[./images/prediction-correlation.png]]
+
+#+caption: Relation of correctly predicted outliers to standard deviations of calculations. This is a representation of the cost to benefit of restarting a set of calculations.
+#+label: fig-cost-benif
+#+attr_latex: :width 5in :placement [H]
+#+attr_org: :width 500
+[[./images/cost-benefit.png]]
+
+** Ising model work
+
+[[./images/MC-spin-20.png]]
+
+[[./images/MC-spin.png]]
+
+** MC timing and code
+
+[[./images/calc-time.png]]
+
+#+BEGIN_SRC python
+import os
+import numpy as np
+
+cmd = ''
+
+for A in np.linspace(12, 96, 8):
+    script = """#!/usr/bin/env python
+
+import numpy as np
+from ase.atoms import Atoms
+import random
+from ase.units import kB
+from ase.db import connect
+
+def main(atoms, dbname, T=800, steps=10000):
+
+    db = connect(dbname)
+
+    # Setting up variables for Cannonical MC
+    symbols = atoms.get_chemical_symbols()
+    chem_bins = {1}
+
+    for i, s in enumerate(symbols):
+	chem_bins[s] += [i]
+
+    # Calculate the initial energy and store it
+    nrg = atoms.get_potential_energy()
+
+    dummy = Atoms.copy(atoms)
+    db.write(dummy, nrg=nrg)
+
+    # Perform MC steps
+    attempt, success = 0, 0
+    while success < steps:
+
+        # First, choose two chemicals to swap
+        sym1, sym2 = random.sample(chem_bins.keys(), 2)
+        random.shuffle(chem_bins[sym1])
+        ind1 = chem_bins[sym1][-1]
+
+        random.shuffle(chem_bins[sym2])
+        ind2 = chem_bins[sym2][-1]
+
+        # Create new atoms object to test
+        new_atoms = Atoms.copy(atoms)
+        new_atoms.set_calculator(atoms.get_calculator())
+
+        # Update the atoms object
+        new_atoms[ind1].symbol, new_atoms[ind2].symbol = sym2, sym1
+
+        # Calculate the energy of the new system
+        new_nrg = new_atoms.get_potential_energy()
+
+        # Stores energy in continuously growing list
+        # potentially memory intensive, but faster than writing to disk
+        if new_nrg < nrg:
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = Atoms.copy(atoms)
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        elif np.exp(-(new_nrg - nrg) / (kB * T)) > np.random.rand():
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = Atoms.copy(atoms)
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        attempt += 1
+
+    return success/attempt
+
+from ase.lattice.cubic import FaceCenteredCubic as fcc
+from amp import Amp
+
+atoms = fcc('Cu', size=(3, 3, 3),
+	    latticeconstant=(3.939-3.634)*({0}/108.) + 3.634)
+
+for i in range(int({0})):
+    atoms[i].symbol = 'Pd'
+
+atoms.set_calculator(Amp('/home/jacob/research/cluster-expansion/networks/db5/40-7-7-1/trained-parameters.json'))
+
+main(atoms, '/home/jacob/research/cluster-expansion/MC/108-{0}.db', steps=10000)
+""".format(int(A), '{sym: [] for sym in set(symbols)}')
+
+    name = 'MC/run-{}.py'.format(int(A))
+    cmd += '{} & '.format(name.replace('MC', '.'))
+
+    # No copied files
+    if os.path.exists(name):
+        os.unlink(name)
+
+    with open(name, 'w') as f:
+        f.write(script)
+    os.chmod(name, 0755)
+
+print(cmd)
+#+END_SRC
