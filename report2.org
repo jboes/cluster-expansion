@@ -1,0 +1,103 @@
+#+BEGIN_SRC python
+from ase.visualize import view
+from glob import glob
+from ase.io import read
+from jasp import *
+from amp import Amp
+from ase.db import connect
+
+with connect('cluster-expansion-gs.db') as db:
+    GS = []
+    with open('../archive/cluster-expansion-PBE/CuPd_fcc/gs.out') as f:
+	for line in f.readlines():
+	    GS += [line.split()[-1]]
+
+    for gs in GS:
+	try: 
+	    with jasp('../archive/cluster-expansion-PBE/CuPd_fcc/{}'.format(gs)) as calc:
+		atoms = calc.get_atoms()
+                energy = atoms.get_potential_energy()
+		db.write(atoms, nrg=energy, cfg=gs)
+	except(VaspNotFinished):
+	    pass
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC python
+ECu = -3.724347
+EPd = -5.159093
+
+print (-16.75754 - ECu*3 - EPd) / 4
+
+
+ECu = -4.02159
+EPd = -5.831758
+
+print (-18.304613 - ECu*3 - EPd) / 4
+
+
+#+END_SRC
+
+#+RESULTS:
+: -0.1063515
+: -0.10202125
+
+#+BEGIN_SRC python
+from ase.db import connect
+from glob import glob
+from jasp import *
+JASPRC['restart_unconverged'] = False
+
+files = glob('../archive/cluster-expansion-PBE/CuPd_fcc/*/')
+
+with connect('cluster-expansion.db') as db:
+    for f in files:
+        try:
+            with jasp(f) as calc:
+                atoms = calc.get_atoms()
+                nrg = atoms.get_potential_energy()
+                db.write(atoms)
+        except(VaspNotFinished):
+            pass
+
+db = connect('cluster-expansion.db')
+
+for d in db.select():
+    print d.energy
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC python
+from ase.db import connect
+
+db = connect('cluster-expansion.db')
+
+for d in db.select():
+    print d
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+<ase.db.row.AtomsRow instance at 0x597cef0>
+<ase.db.row.AtomsRow instance at 0x597cf80>
+<ase.db.row.AtomsRow instance at 0x597cef0>
+<ase.db.row.AtomsRow instance at 0x597cf80>
+<ase.db.row.AtomsRow instance at 0x597cef0>
+<ase.db.row.AtomsRow instance at 0x597cf80>
+<ase.db.row.AtomsRow instance at 0x597cef0>
+<ase.db.row.AtomsRow instance at 0x597cf80>
+<ase.db.row.AtomsRow instance at 0x597cef0>
+<ase.db.row.AtomsRow instance at 0x597cf80>
+<ase.db.row.AtomsRow instance at 0x597cef0>
+<ase.db.row.AtomsRow instance at 0x597cf80>
+<ase.db.row.AtomsRow instance at 0x597cef0>
+<ase.db.row.AtomsRow instance at 0x597cf80>
+<ase.db.row.AtomsRow instance at 0x597cef0>
+<ase.db.row.AtomsRow instance at 0x597cf80>
+<ase.db.row.AtomsRow instance at 0x597cef0>
+<ase.db.row.AtomsRow instance at 0x597cf80>
+<ase.db.row.AtomsRow instance at 0x597cef0>
+#+end_example
+

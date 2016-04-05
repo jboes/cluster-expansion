@@ -3358,7 +3358,6 @@ for f in files:
     kE = kE[ind]
     c = np.array(c)[ind]
 
-
     def onpick(event):
 	ind = event.ind
 	atoms = traj[ind]
@@ -3382,7 +3381,6 @@ for f in files:
     ax.legend(loc='best')
     plt.tight_layout()
     fig.canvas.mpl_connect('pick_event', onpick)
-
 
     #if np.array(ind).all():
     #    print('{} still running'.format(name))
