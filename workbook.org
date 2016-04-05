@@ -2761,7 +2761,7 @@ import numpy as np
 
 cmd = ''
 
-for A in np.linspace(12, 96, 8):
+for A in np.linspace(6, 102, 17)[::2]:
     script = """#!/usr/bin/env python
 
 import numpy as np
@@ -2776,7 +2776,7 @@ def main(atoms, dbname, T=800, steps=10000):
 
     # Setting up variables for Cannonical MC
     symbols = atoms.get_chemical_symbols()
-    chem_bins = {1}
+    chem_bins = {{sym: [] for sym in set(symbols)}}
 
     for i, s in enumerate(symbols):
 	chem_bins[s] += [i]
@@ -2847,7 +2847,7 @@ for i in range(int({0})):
 atoms.set_calculator(Amp('/home/jacob/research/cluster-expansion/networks/db5/40-7-7-1/trained-parameters.json'))
 
 main(atoms, '/home/jacob/research/cluster-expansion/MC/108-{0}.db', steps=10000)
-""".format(int(A), '{sym: [] for sym in set(symbols)}')
+""".format(int(A))
 
     name = 'MC/run-{}.py'.format(int(A))
     cmd += '{} & '.format(name.replace('MC', '.'))
@@ -2864,8 +2864,232 @@ print(cmd)
 #+END_SRC
 
 #+RESULTS:
-: ./run-12.py & ./run-24.py & ./run-36.py & ./run-48.py & ./run-60.py & ./run-72.py & ./run-84.py & ./run-96.py & 
+: ./run-6.py & ./run-18.py & ./run-30.py & ./run-42.py & ./run-54.py & ./run-66.py & ./run-78.py & ./run-90.py & ./run-102.py & 
 
+
+#+BEGIN_SRC python
+import os
+import numpy as np
+
+cmd = ''
+
+for A in np.linspace(6, 102, 17)[::2]:
+    script = """#!/usr/bin/env python
+
+import numpy as np
+from ase.atoms import Atoms
+import random
+from ase.units import kB
+from ase.db import connect
+
+def main(atoms, dbname, T=800, steps=10000):
+
+    db = connect(dbname)
+
+    # Setting up variables for Cannonical MC
+    symbols = atoms.get_chemical_symbols()
+    chem_bins = {{sym: [] for sym in set(symbols)}}
+
+    for i, s in enumerate(symbols):
+	chem_bins[s] += [i]
+
+    # Calculate the initial energy and store it
+    nrg = atoms.get_potential_energy()
+
+    dummy = Atoms.copy(atoms)
+    db.write(dummy, nrg=nrg)
+
+    # Perform MC steps
+    attempt, success = 0, 0
+    while success < steps:
+
+        # First, choose two chemicals to swap
+        sym1, sym2 = random.sample(chem_bins.keys(), 2)
+        random.shuffle(chem_bins[sym1])
+        ind1 = chem_bins[sym1][-1]
+
+        random.shuffle(chem_bins[sym2])
+        ind2 = chem_bins[sym2][-1]
+
+        # Create new atoms object to test
+        new_atoms = Atoms.copy(atoms)
+        new_atoms.set_calculator(atoms.get_calculator())
+
+        # Update the atoms object
+        new_atoms[ind1].symbol, new_atoms[ind2].symbol = sym2, sym1
+
+        # Calculate the energy of the new system
+        new_nrg = new_atoms.get_potential_energy()
+
+        # Stores energy in continuously growing list
+        # potentially memory intensive, but faster than writing to disk
+        if new_nrg < nrg:
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = Atoms.copy(atoms)
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        elif np.exp(-(new_nrg - nrg) / (kB * T)) > np.random.rand():
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = Atoms.copy(atoms)
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        attempt += 1
+
+    return success/attempt
+
+# Select the lowest energy configuration
+db = connect('/home/jacob/research/cluster-expansion/MC/108-{0}.db')
+E, ID = [], []
+for d in db.select():
+    E += [d.nrg]
+    ID += [d.id]
+E = np.array(E)
+ID = np.array(ID)
+
+i = list(E).index(min(E))
+atoms = db.get_atoms(ID[i])
+
+from amp import Amp
+
+atoms.set_calculator(Amp('/home/jacob/research/cluster-expansion/networks/db5/40-7-7-1/trained-parameters.json'))
+
+main(atoms, '/home/jacob/research/cluster-expansion/MC/lowT-108-{0}.db', T=100, steps=10000)
+""".format(int(A))
+
+    name = 'MC/run-lowT-{}.py'.format(int(A))
+    cmd += '{} & '.format(name.replace('MC', '.'))
+
+    # No copied files
+    if os.path.exists(name):
+        os.unlink(name)
+
+    with open(name, 'w') as f:
+        f.write(script)
+    os.chmod(name, 0755)
+
+print(cmd)
+#+END_SRC
+
+#+RESULTS:
+: ./run-lowT-6.py & ./run-lowT-18.py & ./run-lowT-30.py & ./run-lowT-42.py & ./run-lowT-54.py & ./run-lowT-66.py & ./run-lowT-78.py & ./run-lowT-90.py & ./run-lowT-102.py & 
+
+: ./run-lowT-12.py & ./run-lowT-24.py & ./run-lowT-36.py & ./run-lowT-48.py & ./run-lowT-60.py & ./run-lowT-72.py & ./run-lowT-84.py & ./run-lowT-96.py & 
+
+*** 
+[[./images/gs-hull-temp.png]]
+
+DFT/convergence=high/MD=db2/hash=92a1faa3acc97df72a1b04fdda0819d1/
+DFT/convergence=high/MD=db2/hash=92a1faa3acc97df72a1b04fdda0819d1/ 3.488714GB
+DFT/convergence=high/MD=db2/hash=d8c2149b96a32e3bd08fd4c34d100cbf/ 3.685486
+DFT/convergence=high/MD=db2/hash=3adef8dc0132b7cfc970a16e08a9a0b6/ 3.685486
+DFT/convergence=high/MD=db2/hash=09d67ed1171eef57e54277da47876801/ 3.685486
+
+#+BEGIN_SRC python :results silent
+import numpy as np
+from ase.db import connect
+import matplotlib.pyplot as plt
+from ase.visualize import view
+from amp import Amp
+from ase.lattice.cubic import FaceCenteredCubic as fcc
+from scipy.optimize import curve_fit
+
+fig, ax = plt.subplots()
+
+# Select the lowest energy configuration
+temps = [100, 800]
+x = np.linspace(0, 1, 100)
+
+ref = {}
+for A, a in [['Cu', 3.634], ['Pd', 3.939]]:
+    atoms = fcc(A,
+                directions=[[0, 1, 1],
+                            [1, 0, 1],
+                            [1, 1, 0]],
+    latticeconstant=a)
+
+    atoms.set_calculator(Amp('networks/db5/40-7-7-1/trained-parameters.json'))
+    ref[A] = atoms.get_potential_energy()
+
+def fit(x, p0, p1, p2):
+    return p0*x**4 + p1*x**3 + p2*x**2 - (p0 + p1 + p2)*x
+
+for T, c in [['/', 'r'], ['/lowT-', 'b']]:
+
+    C, avg, comp, std = [], [0.0], [0.0], [0.0]
+    for A in np.linspace(6, 102, 17):
+
+	db = connect('MC{}108-{}.db'.format(T, int(A)))
+
+	E, ID = [], []
+	for d in db.select():
+            syms = d.symbols
+	    E += [(d.nrg - ref['Cu'] * syms.count('Cu') - ref['Pd'] * syms.count('Pd')) / d.natoms]
+	    ID += [d.id]
+	E, ID = np.array(E), np.array(ID)
+
+    	MIN = list(E).index(min(E))
+    	MAX = list(E).index(max(E))
+    	atoms = db.get_atoms(ID[MIN])
+        
+        avg += [np.mean(E)]
+        std += [np.std(E)]
+        comp += [A / 108.0]
+        C += [len(E)]
+
+    popt, pcov = curve_fit(fit, comp, avg)
+
+    #plt.hist(E, color='{}'.format(c), alpha=0.3)
+    #ylim = ax.get_ylim()
+    #plt.plot([avg, avg], ylim, '{}--'.format(c))
+
+    #plt.plot(ID, E, '{}-'.format(c))
+    #plt.plot(ID[i], E[i], '{}o'.format(c))
+
+    comp = np.array(comp + [1.])
+    avg = np.array(avg + [0.])
+    std = np.array(std + [0.])
+
+    # plt.plot(x, fit(x, *popt), color=c)
+    plt.scatter(comp, avg, color=c)
+    ax.fill_between(comp, avg + std, avg - std, facecolor=c, alpha=0.5)
+
+for i, cnt in enumerate(C):
+    plt.text(comp[i+1] + 0.01, avg[i+1], cnt, va='center', ha='left')
+
+plt.legend(['800 K', r'$\pm$ 1$\sigma$', '100 K', r'$\pm$ 1$\sigma$'], loc=3)
+plt.xlim(0, 1)
+plt.xlabel('Cu$_{1-x}$Pd$_{x}$ composition (x)')
+plt.ylabel('Heat of formation (eV/atom)')
+plt.ylim(-0.1, 0)
+plt.tight_layout()
+plt.savefig('./images/gs-hull-temp.png')
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC python
+from ase.visualize import view
+from glob import glob
+
+with open('../archive/cluster-expansion-PBE/CuPd_fcc/gs.out') as f:
+    print(f.readlines())
+
+#+END_SRC
+
+#+RESULTS:
+
+
+*** Boltzmann distribution 
 [[./images/boltzmann.png]]
 
 #+BEGIN_SRC python :results silent
