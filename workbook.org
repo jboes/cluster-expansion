@@ -70,6 +70,179 @@ for d in ['./CuPd_bcc', './CuPd_fcc']:
     call(["atatstatus.py", d])
 #+END_SRC
 
+** Cluster expansion using NN
+Here we initialize files using a dynamic scaling method which adjusts the lattice size depending on the alloy composition.
+
+#+BEGIN_SRC python :result silent
+import numpy as np
+from subprocess import call
+
+# This code is used to get a better starting point for lattice constant
+scale = 3.7865 / 4.157788
+
+call(["makelat", "-s={}".format(scale), "Cu,Pd", "fcc"])
+#+END_SRC
+
+In this section we begin generate certain number of initial configurations predicted to be unique by ATAT using the existing cluster expansion. The second portion of the code then performs VASP calculations on these structures.
+
+#+BEGIN_SRC python :results silent
+import os
+import time
+
+# The number of structures to create
+N = 2000
+t = 0.5
+
+os.chdir('./CuPd_fcc')
+os.system('maps -t={} &'.format(t))
+for n in range(N):
+    open('ready', 'w').close()
+    while os.path.exists('ready'):
+	time.sleep(t / 5)
+open('stop', 'w').close()
+#+END_SRC
+
+#+BEGIN_SRC python :result silent
+import os
+from ase.lattice.cubic import FaceCenteredCubic as fcc
+import numpy as np
+from ase.db import connect
+from ase.visualize import view
+from atat import str2atoms, atoms2str
+from amp import Amp
+from ase.calculators.vasp import Vasp
+from jasp import *
+from jbtools.gilgamesh import compile_trajectory
+from ase.io.trajectory import Trajectory
+import jbtools.gilgamesh as jb
+import sys
+JASPRC['queue.walltime'] = '168:00:00'
+JASPRC['queue.mem'] = '2GB'
+
+def lat(comp):
+    return (3.939 - 3.634)*comp + 3.634
+
+os.chdir('./CuPd_fcc')
+
+HOME = os.getcwd()
+
+db = connect('~/research/cluster-expansion/CuPd_fcc/atat_atoms.db')
+
+for r, d, f in os.walk('.'):
+
+    if 'wait' in f and 'str.out' in f:
+	ind = r.lstrip('./')
+
+	wd = r + '/str.out'
+
+	atoms = str2atoms(wd)
+	syms = atoms.get_chemical_symbols()
+	nPd = float(syms.count('Pd'))
+	nCu = float(syms.count('Cu'))
+	a = lat(nPd / (nCu + nPd))
+
+	vol = atoms.get_volume()
+	scal = a / (4 * vol / len(atoms))**(1/3.)
+
+	fac = [[scal, 0., 0.],
+	       [0., scal, 0.],
+	       [0., 0., scal]]
+
+	atoms.set_cell(np.dot(atoms.get_cell(), fac), scale_atoms=True)
+
+	keys = {'a': float(a), 'atat': int(ind)}
+	atoms.set_calculator(Amp('../networks/db5/40-7-7-1/'))
+	nrg1 = atoms.get_potential_energy()
+	keys.update({'nrg1': float(nrg1)})
+
+	atoms.set_calculator(Amp('../networks/db5/40-6-6-1/'))
+	nrg2 = atoms.get_potential_energy()
+	keys.update({'nrg2': float(nrg2)})
+
+	atoms.set_calculator(None)
+
+	if os.path.exists(os.path.join(r, 'vasp.in')):
+	    os.unlink(wd)
+	    atoms2str(atoms, strout=wd)
+
+	    os.chdir(r)
+	    os.system('str2ezvasp')  # creates vasp.in
+	    os.system('ezvasp -n vasp.in')  # creates VASP input files
+	    os.chdir(HOME)
+
+        try:
+            with jasp(r) as calc:
+                try:
+                    atoms0 = calc.get_atoms()
+                    nrg = atoms0.get_potential_energy()
+
+                    try:
+		        compile_trajectory(calc)
+                    # The reset is creating identical OUTCAR files
+                    # Without new XDATCAT files.
+                    except(IndexError):
+                        from glob import glob 
+                        extra = glob('*.0')
+                        for files in extra:
+                            os.unlink(files)
+                        compile_trajectory(calc)
+                    traj = Trajectory('out.traj')
+
+                    db.write(traj[0], key_value_pairs=keys)
+                    with open('energy', 'w') as f:
+                        f.write(str(nrg) + '\n')
+                    os.unlink('wait')
+                except(VaspQueued, VaspSubmitted):
+                    pass
+        except(VaspNotFinished):
+            jb.reset(r)
+            with jasp(r) as calc:
+                try:
+                    calc.calculate()
+                except(VaspQueued, VaspSubmitted):
+                    pass
+#+END_SRC
+
+#+RESULTS:
+
+
+[[./images/atat-cluster-expansion.png]]
+
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+from jbtools.utils import get_composition
+import matplotlib.pyplot as plt
+
+db = connect('./CuPd_fcc/atat_atoms.db')
+
+Cu = db.get('atat=0')
+Pd = db.get('atat=1')
+
+I, C, Qe, Ne, dE = [], [], [], [], []
+for d in db.select():
+    syms = d.symbols
+    nCu = float(syms.count('Cu'))
+    nPd = float(syms.count('Pd'))
+
+    I += [d.atat]
+    C += [nPd / (nCu + nPd)]
+    Qe += [(d.energy - nPd*Pd.energy - nCu*Cu.energy) / d.natoms]
+    Ne += [(d.nrg1 - nPd*Pd.nrg1 - nCu*Cu.nrg1) / d.natoms]
+    dE += [Ne[-1] - Qe[-1]]
+
+fig, ax = plt.subplots(1, 2, sharey=True, figsize=(6, 4))
+ax[0].scatter(C, Qe)
+ax[1].scatter(C, Ne)
+ax[0].set_xlim(0, 1)
+ax[1].set_xticks(ax[1].get_xticks()[2:])
+ax[1].set_xlim(0, 1)
+ax[0].set_xlabel('Composition Cu$_{1-x}$Pd$_{x}$, ($x$)')
+ax[1].set_xlabel('Composition Cu$_{1-x}$Pd$_{x}$, ($x$)')
+ax[0].set_ylabel('Heat of formation (eV/atom)')
+plt.tight_layout(w_pad=-0.4)
+plt.savefig('./images/atat-cluster-expansion.png')
+#+END_SRC
+
 ** Analysis
 Analysis of ATAT calculations.
 
@@ -991,7 +1164,7 @@ jbn.produce_trainset('networks/db5/data.db', fraction=0.9)
 #+RESULTS:
 
 ** Running AMP locally
-Run AMP on the local machine ONLY. Copy the submit.sh and submit.py files from an existing networks directory to train on node 40 on Gilgamesh.
+Run AMP on the local machine ONLY. Copy the submit.sh and submit.py files from an existing networks directory to train on node 30 on Gilgamesh.
 
 #+BEGIN_SRC python :results silent
 from amp import Amp
@@ -2324,6 +2497,139 @@ plt.savefig('./images/db5_bulk_5lat.png')
 : 2225
 : [3.6339999999999999, 3.9051111111111112, 3.9390000000000001]
 
+** Database db6
+Calculations for the next iteration of the bulk-only database.
+
+*** Review of trained networks
+#+BEGIN_SRC python
+import os
+from glob import glob
+import shutil
+import numpy as np
+
+files = glob('networks/db6/40-*-*-1/train-log.txt')
+
+for fil in files:
+    fit = fil.split('/')[-2]
+
+    with open(fil, 'r') as f:
+        lines = f.readlines()
+
+    print(fit, lines[-5])
+#+END_SRC
+
+#+RESULTS:
+: ('40-6-6-1', ' 7504        2016-04-13T17:09:40  1.154e-01    2.107e-03\n')
+: ('40-7-7-1', ' 7585        2016-04-13T17:09:40  1.106e-01    2.062e-03\n')
+: ('40-8-8-1', ' 6074        2016-04-13T13:11:11  1.142e-01    2.095e-03\n')
+: ('40-9-9-1', ' 7390        2016-04-13T17:09:32  1.161e-01    2.113e-03\n')
+
+*** Fits to database data
+[[./images/db6_bulk.png]]
+
+#+BEGIN_SRC python :results silent
+from ase.io import read
+from amp import Amp
+from ase.db import connect
+
+db0 = connect('networks/db6/data.db')
+
+with connect('temp/db6.db') as db:
+    for d in db0.select():
+
+        keys = d.key_value_pairs
+        atoms = db0.get_atoms(d.id)
+
+        calc = Amp('networks/db6/40-7-7-1/')
+        atoms.set_calculator(calc)
+        nnE = atoms.get_potential_energy()
+
+        calc = Amp('networks/db6/40-8-8-1/')
+        atoms.set_calculator(calc)
+        nndE = atoms.get_potential_energy() - nnE
+
+        atoms.set_calculator(None)
+        keys.update({'nnE': nnE, 'nndE': nndE})
+        db.write(atoms, key_value_pairs=keys)
+#+END_SRC
+
+#+BEGIN_SRC python :results silent
+from ase.io import read
+from amp import Amp
+from ase.db import connect
+import numpy as np
+import matplotlib.pyplot as plt
+
+db = connect('temp/db6-bulk.db')
+
+dE = []
+for d in db.select():
+    dE += [(d.NN6 - d.NN7) / len(d.symbols)]
+dE = np.array(dE)
+
+def nbins(x):
+    from math import log10, floor, ceil
+    n = 4
+    w = ceil(x*10**n) / ceil(x*10**n)*10**-n
+    m = ceil(x*10**n)
+    return np.arange(0, (m*w)+w, w)
+
+plt.figure(figsize=(6, 4))
+n, bins, patches = plt.hist(dE, bins=nbins(max(dE)))
+plt.xlabel('Predicted energy difference (eV/atom)')
+plt.ylabel('Probability')
+plt.title('{0} total calculations'.format(len(dE)))
+plt.tight_layout()
+plt.savefig('./images/db6_bulk.png')
+#+END_SRC
+
+*** for multi-lattice constants
+#+caption: Energy differences between db6 NN frameworks for energy unique bulk configurations at 5 lattice constants.
+#+label: fig-db6_bulk_5lat
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db6_bulk_5lat.png]]
+
+
+#+BEGIN_SRC python
+from ase.db import connect
+import numpy as np
+import matplotlib.pyplot as plt
+
+db = connect('temp/db6-3x3-bulk.db')
+
+E, lat = [], []
+for d in db.select():
+    E += [abs(d.data['NN6'] / d.natoms - d.data['NN7'] / d.natoms)]
+    lat += [d.a]
+E = np.array(E)
+lat = np.array(lat)
+
+ind = E > 0.007
+print sum(ind)
+print sorted(list(set(lat) ^ set(lat[ind])))
+
+def nbins(x):
+    from math import log10, floor, ceil
+    n = 3
+    w = ceil(x*10**n) / ceil(x*10**n)*10**-n
+    m = ceil(x*10**n)
+    return np.arange(0, (m*w)+w, w)
+
+plt.figure(figsize=(6, 4))
+n, bins, patches = plt.hist(E, bins=nbins(max(E)))
+plt.xlabel('Predicted energy difference (eV/atom)')
+plt.ylabel('Probability')
+plt.title('{0} total calculations'.format(len(E)))
+plt.tight_layout()
+plt.savefig('./images/db6_bulk_5lat.png')
+#+END_SRC
+
+#+RESULTS:
+: 2225
+: [3.6339999999999999, 3.9051111111111112, 3.9390000000000001]
+
+
 * Scratch Pad
 ** Making temp file for db4 NN predictions
 Create a temporary database which will contain the NN calculations for all of the db4 data.
@@ -2602,159 +2908,6 @@ plt.savefig('./images/cost-benefit.png')
 #+END_SRC
 
 ** monte carlo simulation
-
-
-[[./images/MC-spin-20.png]]
-
-[[./images/MC-spin.png]]
-
-#+BEGIN_SRC python :results raw
-func = """
-import matplotlib.pyplot as plt
-import numpy as np
-
-def ising(N, T):
-    J = 1  # Strength of interaction (Joules)
-    k = 1  # J/K
-
-    # Generate random initial configuration
-
-    grid = (np.random.ranf(size=(N, N)) > 0.5) * 2 - 1
-
-    # Evaluate the system for a fixed number of steps
-
-    for i in range(1000):
-        # Calculate the number of neighbors for each cell
-        neighbors = np.roll(grid, 1, axis=1) + \
-                    np.roll(grid, -1, axis=1) + \
-                    np.roll(grid, 1, axis=0) + \
-                    np.roll(grid, -1, axis=0)
-
-
-        # Calculate energy change from spin flip
-        dE = 2 * J * (grid * neighbors)
-
-        # Calculate the transition probability
-        P = np.exp(-dE/(k * T))
-
-        # Transition which will occur
-        transitions = np.random.random(size=(N, N)) < P
-
-
-        # Screen all but 10% of transitions
-        screen = (np.random.random(size=(N, N)) < 0.1)
-
-
-        transitions = (transitions * screen) * -2 + 1
-
-        # Perform the transitions
-        grid = grid * transitions
-
-        # Sum variables of interest
-        M = grid.sum() / (N**2.)
-        E = -dE.sum() / 2 / (N**2.)
-
-    return M, E
-
-n_grid = 20
-Ms, Ts, Es = [], [], []
-
-for i in range(1000):
-    # Random temperature from 0 - 5
-    T = np.random.random() * 5 + 1e-10
-
-    M, E = ising(n_grid, T)
-
-    Ms += [M]
-    Es += [E]
-    Ts += [T]
-
-plt.figure()
-plt.scatter(Ts, Ms)
-plt.xlim(0, 5)
-plt.ylim(-1, 1)
-plt.title('20 x 20 grid')
-plt.xlabel('inverse beta (J)')
-plt.ylabel('Average spin')
-plt.savefig('images/MC-spin-20.png')
-"""
-
-import timeit
-
-time = timeit.timeit(func, number=1) / 60.
-print('1 million calculations on 20 x 20 grid in {:1.1f} min'.format(time))
-#+END_SRC
-
-#+RESULTS:
-1 million calculations on 20 x 20 grid in 1.6 min
-1 million calculations on 50 x 50 grid in 3.9 min
-
-#+BEGIN_SRC python
-import matplotlib.pyplot as plt
-
-plt.plot([0], [1], 'bo')
-plt.xlabel('$\beta$')
-plt.show()
-#+END_SRC
-
-#+RESULTS:
-
-#+BEGIN_SRC python
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
-from mpl_toolkits.mplot3d import Axes3D
-
-k = 1  # Normalized by Boltzmann cosntant J / K
-
-temps = np.linspace(0.6, 1, 100)
-nrgs = np.linspace(-1, 1, 100)
-T, E = np.meshgrid(temps, nrgs)
-P = np.exp(-E/(k * T))
-
-fig = plt.figure()
-ax = fig.gca(projection='3d')
-
-ax.plot_surface(T, E, P) 
-
-ax.set_xlabel('Boltzmann normalized temperature (K)')
-ax.set_ylabel('Energy (eV)')
-ax.set_zlabel('Probability distribution')
-plt.show()
-#+END_SRC
-
-#+RESULTS:
-#+BEGIN_SRC python
-from jasp import *
-from amp import Amp
-from glob import glob
-JASPRC['restart_unconverged'] = False
-
-files = glob('../archive/cluster-expansion-PBE/CuPd_fcc/*/')
-
-delta = []
-for wd in files:
-    try:
-	with jasp(wd) as calc:
-            try:
-		atoms = calc.get_atoms()
-		nrg = atoms.get_potential_energy() / len(atoms)
-            except(VaspQueued, VaspSubmitted):
-                pass
-
-        calc = Amp('networks/db5/40-7-7-1/')
-        atoms.set_calculator(calc)
-	delta += [atoms.get_potential_energy() / len(atoms) - nrg]
-    except(VaspNotFinished, VaspNotConverged):
-        pass
-
-print delta
-#+END_SRC
-
-#+RESULTS:
-: [-0.004442877373188825, -0.059599315805680675, 9.522945089646129e-05, -0.019087544011419766, -0.025345979116320194, 0.01447687663729269, -0.011149054164117267, -0.015150699341703877, -0.005505132646609567, -0.013227297925100245, -0.014929814353989102, -0.02504895227412618, 0.00016171948147114534, -0.011441674548032132, -0.005635441144927533, -0.01213655547501613, -0.011378423119922765, -0.019507470996535048, -0.03003397730923041]
-
 #+BEGIN_SRC python
 import os
 import numpy as np
@@ -2866,6 +3019,98 @@ print(cmd)
 #+RESULTS:
 : ./run-6.py & ./run-18.py & ./run-30.py & ./run-42.py & ./run-54.py & ./run-66.py & ./run-78.py & ./run-90.py & ./run-102.py & 
 
+#+BEGIN_SRC python
+import numpy as np
+from ase.atoms import Atoms
+import random
+from ase.units import kB
+from ase.db import connect
+
+def main(atoms, dbname, T=800, steps=10000):
+
+    db = connect(dbname)
+
+    # Setting up variables for Cannonical MC
+    symbols = atoms.get_chemical_symbols()
+    chem_bins = {sym: [] for sym in set(symbols)}
+
+    for i, s in enumerate(symbols):
+	chem_bins[s] += [i]
+
+    # Calculate the initial energy and store it
+    nrg = atoms.get_potential_energy()
+
+    dummy = Atoms.copy(atoms)
+    db.write(dummy, nrg=nrg)
+
+    # Perform MC steps
+    attempt, success = 0, 0
+    while success < steps:
+
+        # First, choose two chemicals to swap
+        sym1, sym2 = random.sample(chem_bins.keys(), 2)
+        random.shuffle(chem_bins[sym1])
+        ind1 = chem_bins[sym1][-1]
+
+        random.shuffle(chem_bins[sym2])
+        ind2 = chem_bins[sym2][-1]
+
+        # Create new atoms object to test
+        new_atoms = Atoms.copy(atoms)
+        new_atoms.set_calculator(atoms.get_calculator())
+
+        # Update the atoms object
+        new_atoms[ind1].symbol, new_atoms[ind2].symbol = sym2, sym1
+
+        # Calculate the energy of the new system
+        new_nrg = new_atoms.get_potential_energy()
+
+        # Stores energy in continuously growing list
+        # potentially memory intensive, but faster than writing to disk
+        if new_nrg < nrg:
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = Atoms.copy(atoms)
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        elif np.exp(-(new_nrg - nrg) / (kB * T)) > np.random.rand():
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = Atoms.copy(atoms)
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        attempt += 1
+
+    return success/attempt
+
+# Select the lowest energy configuration
+db = connect('/home-research/jboes/research/cluster-expansion/MC/108-54.db')
+E, ID = [], []
+for d in db.select():
+    E += [d.nrg]
+    ID += [d.id]
+E = np.array(E)
+ID = np.array(ID)
+
+i = list(E).index(min(E))
+atoms = db.get_atoms(ID[i])
+
+from amp import Amp
+
+atoms.set_calculator(Amp('/home-research/jboes/research/cluster-expansion/networks/db5/40-7-7-1/trained-parameters.json'))
+
+main(atoms, '/home-research/jboes/research/cluster-expansion/MC/lowT2-108-54.db', T=100, steps=10000)
+#+END_SRC
+
+#+RESULTS:
 
 #+BEGIN_SRC python
 import os
@@ -2873,7 +3118,7 @@ import numpy as np
 
 cmd = ''
 
-for A in np.linspace(6, 102, 17)[::2]:
+for A in np.linspace(6, 102, 17)[3:-8]:
     script = """#!/usr/bin/env python
 
 import numpy as np
@@ -2948,7 +3193,7 @@ def main(atoms, dbname, T=800, steps=10000):
     return success/attempt
 
 # Select the lowest energy configuration
-db = connect('/home/jacob/research/cluster-expansion/MC/108-{0}.db')
+db = connect('/home-research/jboes/research/cluster-expansion/MC/108-{0}.db')
 E, ID = [], []
 for d in db.select():
     E += [d.nrg]
@@ -2961,13 +3206,13 @@ atoms = db.get_atoms(ID[i])
 
 from amp import Amp
 
-atoms.set_calculator(Amp('/home/jacob/research/cluster-expansion/networks/db5/40-7-7-1/trained-parameters.json'))
+atoms.set_calculator(Amp('/home-research/jboes/research/cluster-expansion/networks/db5/40-7-7-1/trained-parameters.json'))
 
-main(atoms, '/home/jacob/research/cluster-expansion/MC/lowT-108-{0}.db', T=100, steps=10000)
+main(atoms, '/home-research/jboes/research/cluster-expansion/MC/lowT2-108-{0}.db', T=100, steps=10000)
 """.format(int(A))
 
-    name = 'MC/run-lowT-{}.py'.format(int(A))
-    cmd += '{} & '.format(name.replace('MC', '.'))
+    name = 'MC/run-lowT2-{}.py'.format(int(A))
+    cmd += 'bpsh 30 -m {} & '.format(name.replace('MC', '.'))
 
     # No copied files
     if os.path.exists(name):
@@ -2981,18 +3226,12 @@ print(cmd)
 #+END_SRC
 
 #+RESULTS:
-: ./run-lowT-6.py & ./run-lowT-18.py & ./run-lowT-30.py & ./run-lowT-42.py & ./run-lowT-54.py & ./run-lowT-66.py & ./run-lowT-78.py & ./run-lowT-90.py & ./run-lowT-102.py & 
+: bpsh 30 -m ./run-lowT2-24.py & bpsh 30 -m ./run-lowT2-30.py & bpsh 30 -m ./run-lowT2-36.py & bpsh 30 -m ./run-lowT2-42.py & bpsh 30 -m ./run-lowT2-48.py & bpsh 30 -m ./run-lowT2-54.py & 
 
 : ./run-lowT-12.py & ./run-lowT-24.py & ./run-lowT-36.py & ./run-lowT-48.py & ./run-lowT-60.py & ./run-lowT-72.py & ./run-lowT-84.py & ./run-lowT-96.py & 
 
-*** 
+*** Temperature Ground state hull
 [[./images/gs-hull-temp.png]]
-
-DFT/convergence=high/MD=db2/hash=92a1faa3acc97df72a1b04fdda0819d1/
-DFT/convergence=high/MD=db2/hash=92a1faa3acc97df72a1b04fdda0819d1/ 3.488714GB
-DFT/convergence=high/MD=db2/hash=d8c2149b96a32e3bd08fd4c34d100cbf/ 3.685486
-DFT/convergence=high/MD=db2/hash=3adef8dc0132b7cfc970a16e08a9a0b6/ 3.685486
-DFT/convergence=high/MD=db2/hash=09d67ed1171eef57e54277da47876801/ 3.685486
 
 #+BEGIN_SRC python :results silent
 import numpy as np
@@ -3078,16 +3317,71 @@ plt.savefig('./images/gs-hull-temp.png')
 #+RESULTS:
 
 #+BEGIN_SRC python
+from ase.db import connect
 from ase.visualize import view
+from jasp import *
 from glob import glob
+from jbtools.utils import get_composition
+from amp import Amp
+from ase.lattice.cubic import FaceCenteredCubic as fcc
+JASPRC['restart_unconverged'] = False
 
-with open('../archive/cluster-expansion-PBE/CuPd_fcc/gs.out') as f:
-    print(f.readlines())
+# db = connect('MC/lowT-108-24.db')
+# atoms = db.get_atoms('id=4')
 
+def aPd(x):
+    return (3.939 - 3.634) * x + 3.634
+
+ref = {}
+for A, a in [['Cu', 3.634], ['Pd', 3.939]]:
+    atoms = fcc(A,
+                directions=[[0, 1, 1],
+                            [1, 0, 1],
+                            [1, 1, 0]],
+    latticeconstant=a)
+
+    atoms.set_calculator(Amp('networks/db5/40-7-7-1/trained-parameters.json'))
+    ref[A] = atoms.get_potential_energy()
+
+
+wds = glob('DFT/bulk=fcc/config=*/strain=xyz/factor=1.0/xc=PBE/gga=PS/')
+
+for wd in wds:
+    try:
+	with jasp(wd) as calc:
+	    atoms = calc.get_atoms()
+	atoms.set_calculator(Amp('networks/db5/40-7-7-1/trained-parameters.json'))
+
+	x = get_composition(atoms, 'Pd')
+	cell = atoms.get_cell()
+        vol = atoms.get_volume()
+
+	f = aPd(x) / (4 * vol / len(atoms))**(1/3.)
+
+	delta = np.array([[f, 0, 0],
+			  [0, f, 0],
+			  [0, 0, f]])
+
+	atoms.set_cell(np.dot(cell, delta), scale_atoms=True)
+
+        sym = atoms.get_chemical_symbols()
+	nrg = atoms.get_potential_energy()
+
+        d = (nrg - sym.count('Cu')*ref['Cu'] - sym.count('Pd')*ref['Pd']) / len(atoms)
+
+        if d < -0.085:
+	    print x, d
+    except(VaspNotFinished):
+        pass
 #+END_SRC
 
 #+RESULTS:
-
+: 0.5 -0.0939482131107
+: 0.5 -0.0884387641227
+: 0.333333333333 -0.0897940519288
+: 0.4 -0.088162003458
+: 0.4 -0.0899312765147
+: 0.375 -0.0859626700218
 
 *** Boltzmann distribution 
 [[./images/boltzmann.png]]
@@ -3616,4 +3910,139 @@ plt.show()
 #+END_SRC
 
 #+RESULTS:
+
+* Database manipulations
+I need to merge recent calculations from the cluster expansion into the existing database for the next iteration for bulk calculations. In this section I will add some additional manipulations to the existing database.
+
+** Merging db5 and cluster expansion into db6
+#+BEGIN_SRC python :results silent
+import numpy as np
+from ase.db import connect
+import os
+import shutil
+
+if not os.path.exists('./networks/db6/'):
+    os.mkdir('./networks/db6/')
+
+db0 = connect('./CuPd_fcc/atat_atoms.db')
+db1 = connect('./networks/db5/data.db')
+
+with connect('./networks/db6/data.db') as db:
+    for d in db0.select():
+	atoms = db0.get_atoms(d.id)
+
+	# Manipulation of kvp
+	keys = {'bulk': 'fcc'}
+	keys.update({'atat': int(d.atat),
+		     'lattice': float('{:1.3f}'.format(d.a))})
+
+	db.write(atoms, key_value_pairs=keys)
+
+    for d in db1.select():
+	atoms = db1.get_atoms(d.id)
+
+	# Manipulation of kvp
+	keys = d.key_value_pairs
+        del keys['train_set']
+
+	db.write(atoms, key_value_pairs=keys)
+#+END_SRC
+
+#+BEGIN_SRC python
+from ase.db import connect
+import random
+import numpy as np
+
+def produce_trainset(database, fraction=0.9, seed=256):
+    """Produce a train.db database for training 
+    """
+
+    db = connect(database)
+
+    n = db.count()
+    n_train = int(round(n * fraction))
+    n_ids =  np.array(range(n)) + 1
+
+    # This will sudo-randomly select 10% of the calculations
+    # Which is useful for reproducing our results.
+    random.seed(seed)
+    train_samples = random.sample(n_ids, n_train)
+    valid_samples = set(n_ids) - set(train_samples)
+
+    db.update(list(train_samples), train_set=True)
+    db.update(list(valid_samples), train_set=False)
+
+    parent = '/'.join(database.split('/')[:-1])
+
+    db0 = connect(parent + '/train.db')
+
+    for d in db.select(['train_set=True']):
+        db0.write(d, key_value_pairs=d.key_value_pairs)
+
+# Produce a trainset with 90% of the database calculations
+produce_trainset('networks/db6/data.db', fraction=0.9)
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC python
+import numpy as np
+from ase.db import connect
+import os
+import shutil
+
+for n in range(6, 10):
+    script = '''#!/usr/bin/env python
+from amp import Amp
+from amp.descriptor import Behler
+from amp.regression import NeuralNetwork
+
+calc = Amp(label="./",
+           descriptor=Behler(cutoff=6.5),
+           regression=NeuralNetwork(hiddenlayers=(2, {0})))
+
+calc.train("../train.db",
+           cores=12,
+           energy_goal=0.0005,
+           force_goal=None,
+           extend_variables=False)
+'''.format(n)
+
+    if not os.path.exists('./networks/db6/40-{0}-{0}-1/'.format(n)):
+        os.mkdir('./networks/db6/40-{0}-{0}-1/'.format(n))
+
+    with open('./networks/db6/40-{0}-{0}-1/script.py'.format(n), 'w') as f:
+	f.write(script)
+    os.chmod('./networks/db6/40-{0}-{0}-1/script.py'.format(n), 0755)
+
+    with open('./networks/db6/40-{0}-{0}-1/script.sh'.format(n), 'w') as f:
+	f.write('bpsh 30 -m ./script.py')
+    os.chmod('./networks/db6/40-{0}-{0}-1/script.sh'.format(n), 0755)
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC python
+from ase.io import read
+from ase.io.formats import filetype
+from ase.visualize import view
+from ase.db import connect
+import os
+
+print slice(0, None, 2)
+
+filename = "./networks/db6/train.db"
+#images = read()
+filename = os.path.expanduser(filename)
+print filename
+
+format = filetype(filename)
+print format
+
+#+END_SRC
+
+#+RESULTS:
+: slice(0, None, 2)
+: ./networks/db6/train.db
+: db
 
