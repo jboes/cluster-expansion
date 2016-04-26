@@ -2519,13 +2519,12 @@ for fil in files:
 #+END_SRC
 
 #+RESULTS:
-: ('40-6-6-1', ' 7504        2016-04-13T17:09:40  1.154e-01    2.107e-03\n')
-: ('40-7-7-1', ' 7585        2016-04-13T17:09:40  1.106e-01    2.062e-03\n')
+: ('40-6-6-1', ' 7743        2016-04-13T17:47:42  1.153e-01    2.106e-03\n')
+: ('40-7-7-1', ' 7826        2016-04-13T17:47:45  1.105e-01    2.061e-03\n')
 : ('40-8-8-1', ' 6074        2016-04-13T13:11:11  1.142e-01    2.095e-03\n')
-: ('40-9-9-1', ' 7390        2016-04-13T17:09:32  1.161e-01    2.113e-03\n')
+: ('40-9-9-1', ' 7628        2016-04-13T17:47:47  1.161e-01    2.113e-03\n')
 
 *** Fits to database data
-[[./images/db6_bulk.png]]
 
 #+BEGIN_SRC python :results silent
 from ase.io import read
@@ -2549,23 +2548,30 @@ with connect('temp/db6.db') as db:
         nndE = atoms.get_potential_energy() - nnE
 
         atoms.set_calculator(None)
-        keys.update({'nnE': nnE, 'nndE': nndE})
+        keys.update({'nnE': nnE, 'nndE': nndE, 'nrg': d.energy})
         db.write(atoms, key_value_pairs=keys)
 #+END_SRC
 
-#+BEGIN_SRC python :results silent
+#+RESULTS: 
+
+
+[[./images/db6_bulk.png]]
+
+#+BEGIN_SRC python
 from ase.io import read
 from amp import Amp
 from ase.db import connect
 import numpy as np
 import matplotlib.pyplot as plt
 
-db = connect('temp/db6-bulk.db')
+db = connect('temp/db6.db')
 
-dE = []
+dE_train, dE_valid = [], []
 for d in db.select():
-    dE += [(d.NN6 - d.NN7) / len(d.symbols)]
-dE = np.array(dE)
+    if d.train_set:
+        dE_train += [(d.nnE - d.energy) / d.natoms]
+    else:
+        dE_valid += [(d.nnE - d.energy) / d.natoms]
 
 def nbins(x):
     from math import log10, floor, ceil
@@ -2574,14 +2580,31 @@ def nbins(x):
     m = ceil(x*10**n)
     return np.arange(0, (m*w)+w, w)
 
-plt.figure(figsize=(6, 4))
-n, bins, patches = plt.hist(dE, bins=nbins(max(dE)))
-plt.xlabel('Predicted energy difference (eV/atom)')
-plt.ylabel('Probability')
-plt.title('{0} total calculations'.format(len(dE)))
-plt.tight_layout()
-plt.savefig('./images/db6_bulk.png')
+fig, ax = plt.subplots(figsize=(6, 4))
+
+print dE_train, dE_valid
+
+# ax.hist(dE_train, bins=nbins(max(dE_train)),
+#         color='r', alpha=0.3, normed=True)
+
+# ax.hist(dE_valid, bins=nbins(max(dE_valid)),
+#         color='b', alpha=0.3, normed=True)
+
+# ax.set_xlabel('Predicted energy difference (eV/atom)')
+# ax.set_ylabel('Probability')
+# x0, x1 = ax.get_xlim()
+# y0, y1 = ax.get_ylim()
+
+# rmse_train = np.sqrt(sum(np.array(dE_train)**2))
+# rmse_valid = np.sqrt(sum(np.array(dE_valid)**2))
+
+# ax.text(x1 - x1/8., y1 - y1/10., '{:1.3f}'.format(rmse_train), color='r')
+# ax.text(x1 - x1/8., y1 - y1/5., '{:1.3f}'.format(rmse_valid), color='b')
+# plt.tight_layout()
+# plt.savefig('./images/db6_bulk.png')
 #+END_SRC
+
+#+RESULTS:
 
 *** for multi-lattice constants
 #+caption: Energy differences between db6 NN frameworks for energy unique bulk configurations at 5 lattice constants.
@@ -2913,17 +2936,16 @@ import os
 import numpy as np
 
 cmd = ''
-
-for A in np.linspace(6, 102, 17)[::2]:
-    script = """#!/usr/bin/env python
-
+for T in [700, 800, 900]:
+    for A in np.linspace(6, 102, 17)[::2]:
+	script = """#!/usr/bin/env python
 import numpy as np
 from ase.atoms import Atoms
 import random
 from ase.units import kB
 from ase.db import connect
 
-def main(atoms, dbname, T=800, steps=10000):
+def main(atoms, dbname, T, steps):
 
     db = connect(dbname)
 
@@ -2937,8 +2959,8 @@ def main(atoms, dbname, T=800, steps=10000):
     # Calculate the initial energy and store it
     nrg = atoms.get_potential_energy()
 
-    dummy = Atoms.copy(atoms)
-    db.write(dummy, nrg=nrg)
+    # dummy = Atoms.copy(atoms)
+    # db.write(dummy, nrg=nrg)
 
     # Perform MC steps
     attempt, success = 0, 0
@@ -2988,6 +3010,35 @@ def main(atoms, dbname, T=800, steps=10000):
 
     return success/attempt
 
+from amp import Amp
+
+# Select last configuration
+db = connect('/home-research/jboes/research/cluster-expansion/MC/T{1}-{0}.db')
+cnt = db.count()
+atoms = db.get_atoms('id={{}}'.format(int(cnt)))
+
+atoms.set_calculator(Amp('/home-research/jboes/research/cluster-expansion/networks/db6/40-7-7-1/'))
+
+main(atoms, '/home-research/jboes/research/cluster-expansion/MC/T{1}-{0}.db', T={1}, steps=int(15000 - cnt))
+""".format(int(A), int(T))
+
+	name = 'MC/run-T{1}-{0}.py'.format(int(A), int(T))
+	cmd += 'bpsh 30 -m {} & '.format(name.replace('MC', '.'))
+
+	with open(name, 'w') as f:
+	    f.write(script)
+	os.chmod(name, 0755)
+
+print(cmd)
+#+END_SRC
+
+#+RESULTS:
+: bpsh 30 -m ./run-T700-6.py & bpsh 30 -m ./run-T700-18.py & bpsh 30 -m ./run-T700-30.py & bpsh 30 -m ./run-T700-42.py & bpsh 30 -m ./run-T700-54.py & bpsh 30 -m ./run-T700-66.py & bpsh 30 -m ./run-T700-78.py & bpsh 30 -m ./run-T700-90.py & bpsh 30 -m ./run-T700-102.py
+
+*** Stagging code
+To be run to make sure the scripted code performs as required.
+**** Starting from highly ordered system
+#+BEGIN_SRC python
 from ase.lattice.cubic import FaceCenteredCubic as fcc
 from amp import Amp
 
@@ -2996,100 +3047,26 @@ atoms = fcc('Cu', size=(3, 3, 3),
 
 for i in range(int({0})):
     atoms[i].symbol = 'Pd'
+#+END_SRC
 
-atoms.set_calculator(Amp('/home/jacob/research/cluster-expansion/networks/db5/40-7-7-1/trained-parameters.json'))
+**** Starting from last configuration
+#+BEGIN_SRC python
+from ase.db import connect
+from amp import Amp
 
-main(atoms, '/home/jacob/research/cluster-expansion/MC/108-{0}.db', steps=10000)
-""".format(int(A))
-
-    name = 'MC/run-{}.py'.format(int(A))
-    cmd += '{} & '.format(name.replace('MC', '.'))
-
-    # No copied files
-    if os.path.exists(name):
-        os.unlink(name)
-
-    with open(name, 'w') as f:
-        f.write(script)
-    os.chmod(name, 0755)
-
-print(cmd)
+# Select last configuration in list
+db = connect('/home-research/jboes/research/cluster-expansion/MC/T800-54.db')
+cnt = db.count()
+atoms = db.get_atoms('id={}'.format(cnt))
 #+END_SRC
 
 #+RESULTS:
-: ./run-6.py & ./run-18.py & ./run-30.py & ./run-42.py & ./run-54.py & ./run-66.py & ./run-78.py & ./run-90.py & ./run-102.py & 
+: 4571
 
+**** Starting from lowest energy configuration
 #+BEGIN_SRC python
 import numpy as np
-from ase.atoms import Atoms
-import random
-from ase.units import kB
 from ase.db import connect
-
-def main(atoms, dbname, T=800, steps=10000):
-
-    db = connect(dbname)
-
-    # Setting up variables for Cannonical MC
-    symbols = atoms.get_chemical_symbols()
-    chem_bins = {sym: [] for sym in set(symbols)}
-
-    for i, s in enumerate(symbols):
-	chem_bins[s] += [i]
-
-    # Calculate the initial energy and store it
-    nrg = atoms.get_potential_energy()
-
-    dummy = Atoms.copy(atoms)
-    db.write(dummy, nrg=nrg)
-
-    # Perform MC steps
-    attempt, success = 0, 0
-    while success < steps:
-
-        # First, choose two chemicals to swap
-        sym1, sym2 = random.sample(chem_bins.keys(), 2)
-        random.shuffle(chem_bins[sym1])
-        ind1 = chem_bins[sym1][-1]
-
-        random.shuffle(chem_bins[sym2])
-        ind2 = chem_bins[sym2][-1]
-
-        # Create new atoms object to test
-        new_atoms = Atoms.copy(atoms)
-        new_atoms.set_calculator(atoms.get_calculator())
-
-        # Update the atoms object
-        new_atoms[ind1].symbol, new_atoms[ind2].symbol = sym2, sym1
-
-        # Calculate the energy of the new system
-        new_nrg = new_atoms.get_potential_energy()
-
-        # Stores energy in continuously growing list
-        # potentially memory intensive, but faster than writing to disk
-        if new_nrg < nrg:
-            atoms = new_atoms
-            nrg = new_nrg
-	    chem_bins[sym2][-1] = ind1
-	    chem_bins[sym1][-1] = ind2
-
-            dummy = Atoms.copy(atoms)
-            db.write(dummy, nrg=nrg)
-            success += 1
-
-        elif np.exp(-(new_nrg - nrg) / (kB * T)) > np.random.rand():
-            atoms = new_atoms
-            nrg = new_nrg
-	    chem_bins[sym2][-1] = ind1
-	    chem_bins[sym1][-1] = ind2
-
-            dummy = Atoms.copy(atoms)
-            db.write(dummy, nrg=nrg)
-            success += 1
-
-        attempt += 1
-
-    return success/attempt
 
 # Select the lowest energy configuration
 db = connect('/home-research/jboes/research/cluster-expansion/MC/108-54.db')
@@ -3102,32 +3079,37 @@ ID = np.array(ID)
 
 i = list(E).index(min(E))
 atoms = db.get_atoms(ID[i])
-
-from amp import Amp
-
-atoms.set_calculator(Amp('/home-research/jboes/research/cluster-expansion/networks/db5/40-7-7-1/trained-parameters.json'))
-
-main(atoms, '/home-research/jboes/research/cluster-expansion/MC/lowT2-108-54.db', T=100, steps=10000)
 #+END_SRC
 
-#+RESULTS:
+**** Starting from new thick-slab configurations
+#+BEGIN_SRC python
+atoms = fcc111('Cu', size=(10, 10, 15), vacuum=6.0,
+               a=(3.939 - 3.634)*{0}/100. + 3.634)
+atoms.set_pbc([True, True, False])
 
+random.seed(255)
+for n in random.sample(range(len(atoms)),
+                       int(1500*{0}/100.)):
+    atoms[n].symbol = 'Pd'
+#+END_SRC
+
+*** Slab MC
 #+BEGIN_SRC python
 import os
-import numpy as np
 
 cmd = ''
+for comp in [10, 20, 30, 40, 50, 60, 70, 80, 90]:
 
-for A in np.linspace(6, 102, 17)[3:-8]:
     script = """#!/usr/bin/env python
-
 import numpy as np
 from ase.atoms import Atoms
 import random
 from ase.units import kB
 from ase.db import connect
+from ase.lattice.surface import fcc111
+from amp import Amp
 
-def main(atoms, dbname, T=800, steps=10000):
+def main(atoms, dbname, T, steps):
 
     db = connect(dbname)
 
@@ -3192,43 +3174,49 @@ def main(atoms, dbname, T=800, steps=10000):
 
     return success/attempt
 
-# Select the lowest energy configuration
-db = connect('/home-research/jboes/research/cluster-expansion/MC/108-{0}.db')
-E, ID = [], []
-for d in db.select():
-    E += [d.nrg]
-    ID += [d.id]
-E = np.array(E)
-ID = np.array(ID)
+# Select last configuration in list
+db = connect('/home-research/jboes/research/cluster-expansion/MC/SLAB-T800-Pd{0}.db')
+cnt = db.count()
+atoms = db.get_atoms('id={{}}'.format(cnt))
 
-i = list(E).index(min(E))
-atoms = db.get_atoms(ID[i])
+atoms.set_calculator(Amp('/home-research/jboes/research/cluster-expansion/networks/db6/40-7-7-1/'))
 
-from amp import Amp
+main(atoms, '/home-research/jboes/research/cluster-expansion/MC/SLAB-T800-Pd{0}.db', T=800, steps=int(10000 - cnt))
+""".format(int(comp))
 
-atoms.set_calculator(Amp('/home-research/jboes/research/cluster-expansion/networks/db5/40-7-7-1/trained-parameters.json'))
-
-main(atoms, '/home-research/jboes/research/cluster-expansion/MC/lowT2-108-{0}.db', T=100, steps=10000)
-""".format(int(A))
-
-    name = 'MC/run-lowT2-{}.py'.format(int(A))
+    name = 'MC/run-SLAB-T800-Pd{}.py'.format(int(comp))
     cmd += 'bpsh 30 -m {} & '.format(name.replace('MC', '.'))
 
-    # No copied files
-    if os.path.exists(name):
-        os.unlink(name)
-
     with open(name, 'w') as f:
-        f.write(script)
+	f.write(script)
     os.chmod(name, 0755)
 
 print(cmd)
 #+END_SRC
 
 #+RESULTS:
-: bpsh 30 -m ./run-lowT2-24.py & bpsh 30 -m ./run-lowT2-30.py & bpsh 30 -m ./run-lowT2-36.py & bpsh 30 -m ./run-lowT2-42.py & bpsh 30 -m ./run-lowT2-48.py & bpsh 30 -m ./run-lowT2-54.py & 
+: bpsh 30 -m ./run-SLAB-T800-Pd10.py & bpsh 30 -m ./run-SLAB-T800-Pd20.py & bpsh 30 -m ./run-SLAB-T800-Pd30.py & bpsh 30 -m ./run-SLAB-T800-Pd40.py & bpsh 30 -m ./run-SLAB-T800-Pd50.py & bpsh 30 -m ./run-SLAB-T800-Pd60.py & bpsh 30 -m ./run-SLAB-T800-Pd70.py & bpsh 30 -m ./run-SLAB-T800-Pd80.py & bpsh 30 -m ./run-SLAB-T800-Pd90.py & 
 
-: ./run-lowT-12.py & ./run-lowT-24.py & ./run-lowT-36.py & ./run-lowT-48.py & ./run-lowT-60.py & ./run-lowT-72.py & ./run-lowT-84.py & ./run-lowT-96.py & 
+#+BEGIN_SRC python
+import os
+import numpy as np
+from ase.db import connect
+from glob import glob
+
+for wd in glob('MC/SLAB-T800-Pd*.db'):
+    print(wd, connect(wd).count())
+#+END_SRC
+
+#+RESULTS:
+: ('MC/SLAB-T800-Pd20.db', 44)
+: ('MC/SLAB-T800-Pd70.db', 93)
+: ('MC/SLAB-T800-Pd10.db', 71)
+: ('MC/SLAB-T800-Pd60.db', 89)
+: ('MC/SLAB-T800-Pd80.db', 52)
+: ('MC/SLAB-T800-Pd50.db', 69)
+: ('MC/SLAB-T800-Pd30.db', 44)
+: ('MC/SLAB-T800-Pd90.db', 68)
+: ('MC/SLAB-T800-Pd40.db', 45)
 
 *** Temperature Ground state hull
 [[./images/gs-hull-temp.png]]
@@ -4017,3 +4005,568 @@ calc.train("../train.db",
 	f.write('bpsh 30 -m ./script.py')
     os.chmod('./networks/db6/40-{0}-{0}-1/script.sh'.format(n), 0755)
 #+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC python
+from ase.db import connect
+from glob import glob
+import matplotlib.pyplot as plt
+
+files = glob('MC/T*-18.db')
+
+for f in files:
+    db = connect(f)
+
+    E = []
+    for d in db.select():
+	E += [d.nrg]
+
+    T = f.split('-')[0].lstrip('MC/T')
+    plt.plot(range(len(E)), E, label=T)
+
+plt.legend(loc='best')
+plt.show()
+#+END_SRC
+
+#+RESULTS:
+
+* db6 Analysis
+** Ground state hull at finite temperature
+#+caption: Ground state hull at 700, 800, and 900 K predicted from Neural Networks.
+[[./images/gs-hull-3temp.png]]
+
+
+#+BEGIN_SRC python :results silent
+import numpy as np
+from ase.db import connect
+import matplotlib.pyplot as plt
+from ase.visualize import view
+from amp import Amp
+from ase.lattice.cubic import FaceCenteredCubic as fcc
+from scipy.optimize import curve_fit
+
+calc = Amp('networks/db6/40-7-7-1/trained-parameters.json')
+
+c = ['b', 'm', 'r']
+
+ref = {}
+for A, a in [['Cu', 3.634], ['Pd', 3.939]]:
+    atoms = fcc(A,
+                directions=[[0, 1, 1],
+                            [1, 0, 1],
+                            [1, 1, 0]],
+    latticeconstant=a)
+
+    atoms.set_calculator(calc)
+    ref[A] = atoms.get_potential_energy()
+
+fig, ax = plt.subplots()
+for i, T in enumerate([700, 800, 900]):
+
+    comp, avg, std = [0.], [0], [0]
+    for A in np.linspace(6, 102, 17)[::2]:
+
+	db = connect('MC/T{}-{}.db'.format(T, int(A)))
+
+	E = []
+	for d in db.select():
+            nCu = d.symbols.count('Cu')
+            nPd = d.symbols.count('Pd')
+	    E += [(d.nrg - ref['Cu'] * nCu - ref['Pd'] * nPd) / d.natoms]
+	E = np.array(E)
+
+        avg += [np.mean(E)]
+        std += [np.std(E)]
+        comp += [A/108.]
+
+    avg = np.array(avg + [0])
+    std = np.array(std + [0])
+    comp = np.array(comp + [1.])
+
+    def Margules(x, A, B, C, D):
+	R = 8.31446   # J/mol/K
+	temp = T      # K
+	return (A + B*(x - (1 - x)) + C*(x - (1 - x))**2. + D*(x - (1 - x))**3.)*(1 - x)*x*R*temp
+
+    from scipy.optimize import curve_fit
+    x = np.linspace(0, 1, 100)
+    p, _ = curve_fit(Margules, comp, avg)
+
+    plt.plot(x, Margules(x, *p), color=c[i])
+    plt.scatter(comp, avg, label=str(T) + ' K', color=c[i])
+    ax.fill_between(comp, avg + std, avg - std, alpha=0.5, color=c[i])
+
+plt.legend(loc='best')
+plt.xlim(0, 1)
+plt.xlabel('Cu$_{1-x}$Pd$_{x}$ composition (x)')
+plt.ylabel('Heat of formation (eV/atom)')
+plt.ylim(-0.1, 0)
+plt.tight_layout()
+plt.savefig('./images/gs-hull-3temp.png')
+#+END_SRC
+
+** Analysis of ATAT enumerated structures for ground state hull
+#+caption: ATAT calculations for ground state hull calculated with DFT and NN. Errors included below in red.
+#+label: fig-db6-cluster-expansion
+[[./images/db6-cluster-expansion.png]]
+
+The most poorly fit structure is included below in Figure ref:fig-poor-fit.
+
+#+caption: Structure with the greatest error shown in Figure ref:fig-db6-cluster-expansion above.
+#+label: fig-poor-fit
+[[./images/atat-poorfit.png]]
+
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+
+db = connect('temp/db6.db')
+
+ECu = db.get(['Cu=1', 'Pd=0'])
+EPd = db.get(['Cu=0', 'Pd=1'])
+
+C, Qe, Ne = [], [], []
+for d in db.select(['atat']):
+    nPd = d.symbols.count('Pd')
+    nCu = d.symbols.count('Cu')
+
+    C += [float(nPd) / (nPd + nCu)]
+    Qe += [(d.nrg - nPd*EPd.nrg - nCu*ECu.nrg) / d.natoms]
+    Ne += [(d.nnE - nPd*EPd.nnE - nCu*ECu.nnE) / d.natoms]
+
+Qe = np.array(Qe)
+Ne = np.array(Ne)
+
+# View the most poorly fit structure
+from ase.visualize import view
+Err = abs(Ne - Qe)
+i = list(Err).index(max(Err))
+from ase.io import write
+write('./images/atat-poorfit.png', db.get_atoms(i), show_unit_cell=2)
+
+fig, ax = plt.subplots(2, sharex=True, figsize=(6, 4))
+ax[0].scatter(C, Qe, color='k')
+ax[0].scatter(C, Ne, color='b')
+ax[1].scatter(C, Ne - Qe, color='r')
+ax[0].set_xlim(0, 1)
+ax[0].set_ylim(-0.12, 0.12)
+ax[1].set_ylim(-0.15, 0.05)
+ax[1].set_yticks(ax[1].get_yticks()[:-1])
+ax[1].set_xlabel('Composition Cu$_{1-x}$Pd$_{x}$, ($x$)')
+ax[0].set_ylabel('Heat of formation\n(eV/atom)')
+ax[1].set_ylabel('Error\n(eV/atom)')
+plt.tight_layout(h_pad=0.0)
+plt.savefig('./images/db6-cluster-expansion.png')
+#+END_SRC
+
+** Error analysis for data included in the fit
+#+caption: Neural network residual error to DFT (red) and alternate neural network (blue).
+#+label: fig-db6-error
+[[./images/db6-error.png]]
+
+The first \approx 2000 calculations are included from the ATAT enumerated structures. These structures have "sharp" unit cells which have historically been difficult for Neural networks to fit to.
+
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+
+db = connect('temp/db6.db')
+
+ECu = db.get(['Cu=1', 'Pd=0'])
+EPd = db.get(['Cu=0', 'Pd=1'])
+
+ID, C, dE, nndE = [], [], [], []
+for d in db.select([]):
+    nPd = d.symbols.count('Pd')
+    nCu = d.symbols.count('Cu')
+
+    ID += [d.id]
+    C += [float(nPd) / (nPd + nCu)]
+    dE += [(d.nnE - d.nrg) / d.natoms]
+    nndE += [d.nndE / d.natoms]
+
+fig, ax = plt.subplots(1, 2, sharey=True, figsize=(6, 4))
+ax[0].scatter(ID, dE, color='r')
+ax[1].scatter(ID, nndE, color='b')
+
+ax[0].set_xlim(0, max(ID))
+ax[1].set_xlim(0, max(ID))
+ax[0].set_xticks(ax[0].get_xticks()[1:])
+ax[1].set_xticks(ax[1].get_xticks()[1:])
+
+fig.autofmt_xdate()
+
+ax[0].set_xlabel('Composition Cu$_{1-x}$Pd$_{x}$, ($x$)')
+ax[1].set_xlabel('Composition Cu$_{1-x}$Pd$_{x}$, ($x$)')
+ax[0].set_ylabel('Error (eV/atom)')
+plt.tight_layout(w_pad=-0.1)
+plt.savefig('./images/db6-error.png')
+#+END_SRC
+
+** Lowest energy configurations for ground state hull
+
+[[./images/temp.png]]
+
+#+BEGIN_SRC python
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+
+db = connect('temp/db6.db')
+
+ECu = db.get(['Cu=1', 'Pd=0']).nrg
+EPd = db.get(['Cu=0', 'Pd=1']).nrg
+
+C, E = [], []
+for d in db.select(['atat']):
+    nPd = d.symbols.count('Pd')
+    nCu = d.symbols.count('Cu')
+    C += [float(nPd) / (nPd + nCu)]
+    E += [(d.nrg - nPd*EPd - nCu*ECu) / d.natoms]
+E = np.array(E)
+
+d = {c:[] for c in sorted(set(C))}
+for c, e in zip(C, E):
+    d[c] += [e]
+
+md = []
+for c in sorted(d.keys()):
+    md += [[c, min(d[c])]]
+md = np.array(md)
+
+gs = [0]
+while gs[-1] != 32:
+    slopes = []
+    for c, e in md[gs[-1]+1:]:
+	x = [md[gs[-1]][0], c]
+	y = [md[gs[-1]][1], e]
+        
+	slopes += [np.polyfit(x, y, 1)[0]]
+    gs += [gs[-1] + 1 + slopes.index(min(slopes))]
+
+def Margules(x, A, B, C, D):
+    R = 8.31446   # J/mol/K
+    temp = 1.      # K
+    return (A + B*(x - (1 - x)) + C*(x - (1 - x))**2. + D*(x - (1 - x))**3.)*(1 - x)*x*R*temp
+
+from scipy.optimize import curve_fit
+x = np.linspace(0, 1, 100)
+p, _ = curve_fit(Margules, md.T[0], md.T[1])
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.scatter(md.T[0], md.T[1], color='b')
+ax.plot(x, Margules(x, *p), color='b')
+ax.scatter(md[gs].T[0], md[gs].T[1], color='r')
+lfits = []
+for i, j in enumerate(md[gs].T[0][:-1]):
+    fit = np.poly1d(np.polyfit(md[gs].T[0][i:i+2],
+                               md[gs].T[1][i:i+2], 1))
+    lfits += [fit]
+    xtemp = np.linspace(md[gs].T[0][i], md[gs].T[0][i+1])
+    ax.plot(xtemp, fit(xtemp), 'r-')
+ax.set_xlim(0, 1)
+ax.set_ylim(-0.12, 0)
+ax.set_xlabel('Composition Cu$_{1-x}$Pd$_{x}$, ($x$)')
+ax.set_ylabel('Heat of formation\n(eV/atom)')
+plt.tight_layout()
+plt.savefig('./images/temp.png')
+#+END_SRC
+
+** MC simulations
+*** Constructing the atoms objects
+#+BEGIN_SRC python
+from ase.lattice.cubic import FaceCenteredCubic as fcc
+from ase.lattice.surface import surface
+from ase.visualize import view
+import numpy as np
+
+for i, a in enumerate(np.linspace(3.634, 3.939, 5)[1:-1]):
+
+    atoms = fcc('Cu', latticeconstant=a)
+    for j in range(1, i+2):
+	atoms[j].symbol = 'Pd'
+    atoms = surface(atoms, (1, 1, 1), 5)
+    atoms.center(vacuum=6., axis=2)
+    atoms.set_pbc([1, 1, 0])
+
+    index = [atom.index for atom in atoms if atom.position[2] < 10.]
+    if M != None:
+	for i in index:
+	    atoms[i].symbol = M
+
+    atoms *= (5, 5, 1)
+
+    view(atoms)
+#+END_SRC
+
+*** Running MC on various 5 layer slabs
+#+BEGIN_SRC python
+import os
+import numpy as np
+
+cmd = ''
+for M in ['Cu', 'Pd', 'None']:
+    for i, a in enumerate(np.linspace(3.634, 3.939, 5)[1:-1]):
+	script = """#!/usr/bin/env python
+from ase.lattice.cubic import FaceCenteredCubic as fcc
+from ase.lattice.surface import surface
+import numpy as np
+from ase.atoms import Atoms
+import random
+from ase.units import kB
+from ase.db import connect
+
+def main(atoms, dbname, T, steps):
+
+    db = connect(dbname)
+
+    # Setting up variables for Cannonical MC
+    symbols = atoms.get_chemical_symbols()
+    chem_bins = {{sym: [] for sym in set(symbols)}}
+
+    for i, s in enumerate(symbols):
+        if atoms[i].position[2] > 10.:
+	    chem_bins[s] += [i]
+
+    # Calculate the initial energy and store it
+    nrg = atoms.get_potential_energy()
+
+    # dummy = Atoms.copy(atoms)
+    # db.write(dummy, nrg=nrg)
+
+    # Perform MC steps
+    attempt, success = 0, 0
+    while success < steps:
+
+        # First, choose two chemicals to swap
+        sym1, sym2 = random.sample(chem_bins.keys(), 2)
+        random.shuffle(chem_bins[sym1])
+        ind1 = chem_bins[sym1][-1]
+
+        random.shuffle(chem_bins[sym2])
+        ind2 = chem_bins[sym2][-1]
+
+        # Create new atoms object to test
+        new_atoms = Atoms.copy(atoms)
+        new_atoms.set_calculator(atoms.get_calculator())
+
+        # Update the atoms object
+        new_atoms[ind1].symbol, new_atoms[ind2].symbol = sym2, sym1
+
+        # Calculate the energy of the new system
+        new_nrg = new_atoms.get_potential_energy()
+
+        # Stores energy in continuously growing list
+        # potentially memory intensive, but faster than writing to disk
+        if new_nrg < nrg:
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = Atoms.copy(atoms)
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        elif np.exp(-(new_nrg - nrg) / (kB * T)) > np.random.rand():
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = Atoms.copy(atoms)
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        attempt += 1
+
+    return success/attempt
+
+from amp import Amp
+
+atoms = fcc('Cu', latticeconstant={1})
+for j in range(1, {0}+2):
+    atoms[j].symbol = 'Pd'
+atoms = surface(atoms, (1, 1, 1), 5)
+atoms.center(vacuum=6., axis=2)
+atoms.set_pbc([1, 1, 0])
+
+index = [atom.index for atom in atoms if atom.position[2] < 10.]
+if '{2}' != 'None':
+    for i in index:
+	atoms[i].symbol = '{2}'
+
+atoms *= (5, 5, 1)
+
+atoms.set_calculator(Amp('/home-research/jboes/research/cluster-expansion/networks/db6/40-7-7-1/'))
+
+main(atoms, '/home-research/jboes/research/cluster-expansion/MC-slab/T800-c{0}-b{2}.db', T=800, steps=4999)
+""".format(int(i), float(a), M)
+
+	name = 'MC-slab/run-T800-c{}-b{}.py'.format(int(i), M)
+	cmd += 'bpsh 30 -m {} & '.format(name.replace('MC-slab', '.'))
+
+	with open(name, 'w') as f:
+	    f.write(script)
+	os.chmod(name, 0755)
+
+print(cmd)
+#+END_SRC
+
+#+RESULTS:
+: bpsh 30 -m ./run-T800-c0-bCu.py & bpsh 30 -m ./run-T800-c1-bCu.py & bpsh 30 -m ./run-T800-c2-bCu.py & bpsh 30 -m ./run-T800-c0-bPd.py & bpsh 30 -m ./run-T800-c1-bPd.py & bpsh 30 -m ./run-T800-c2-bPd.py & bpsh 30 -m ./run-T800-c0-bNone.py & bpsh 30 -m ./run-T800-c1-bNone.py & bpsh 30 -m ./run-T800-c2-bNone.py & 
+
+*** Analyzing surface compositions
+**** Canonical 5 layer slab compositions
+#+BEGIN_SRC python
+import numpy as np
+from ase.db import connect
+from ase.visualize import view
+import matplotlib.pyplot as plt
+from amp import Amp
+
+calc = Amp('networks/db6/40-8-8-1/')
+
+for i, a in enumerate(np.linspace(3.634, 3.939, 5)[1:-1]):
+    
+    for M in ['Cu', 'Pd', 'None']:
+        fig, ax = plt.subplots(figsize=(4.5, 3))
+
+	name = 'MC-slab/T800-c{}-b{}.db'.format(int(i), M)
+	db = connect(name)
+
+        C, c1, c2, c3 = [], [], [], []
+        for d in db.select():
+            
+            pos, syms = d.positions, d.symbols
+            l1 = [s for s, p in zip(syms, pos) if p[2] > 14]
+            l2 = [s for s, p in zip(syms, pos) if 14 > p[2] > 12]
+            l3 = [s for s, p in zip(syms, pos) if 12 > p[2] > 10]
+
+            c1 += [l1.count('Pd') / 100.]
+            c2 += [l2.count('Pd') / 100.]
+            c3 += [l3.count('Pd') / 100.]
+            C += [d.id]
+
+        ax.plot(C, np.ones(len(C))*c1[0], 'k--')
+        ax.plot(C, c1, 'r-', label='layer 1')
+        ax.plot(C, c2, 'r--', label='layer 2')
+        ax.plot(C, c3, 'r:', label='layer 3')
+        ax.set_ylim(0, 1)
+        ax.set_xlabel('Step')
+        ax.set_ylabel(r'Composition\nCu$_{1-x}$Pd$_{x}$')
+        ax.set_title('{} {}'.format(int(i), M))
+        ax.legend(loc='best')
+        plt.tight_layout()
+        plt.savefig('./images/T800-c{}-b{}.png'.format(int(i), M))
+        print('[[./images/T800-c{}-b{}.png]]'.format(int(i), M))
+#+END_SRC
+
+#+RESULTS:
+: [[./images/T800-c0-bCu.png]]
+: [[./images/T800-c0-bPd.png]]
+: [[./images/T800-c0-bNone.png]]
+: [[./images/T800-c1-bCu.png]]
+: [[./images/T800-c1-bPd.png]]
+: [[./images/T800-c1-bNone.png]]
+: [[./images/T800-c2-bCu.png]]
+: [[./images/T800-c2-bPd.png]]
+: [[./images/T800-c2-bNone.png]]
+
+**** Canonical 20 layer slab compositions
+#+BEGIN_SRC python
+import numpy as np
+from ase.db import connect
+from ase.visualize import view
+import matplotlib.pyplot as plt
+
+for a in np.linspace(0, 100, 11)[1:-1]:
+    fig, ax = plt.subplots(figsize=(4.5, 3))
+
+    name = 'MC/SLAB-T800-Pd{}.db'.format(int(a))
+    db = connect(name)
+
+    C, c1, c2, c3 = [], [], [], []
+    for d in db.select():
+        pos, syms = d.positions, d.symbols
+        l1 = [s for s, p in zip(syms, pos) if p[2] > 35.5]
+        l2 = [s for s, p in zip(syms, pos) if 35.5 > p[2] > 33.1]
+        l3 = [s for s, p in zip(syms, pos) if 33.1 > p[2] > 31]
+
+        c1 += [l1.count('Pd') / 100.]
+        c2 += [l2.count('Pd') / 100.]
+        c3 += [l3.count('Pd') / 100.]
+  
+        C += [d.id]
+
+    ax.plot(C, np.ones(len(C))*c1[0], 'k--')
+    ax.plot(C, c1, 'r-', label='layer 1')
+    ax.plot(C, c2, 'r--', label='layer 2')
+    ax.plot(C, c3, 'r:', label='layer 3')
+    ax.set_ylim(0, 1)
+    ax.set_xlabel('Step')
+    ax.set_ylabel(r'Composition\nCu$_{1-x}$Pd$_{x}$')
+    plt.legend(loc='best')
+    plt.tight_layout()
+    plt.savefig('./images/T800-Pd{}.png'.format(int(a)))
+    print('[[./images/T800-Pd{}.png]]'.format(int(a)))
+#+END_SRC
+
+#+RESULTS:
+: [[./images/T800-Pd10.png]]
+: [[./images/T800-Pd20.png]]
+: [[./images/T800-Pd30.png]]
+: [[./images/T800-Pd40.png]]
+: [[./images/T800-Pd50.png]]
+: [[./images/T800-Pd60.png]]
+: [[./images/T800-Pd70.png]]
+: [[./images/T800-Pd80.png]]
+: [[./images/T800-Pd90.png]]
+
+*** Analyzing surface energies
+**** Canonical 5 layer slab compositions
+#+BEGIN_SRC python
+import numpy as np
+from ase.db import connect
+from glob import glob
+from amp import Amp
+from ase.io import read
+
+calc = Amp('networks/db6/40-8-8-1/')
+
+db = connect('MC-slab/master.db')
+
+for name in glob('MC-slab/T800-c*'):
+
+    if name == 'MC-slab/T800-c2-bCu.db':
+        continue
+
+    db0 = connect(name)
+    images = read(name, ':')
+    basis = name[:-3].split('b')[-1]
+
+    for i, atoms in enumerate(images):
+    	keys = db0.get(i+1).key_value_pairs
+
+    	atoms.set_calculator(calc)
+    	nrg2 = atoms.get_potential_energy()
+
+    	keys.update({'dE': float(nrg2 - keys['nrg']),
+    		     'basis': basis})
+    	atoms.set_calculator(None)
+    	db.write(atoms, key_value_pairs=keys)
+#+END_SRC
+
+#+RESULTS:
+: MC-slab/T800-c1-bPd.db
+: MC-slab/T800-c1-bCu.db
+: MC-slab/T800-c0-bNone.db
+: MC-slab/T800-c2-bPd.db
+: MC-slab/T800-c1-bNone.db
+: MC-slab/T800-c0-bPd.db
+: MC-slab/T800-c2-bNone.db
+: MC-slab/T800-c0-bCu.db
+
