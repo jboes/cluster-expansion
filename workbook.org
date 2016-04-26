@@ -3264,7 +3264,7 @@ def fit(x, p0, p1, p2):
 
 for T, c in [['/', 'r'], ['/lowT-', 'b']]:
 
-    C, avg, comp, std = [], [0.0], [0.0], [0.0]
+    C, avg, comp, std, Emin = [], [0.0], [0.0], [0.0], []
     for A in np.linspace(6, 102, 17):
 
 	db = connect('MC{}108-{}.db'.format(T, int(A)))
@@ -3279,33 +3279,31 @@ for T, c in [['/', 'r'], ['/lowT-', 'b']]:
     	MIN = list(E).index(min(E))
     	MAX = list(E).index(max(E))
     	atoms = db.get_atoms(ID[MIN])
-        
+
         avg += [np.mean(E)]
         std += [np.std(E)]
         comp += [A / 108.0]
         C += [len(E)]
+        Emin += [E[MIN]]
 
     popt, pcov = curve_fit(fit, comp, avg)
-
-    #plt.hist(E, color='{}'.format(c), alpha=0.3)
-    #ylim = ax.get_ylim()
-    #plt.plot([avg, avg], ylim, '{}--'.format(c))
-
-    #plt.plot(ID, E, '{}-'.format(c))
-    #plt.plot(ID[i], E[i], '{}o'.format(c))
 
     comp = np.array(comp + [1.])
     avg = np.array(avg + [0.])
     std = np.array(std + [0.])
 
-    # plt.plot(x, fit(x, *popt), color=c)
     plt.scatter(comp, avg, color=c)
     ax.fill_between(comp, avg + std, avg - std, facecolor=c, alpha=0.5)
 
 for i, cnt in enumerate(C):
+    plt.scatter(comp[i+1], Emin[i], color='g', marker='^')
     plt.text(comp[i+1] + 0.01, avg[i+1], cnt, va='center', ha='left')
 
-plt.legend(['800 K', r'$\pm$ 1$\sigma$', '100 K', r'$\pm$ 1$\sigma$'], loc=3)
+ax.xaxis.set_ticks(np.linspace(0., 1., 5))
+ax.yaxis.set_ticks(np.linspace(0.0, -0.1, 11))
+ax.grid(True)
+
+plt.legend(['800 K', r'$\pm$ 1$\sigma$', '100 K', r'$\pm$ 1$\sigma$'], loc=9)
 plt.xlim(0, 1)
 plt.xlabel('Cu$_{1-x}$Pd$_{x}$ composition (x)')
 plt.ylabel('Heat of formation (eV/atom)')
@@ -4019,30 +4017,3 @@ calc.train("../train.db",
 	f.write('bpsh 30 -m ./script.py')
     os.chmod('./networks/db6/40-{0}-{0}-1/script.sh'.format(n), 0755)
 #+END_SRC
-
-#+RESULTS:
-
-#+BEGIN_SRC python
-from ase.io import read
-from ase.io.formats import filetype
-from ase.visualize import view
-from ase.db import connect
-import os
-
-print slice(0, None, 2)
-
-filename = "./networks/db6/train.db"
-#images = read()
-filename = os.path.expanduser(filename)
-print filename
-
-format = filetype(filename)
-print format
-
-#+END_SRC
-
-#+RESULTS:
-: slice(0, None, 2)
-: ./networks/db6/train.db
-: db
-
