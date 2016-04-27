@@ -76,8 +76,6 @@ $$\frac{y}{1-y} = \frac{x}{1-x} e^{\frac{-\Delta G}{k_{B}T}}$$
 
 - Alternatively, _ANY_ system which predicts consistent energy output from identical position of atoms input will do the same. (i.e. any potential)
 
-* EMT is an effective/cheap tool for exploring configuration space
-
 - Effective medium theory (EMT) is a very cheap and simple potential, capable of predictions on CuPd.
 
 #+caption: Demonstration of the r7 \times r7 lattice structures utilized as a starting point calculations for the NN. The darker the atom, the deeper the layer. Bottom two layers are held fixed in most cases.
@@ -616,9 +614,9 @@ x = np.linspace(0, 1, 100)
 p, _ = curve_fit(Margules, md.T[0], md.T[1])
 
 fig, ax = plt.subplots(figsize=(6, 4))
-ax.scatter(md.T[0], md.T[1], color='b')
+ax.scatter(md.T[0], md.T[1], color='b', label='Low energy cfgs.')
 ax.plot(x, Margules(x, *p), color='b')
-ax.scatter(md[gs].T[0], md[gs].T[1], color='r')
+ax.scatter(md[gs].T[0], md[gs].T[1], color='r', label='Ground state hull')
 lfits = []
 for i, j in enumerate(md[gs].T[0][:-1]):
     fit = np.poly1d(np.polyfit(md[gs].T[0][i:i+2],
@@ -630,10 +628,12 @@ ax.set_xlim(0, 1)
 ax.set_ylim(-0.12, 0)
 ax.set_xlabel('Composition Cu$_{1-x}$Pd$_{x}$, ($x$)')
 ax.set_ylabel('Heat of formation\n(eV/atom)')
+ax.legend(loc='best')
 plt.tight_layout()
 plt.savefig('./images/temp.png')
 #+END_SRC
 
+#+RESULTS:
 
 * Extra material
 ** Boltzmann distribution
@@ -1101,7 +1101,10 @@ Questions:
 [[./images/db6-error.png]]
 
 ** Bulk properties
-- Currently, we are simulating 
+Questions for Dr. Widom:
+- Currently, we are performing bulk MC with only 108 atoms (54 Cu and 54 Pd atoms), but I am unsure if this would be considered sufficient.
+- MCs are being performed to \approx 15,000 (successful) iterations with \approx 35% success rate. What criteria are most commonly accepted for convergence?
+- MC code is custom written to perform swaps on only Cu and Pd atoms to improve efficiency. Are there any other standard methods for improving performance?
 
 *** Lowest energy configurations for ground state hull
 #+caption: Lowest energy configurations of the Ground state hull.
@@ -1116,3 +1119,40 @@ Questions:
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
 [[./images/gs-hull-3temp.png]]
+
+** Surface MC studies
+
+*** Canonical 5 layer slab compositions
+- The NN is known to work well for 5 layers slabs, so we began with similar simulations (10 \times 10 \times 5).
+
+- In this case the bottom two layers are fixed to the ideal bulk configuration at 1/4th Cu.
+
+- Is relaxation typically considered for MC simulation?
+
+#+caption: Canonical MC of 25% Cu mixture of CuPd alloy for a 10 \times 10 \times 5 slab. The bottom two layers are fixed to a 50-50 composition of CuPd.
+#+label: fig-T800-c2-bNone
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/T800-c2-bNone.png]]
+
+*** Canonical 20 layer slab compositions
+- Simulations performed using 10 \times 10 \times 20 slabs were also attempted.
+
+- These simulations are much slower, and appear to (incorrectly) predict Pd segregation as well.
+
+
+#+caption: Canonical MC of 30% Cu mixture of CuPd alloy for a 10 \times 10 \times 20 slab. The bottom two layers are fixed to a 50-50 composition of CuPd.
+#+label: fig-T800-c2-bNone
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+: [[./images/T800-Pd30.png]]
+
+*** Next steps: Semi-Grand Canonical MC simulations
+- Next we would like to try an MC where the atoms are allowed to be changed from Cu to Pd.
+
+- This requires the chemical potentials from the bulk at the desired bulk composition.
+
+- I am unsure of the best method for calculating the chemical potential.
+-- My idea is to use the fitted Marguels equation of the bulk MC to predict chemical potential at the temperature of the surface MC. Is this a valid approach?
+
+-- Other sources seem to imply that chemical potentials from the ground state hull are used at all temperatures?

@@ -4061,7 +4061,7 @@ for A, a in [['Cu', 3.634], ['Pd', 3.939]]:
     atoms.set_calculator(calc)
     ref[A] = atoms.get_potential_energy()
 
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(6, 4))
 for i, T in enumerate([700, 800, 900]):
 
     comp, avg, std = [0.], [0], [0]
@@ -4101,7 +4101,7 @@ plt.legend(loc='best')
 plt.xlim(0, 1)
 plt.xlabel('Cu$_{1-x}$Pd$_{x}$ composition (x)')
 plt.ylabel('Heat of formation (eV/atom)')
-plt.ylim(-0.1, 0)
+plt.ylim(-0.12, 0)
 plt.tight_layout()
 plt.savefig('./images/gs-hull-3temp.png')
 #+END_SRC
