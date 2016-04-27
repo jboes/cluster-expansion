@@ -290,7 +290,7 @@ plt.savefig('images/composition-types.png')
 #+attr_org: :width 400
 [[./images/vegard-error-bulk.png]]
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results silent
 from ase.db import connect
 import matplotlib.pyplot as plt
 import numpy as np
@@ -379,7 +379,261 @@ plt.savefig('./images/vegard-error-bulk.png')
 plt.show()
 #+END_SRC
 
-#+RESULTS:
+* db6 Analysis
+** Ground state hull at finite temperature
+#+caption: Ground state hull at 700, 800, and 900 K predicted from Neural Networks.
+#+label: fig-db6-gs-hull-3temp
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/gs-hull-3temp.png]]
+
+#+BEGIN_SRC python :results silent
+import numpy as np
+from ase.db import connect
+import matplotlib.pyplot as plt
+from ase.visualize import view
+from amp import Amp
+from ase.lattice.cubic import FaceCenteredCubic as fcc
+from scipy.optimize import curve_fit
+
+calc = Amp('networks/db6/40-7-7-1/trained-parameters.json')
+
+c = ['b', 'm', 'r']
+
+ref = {}
+for A, a in [['Cu', 3.634], ['Pd', 3.939]]:
+    atoms = fcc(A,
+                directions=[[0, 1, 1],
+                            [1, 0, 1],
+                            [1, 1, 0]],
+    latticeconstant=a)
+
+    atoms.set_calculator(calc)
+    ref[A] = atoms.get_potential_energy()
+
+fig, ax = plt.subplots()
+for i, T in enumerate([700, 800, 900]):
+
+    comp, avg, std = [0.], [0], [0]
+    for A in np.linspace(6, 102, 17)[::2]:
+
+	db = connect('MC/T{}-{}.db'.format(T, int(A)))
+
+	E = []
+	for d in db.select():
+            nCu = d.symbols.count('Cu')
+            nPd = d.symbols.count('Pd')
+	    E += [(d.nrg - ref['Cu'] * nCu - ref['Pd'] * nPd) / d.natoms]
+	E = np.array(E)
+
+        avg += [np.mean(E)]
+        std += [np.std(E)]
+        comp += [A/108.]
+
+    avg = np.array(avg + [0])
+    std = np.array(std + [0])
+    comp = np.array(comp + [1.])
+
+    def Margules(x, A, B, C, D):
+	R = 8.31446   # J/mol/K
+	temp = T      # K
+	return (A + B*(x - (1 - x)) + C*(x - (1 - x))**2. + D*(x - (1 - x))**3.)*(1 - x)*x*R*temp
+
+    from scipy.optimize import curve_fit
+    x = np.linspace(0, 1, 100)
+    p, _ = curve_fit(Margules, comp, avg)
+
+    plt.plot(x, Margules(x, *p), color=c[i])
+    plt.scatter(comp, avg, label=str(T) + ' K', color=c[i])
+    ax.fill_between(comp, avg + std, avg - std, alpha=0.5, color=c[i])
+
+plt.legend(loc='best')
+plt.xlim(0, 1)
+plt.xlabel('Cu$_{1-x}$Pd$_{x}$ composition (x)')
+plt.ylabel('Heat of formation (eV/atom)')
+plt.ylim(-0.12, 0)
+plt.tight_layout()
+plt.savefig('./images/gs-hull-3temp.png')
+#+END_SRC
+
+** Analysis of ATAT enumerated structures for ground state hull
+#+caption: ATAT calculations for ground state hull calculated with DFT and NN. Errors included below in red.
+#+label: fig-db6-cluster-expansion
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db6-cluster-expansion.png]]
+
+The most poorly fit structure is included below in Figure ref:fig-poor-fit.
+
+#+caption: Structure with the greatest error shown in Figure ref:fig-db6-cluster-expansion above.
+#+label: fig-poor-fit
+#+attr_latex: :width 1in :placement [H]
+#+attr_org: :width 100
+[[./images/atat-poorfit.png]]
+
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+
+db = connect('temp/db6.db')
+
+ECu = db.get(['Cu=1', 'Pd=0'])
+EPd = db.get(['Cu=0', 'Pd=1'])
+
+C, Qe, Ne = [], [], []
+for d in db.select(['atat']):
+    nPd = d.symbols.count('Pd')
+    nCu = d.symbols.count('Cu')
+
+    C += [float(nPd) / (nPd + nCu)]
+    Qe += [(d.nrg - nPd*EPd.nrg - nCu*ECu.nrg) / d.natoms]
+    Ne += [(d.nnE - nPd*EPd.nnE - nCu*ECu.nnE) / d.natoms]
+
+Qe = np.array(Qe)
+Ne = np.array(Ne)
+
+# View the most poorly fit structure
+from ase.visualize import view
+Err = abs(Ne - Qe)
+i = list(Err).index(max(Err))
+from ase.io import write
+write('./images/atat-poorfit.png', db.get_atoms(i), show_unit_cell=2)
+
+fig, ax = plt.subplots(2, sharex=True, figsize=(6, 4))
+ax[0].scatter(C, Qe, color='k')
+ax[0].scatter(C, Ne, color='b')
+ax[1].scatter(C, Ne - Qe, color='r')
+ax[0].set_xlim(0, 1)
+ax[0].set_ylim(-0.12, 0.12)
+ax[1].set_ylim(-0.15, 0.05)
+ax[1].set_yticks(ax[1].get_yticks()[:-1])
+ax[1].set_xlabel('Composition Cu$_{1-x}$Pd$_{x}$, ($x$)')
+ax[0].set_ylabel('Heat of formation\n(eV/atom)')
+ax[1].set_ylabel('Error\n(eV/atom)')
+plt.tight_layout(h_pad=0.0)
+plt.savefig('./images/db6-cluster-expansion.png')
+#+END_SRC
+
+** Error analysis for data included in the fit
+#+caption: Neural network residual error to DFT (red) and alternate neural network (blue).
+#+label: fig-db6-error
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db6-error.png]]
+
+The first \approx 2000 calculations are included from the ATAT enumerated structures. These structures have "sharp" unit cells which have historically been difficult for Neural networks to fit to.
+
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+
+db = connect('temp/db6.db')
+
+ECu = db.get(['Cu=1', 'Pd=0'])
+EPd = db.get(['Cu=0', 'Pd=1'])
+
+ID, C, dE, nndE = [], [], [], []
+for d in db.select([]):
+    nPd = d.symbols.count('Pd')
+    nCu = d.symbols.count('Cu')
+
+    ID += [d.id]
+    C += [float(nPd) / (nPd + nCu)]
+    dE += [(d.nnE - d.nrg) / d.natoms]
+    nndE += [d.nndE / d.natoms]
+
+fig, ax = plt.subplots(1, 2, sharey=True, figsize=(6, 4))
+ax[0].scatter(ID, dE, color='r')
+ax[1].scatter(ID, nndE, color='b')
+
+ax[0].set_xlim(0, max(ID))
+ax[1].set_xlim(0, max(ID))
+ax[0].set_xticks(ax[0].get_xticks()[1:])
+ax[1].set_xticks(ax[1].get_xticks()[1:])
+
+fig.autofmt_xdate()
+
+ax[0].set_xlabel('Composition Cu$_{1-x}$Pd$_{x}$, ($x$)')
+ax[1].set_xlabel('Composition Cu$_{1-x}$Pd$_{x}$, ($x$)')
+ax[0].set_ylabel('Error (eV/atom)')
+plt.tight_layout(w_pad=-0.1)
+plt.savefig('./images/db6-error.png')
+#+END_SRC
+
+** Lowest energy configurations for ground state hull
+#+caption: Lowest energy configurations of the Ground state hull.
+#+label: fig-db6-error
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/temp.png]]
+
+#+BEGIN_SRC python : results silent
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+
+db = connect('temp/db6.db')
+
+ECu = db.get(['Cu=1', 'Pd=0']).nrg
+EPd = db.get(['Cu=0', 'Pd=1']).nrg
+
+C, E = [], []
+for d in db.select(['atat']):
+    nPd = d.symbols.count('Pd')
+    nCu = d.symbols.count('Cu')
+    C += [float(nPd) / (nPd + nCu)]
+    E += [(d.nrg - nPd*EPd - nCu*ECu) / d.natoms]
+E = np.array(E)
+
+d = {c:[] for c in sorted(set(C))}
+for c, e in zip(C, E):
+    d[c] += [e]
+
+md = []
+for c in sorted(d.keys()):
+    md += [[c, min(d[c])]]
+md = np.array(md)
+
+gs = [0]
+while gs[-1] != 32:
+    slopes = []
+    for c, e in md[gs[-1]+1:]:
+	x = [md[gs[-1]][0], c]
+	y = [md[gs[-1]][1], e]
+        
+	slopes += [np.polyfit(x, y, 1)[0]]
+    gs += [gs[-1] + 1 + slopes.index(min(slopes))]
+
+def Margules(x, A, B, C, D):
+    R = 8.31446   # J/mol/K
+    temp = 1.      # K
+    return (A + B*(x - (1 - x)) + C*(x - (1 - x))**2. + D*(x - (1 - x))**3.)*(1 - x)*x*R*temp
+
+from scipy.optimize import curve_fit
+x = np.linspace(0, 1, 100)
+p, _ = curve_fit(Margules, md.T[0], md.T[1])
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.scatter(md.T[0], md.T[1], color='b')
+ax.plot(x, Margules(x, *p), color='b')
+ax.scatter(md[gs].T[0], md[gs].T[1], color='r')
+lfits = []
+for i, j in enumerate(md[gs].T[0][:-1]):
+    fit = np.poly1d(np.polyfit(md[gs].T[0][i:i+2],
+                               md[gs].T[1][i:i+2], 1))
+    lfits += [fit]
+    xtemp = np.linspace(md[gs].T[0][i], md[gs].T[0][i+1])
+    ax.plot(xtemp, fit(xtemp), 'r-')
+ax.set_xlim(0, 1)
+ax.set_ylim(-0.12, 0)
+ax.set_xlabel('Composition Cu$_{1-x}$Pd$_{x}$, ($x$)')
+ax.set_ylabel('Heat of formation\n(eV/atom)')
+plt.tight_layout()
+plt.savefig('./images/temp.png')
+#+END_SRC
+
 
 * Extra material
 ** Boltzmann distribution
@@ -803,3 +1057,62 @@ main(atoms, '/home/jacob/research/cluster-expansion/MC/108-{0}.db', steps=10000)
 
 print(cmd)
 #+END_SRC
+
+* Meeting With Mike
+** Experimental CuPd segregation
+We are attempting to reproduce segregation effects under vacuum conditions in CuPd alloys.
+
+#+label: fig-cupd-segregation
+#+caption: Experimental surface segregation of Cu_{x}Pd_{1-x}.
+#+attr_latex: :width 3in :placement [H]
+#+attr_org: :width 300
+[[./images/cupd-segregation.jpeg]]
+
+This has not been previously modeled with DFT due to the difficulties of 
+
+
+Questions:
+- An appropraite
+
+** NN training methods
+- Effective medium theory (EMT) is a very cheap and simple potential, capable of predictions on CuPd.
+
+#+caption: Demonstration of the r7 \times r7 lattice structures utilized as a starting point calculations for the NN. The darker the atom, the deeper the layer. Bottom two layers are held fixed in most cases.
+#+label: structure-types
+#+attr_latex: :width 6in :placement [H]
+#+attr_org: :width 800
+[[./images/structure-types.png]]
+
+#+caption: Representative composition of single-layer configuration search. All unique energy configurations of single-layer enumeration with EMT calculator.
+#+label: composition-types
+#+attr_latex: :width 3in :placement [H]
+#+attr_org: :width 300
+[[./images/composition-types.png]]
+
+- Unique energy configurations of 3 \times 3 primitive fcc unit cell enumerated using EMT as described previously.
+#+attr_latex: :width 1in :placement [H]
+#+attr_org: :width 125
+[[./images/temp-atoms.png]]
+
+#+caption: Neural network residual error to DFT (red) and alternate neural network (blue).
+#+label: fig-db6-error
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/db6-error.png]]
+
+** Bulk properties
+- Currently, we are simulating 
+
+*** Lowest energy configurations for ground state hull
+#+caption: Lowest energy configurations of the Ground state hull.
+#+label: fig-db6-error
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/temp.png]]
+
+*** Ground state hull at finite temperature
+#+caption: Ground state hull at 700, 800, and 900 K predicted from Neural Networks.
+#+label: fig-db6-gs-hull-3temp
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/gs-hull-3temp.png]]
