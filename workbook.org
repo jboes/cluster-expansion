@@ -205,8 +205,32 @@ for r, d, f in os.walk('.'):
 
 #+RESULTS:
 
-
 [[./images/atat-cluster-expansion.png]]
+
+#+BEGIN_SRC python
+from jasp import *
+from glob import iglob
+JASPRC['queue.walltime'] = '24:00:00'
+JASPRC['queue.ppn'] = 4
+
+for wd in iglob('CuPd_fcc/*/'):
+
+    nwd = wd.split('/')
+    nwd[0] = 'ion_relax'
+    nwd = '/'.join(nwd)
+
+    with jasp(wd) as calc:
+        atoms = calc.get_atoms()
+	calc.clone(nwd)
+
+    with jasp(nwd,
+              isif=2,
+              ibrion=2,
+              nsw=40,
+              atoms=atoms) as calc:
+        calc.get_required_memory()
+        calc.calculate()
+#+END_SRC
 
 #+BEGIN_SRC python :results silent
 from ase.db import connect
@@ -1354,21 +1378,25 @@ base = fcc111('Cu', size=(2, 2, 5), vacuum=6.0, a=3.634)
 natoms = [a.index for a in base]
 metals = ['Cu', 'Pd']
 
-with connect('traj/cfg2x2-5layer.db') as db:
-    nrgs = set()
-    for i, c in enumerate(product(metals, repeat=len(natoms))):
-        atoms0 = Atoms.copy(base)
-        for j, s in enumerate(natoms):
-            atoms0[s].symbol = c[j]
+from ase.visualize import view
 
-        atoms = Atoms.copy(atoms0)
-        atoms.set_calculator(EMT())
-        nrg = round(atoms.get_potential_energy(), 3)
-        atoms.set_calculator(None)
+view(base)
 
-        if nrg not in nrgs:
-            nrgs.add(nrg)
-            db.write(atoms)
+# with connect('traj/cfg2x2-5layer.db') as db:
+#     nrgs = set()
+#     for i, c in enumerate(product(metals, repeat=len(natoms))):
+#         atoms0 = Atoms.copy(base)
+#         for j, s in enumerate(natoms):
+#             atoms0[s].symbol = c[j]
+
+#         atoms = Atoms.copy(atoms0)
+#         atoms.set_calculator(EMT())
+#         nrg = round(atoms.get_potential_energy(), 3)
+#         atoms.set_calculator(None)
+
+#         if nrg not in nrgs:
+#             nrgs.add(nrg)
+#             db.write(atoms)
 #+END_SRC
 
 *** Bulk configurations
@@ -4569,4 +4597,163 @@ for name in glob('MC-slab/T800-c*'):
 : MC-slab/T800-c0-bPd.db
 : MC-slab/T800-c2-bNone.db
 : MC-slab/T800-c0-bCu.db
+
+** Smaller MC simulations for DFT compassion
+#+BEGIN_SRC python
+script = """#!/usr/bin/env python
+from ase.lattice.cubic import FaceCenteredCubic as fcc
+from ase.lattice.surface import surface
+import numpy as np
+from ase.atoms import Atoms
+import random
+from ase.units import kB
+from ase.db import connect
+from ase.constraints import FixAtoms
+
+
+def main(atoms, dbname, T=800, steps=2499):
+
+    db = connect(dbname)
+
+    # Setting up variables for Cannonical MC
+    symbols = atoms.get_chemical_symbols()
+    chem_bins = {sym: [] for sym in set(symbols)}
+
+    for i, s in enumerate(symbols):
+        if atoms[i].position[2] > 8.5:
+	    chem_bins[s] += [i]
+
+    # Calculate the initial energy and store it
+    nrg = atoms.get_potential_energy()
+
+    dummy = Atoms.copy(atoms)
+    db.write(dummy, nrg=nrg)
+
+    # Perform MC steps
+    attempt, success = 0, 0
+    while success < steps:
+
+        # First, choose two chemicals to swap
+        sym1, sym2 = random.sample(chem_bins.keys(), 2)
+        random.shuffle(chem_bins[sym1])
+        ind1 = chem_bins[sym1][-1]
+
+        random.shuffle(chem_bins[sym2])
+        ind2 = chem_bins[sym2][-1]
+
+        # Create new atoms object to test
+        new_atoms = Atoms.copy(atoms)
+        new_atoms.set_calculator(atoms.get_calculator())
+
+        # Update the atoms object
+        new_atoms[ind1].symbol, new_atoms[ind2].symbol = sym2, sym1
+
+        # Calculate the energy of the new system
+        new_nrg = new_atoms.get_potential_energy()
+
+        # Stores energy in continuously growing list
+        # potentially memory intensive, but faster than writing to disk
+        if new_nrg < nrg:
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = Atoms.copy(atoms)
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        elif np.exp(-(new_nrg - nrg) / (kB * T)) > np.random.rand():
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = Atoms.copy(atoms)
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        attempt += 1
+
+    return success/attempt
+
+from amp import Amp
+
+atoms = fcc('Cu', latticeconstant=3.7865)
+
+# Turn 50% of the atoms into Pd
+for j in range(1, 3):
+    atoms[j].symbol = 'Pd'
+
+atoms = surface(atoms, (1, 1, 1), 5)
+atoms.center(vacuum=6., axis=2)
+
+constraint = FixAtoms(mask=[atom.position[2] < 8.5 for atom in atoms])
+atoms.set_constraint(constraint)
+
+atoms.set_calculator(Amp('/home-research/jboes/research/cluster-expansion/networks/db6/40-7-7-1/'))
+
+main(atoms, '/home-research/jboes/research/cluster-expansion/MC-slab/T800-Pd50.db')
+"""
+
+import os
+
+name = 'MC-slab/run-T800-Pd50.py'
+cmd = 'bpsh 30 -m {}'.format(name.replace('MC-slab', '.'))
+print(cmd)
+
+with open(name, 'w') as f:
+    f.write(script)
+os.chmod(name, 0755)
+#+END_SRC
+
+#+RESULTS: 
+: bpsh 30 -m ./run-T800-Pd50.py
+
+#+BEGIN_SRC python
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+from jasp import *
+JASPRC['queue.ppn'] = 8
+JASPRC['queue.walltime'] = '24:00:00'
+
+db = connect('MC-slab/T800-Pd50.db')
+
+for d in db.select():
+
+    if not d.id % 50:
+
+        atoms = db.get_atoms(d.id)
+        wd = 'DFT/surf=fcc/host=CuPd/lattice=3.787/type=T800-Pd50/cfg={}'.format(d.id)
+     
+        with jasp(wd,
+                  xc='PBE',
+                  encut=400,
+                  kpts=(5, 5, 1),
+                  ibrion=2,
+                  isif=2,
+                  nsw=40,
+                  ediff=1e-5,
+                  atoms=atoms) as calc:
+
+            try:
+                calc.get_required_memory()
+                calc.calculate()
+            except(VaspQueued, VaspSubmitted):
+                pass
+#+END_SRC
+
+
+* Relaxation dependence
+#+BEGIN_SRC python
+from ase.db import connect
+from ase.visualize import view
+
+db = connect('temp/pred-2layer.db')
+print db.count()
+#+END_SRC
+
+#+RESULTS:
+: 3430
 
