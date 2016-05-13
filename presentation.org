@@ -635,6 +635,81 @@ plt.savefig('./images/temp.png')
 
 #+RESULTS:
 
+* MC results for canonical ensemble
+*** Canonical 5 layer slab compositions
+- The NN is known to work well for 5 layers slabs, so we began with similar simulations (10 \times 10 \times 5).
+
+- In this case the bottom two layers are fixed to the ideal bulk configuration at 1/4th Cu.
+
+#+caption: Canonical MC of 25% Cu mixture of CuPd alloy for a 10 \times 10 \times 5 slab. The bottom two layers are fixed to a 50-50 composition of CuPd.
+#+label: fig-T800-c2-bNone
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/T800-c2-bNone.png]]
+
+*** Canonical 20 layer slab compositions
+- Simulations performed using 10 \times 10 \times 20 slabs were also attempted.
+
+- These simulations are much slower, and appear to (incorrectly) predict Pd segregation as well.
+
+#+caption: Canonical MC of 30% Cu mixture of CuPd alloy for a 10 \times 10 \times 20 slab. The bottom two layers are fixed to a 50-50 composition of CuPd.
+#+label: fig-T800-c2-bNone
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+: [[./images/T800-Pd30.png]]
+
+* Possible reasons for incorrect predictions
+There are two primary reasons sources of error that may be contributing to the incorrect Pd segregation:
+1. Errors in the fitted NN energy
+2. Neglecting relaxations energies
+
+** Analysis of errors in fitted NN energy predictions
+- All slab calculations shown above are unit cells of at least 500 atoms. This is too many to perform direct DFT validation on.
+
+- Instead we can validate using predictions from as second NN with different framework
+
+*** NN validation against second NN
+- Errors from the second neural network appear significant at first glance
+-- likely because configurational energy differences are small
+
+- Predictions are relatively consistent for all configurations predicted by the first NN.
+-- This indicates the predictions are accurate to DFT within the fitting error (5meV/atom)
+
+#+caption: Energy differences between two NNs with different frameworks on simulation energies shown above.
+#+label: fig-MC-energy-diff-NN
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/MC-energy-diff-NN.png]]
+
+*** NN validation against small DFT unit cells
+- Validation against "dummy" unit cells of much smaller size can also be done.
+
+- This way we can compare DFT energies directly to the NN predictions.
+
+- Calculations are not yet complete.
+
+* Energy contribution from relaxations
+- Pd segregation may also be predicted due to neglecting relaxations energy in the MC
+
+#+caption: DFT energies for relaxation trajectories for two 2x2x5 slabs of mixed CuPd alloys.
+#+label: fig-DFT-relaxations
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/DFT-2x2-relaxations.png]]
+
+* Feasibility of using current NN to perform relaxations
+- Calculation times are much larger than that of more traditional MC methods.
+
+- Calculations for the same unit cells with additional relaxations were started this morning, and have yet to finish.
+-- performing an additional relaxation step on the MC is NOT feasible.
+
+#+caption: NN calculations times for a 50/50 composition of bulk fcc CuPd at various unit cell sizes.
+#+label: fig-calc-times
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/calc-time.png]]
+
+
 * Extra material
 ** Boltzmann distribution
 
@@ -1057,102 +1132,3 @@ main(atoms, '/home/jacob/research/cluster-expansion/MC/108-{0}.db', steps=10000)
 
 print(cmd)
 #+END_SRC
-
-* Meeting With Mike
-** Experimental CuPd segregation
-We are attempting to reproduce segregation effects under vacuum conditions in CuPd alloys.
-
-#+label: fig-cupd-segregation
-#+caption: Experimental surface segregation of Cu_{x}Pd_{1-x}.
-#+attr_latex: :width 3in :placement [H]
-#+attr_org: :width 300
-[[./images/cupd-segregation.jpeg]]
-
-This has not been previously modeled with DFT due to the difficulties of 
-
-
-Questions:
-- An appropraite
-
-** NN training methods
-- Effective medium theory (EMT) is a very cheap and simple potential, capable of predictions on CuPd.
-
-#+caption: Demonstration of the r7 \times r7 lattice structures utilized as a starting point calculations for the NN. The darker the atom, the deeper the layer. Bottom two layers are held fixed in most cases.
-#+label: structure-types
-#+attr_latex: :width 6in :placement [H]
-#+attr_org: :width 800
-[[./images/structure-types.png]]
-
-#+caption: Representative composition of single-layer configuration search. All unique energy configurations of single-layer enumeration with EMT calculator.
-#+label: composition-types
-#+attr_latex: :width 3in :placement [H]
-#+attr_org: :width 300
-[[./images/composition-types.png]]
-
-- Unique energy configurations of 3 \times 3 primitive fcc unit cell enumerated using EMT as described previously.
-#+attr_latex: :width 1in :placement [H]
-#+attr_org: :width 125
-[[./images/temp-atoms.png]]
-
-#+caption: Neural network residual error to DFT (red) and alternate neural network (blue).
-#+label: fig-db6-error
-#+attr_latex: :width 4in :placement [H]
-#+attr_org: :width 400
-[[./images/db6-error.png]]
-
-** Bulk properties
-Questions for Dr. Widom:
-- Currently, we are performing bulk MC with only 108 atoms (54 Cu and 54 Pd atoms), but I am unsure if this would be considered sufficient.
-- MCs are being performed to \approx 15,000 (successful) iterations with \approx 35% success rate. What criteria are most commonly accepted for convergence?
-- MC code is custom written to perform swaps on only Cu and Pd atoms to improve efficiency. Are there any other standard methods for improving performance?
-
-*** Lowest energy configurations for ground state hull
-#+caption: Lowest energy configurations of the Ground state hull.
-#+label: fig-db6-error
-#+attr_latex: :width 4in :placement [H]
-#+attr_org: :width 400
-[[./images/temp.png]]
-
-*** Ground state hull at finite temperature
-#+caption: Ground state hull at 700, 800, and 900 K predicted from Neural Networks.
-#+label: fig-db6-gs-hull-3temp
-#+attr_latex: :width 4in :placement [H]
-#+attr_org: :width 400
-[[./images/gs-hull-3temp.png]]
-
-** Surface MC studies
-
-*** Canonical 5 layer slab compositions
-- The NN is known to work well for 5 layers slabs, so we began with similar simulations (10 \times 10 \times 5).
-
-- In this case the bottom two layers are fixed to the ideal bulk configuration at 1/4th Cu.
-
-- Is relaxation typically considered for MC simulation?
-
-#+caption: Canonical MC of 25% Cu mixture of CuPd alloy for a 10 \times 10 \times 5 slab. The bottom two layers are fixed to a 50-50 composition of CuPd.
-#+label: fig-T800-c2-bNone
-#+attr_latex: :width 4in :placement [H]
-#+attr_org: :width 400
-[[./images/T800-c2-bNone.png]]
-
-*** Canonical 20 layer slab compositions
-- Simulations performed using 10 \times 10 \times 20 slabs were also attempted.
-
-- These simulations are much slower, and appear to (incorrectly) predict Pd segregation as well.
-
-
-#+caption: Canonical MC of 30% Cu mixture of CuPd alloy for a 10 \times 10 \times 20 slab. The bottom two layers are fixed to a 50-50 composition of CuPd.
-#+label: fig-T800-c2-bNone
-#+attr_latex: :width 4in :placement [H]
-#+attr_org: :width 400
-: [[./images/T800-Pd30.png]]
-
-*** Next steps: Semi-Grand Canonical MC simulations
-- Next we would like to try an MC where the atoms are allowed to be changed from Cu to Pd.
-
-- This requires the chemical potentials from the bulk at the desired bulk composition.
-
-- I am unsure of the best method for calculating the chemical potential.
--- My idea is to use the fitted Marguels equation of the bulk MC to predict chemical potential at the temperature of the surface MC. Is this a valid approach?
-
--- Other sources seem to imply that chemical potentials from the ground state hull are used at all temperatures?
