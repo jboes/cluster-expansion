@@ -4619,14 +4619,6 @@ for name in glob('MC-slab/T800-c*'):
 #+END_SRC
 
 #+RESULTS:
-: MC-slab/T800-c1-bPd.db
-: MC-slab/T800-c1-bCu.db
-: MC-slab/T800-c0-bNone.db
-: MC-slab/T800-c2-bPd.db
-: MC-slab/T800-c1-bNone.db
-: MC-slab/T800-c0-bPd.db
-: MC-slab/T800-c2-bNone.db
-: MC-slab/T800-c0-bCu.db
 
 ** Smaller MC simulations for DFT compassion
 #+BEGIN_SRC python
@@ -4956,13 +4948,57 @@ for d in db.select():
 NEED TO ENUMERATE
 
 #+BEGIN_SRC python
+from itertools import product
+from ase.lattice.surface import fcc111
+from asap3 import EMT
+from ase import Atoms
+from ase.db import connect
+from amp.utilities import hash_image
+import numpy as np
+from ase.constraints import FixAtoms
+
+a = np.linspace(3.634, 3.939, 3)
+
+base = fcc111('Cu', size=(3, 3, 5), vacuum=6.0, a=a[1])
+natoms = [a.index for a in base if a.tag <= 2]
+metals = ['Cu', 'Pd']
+
+for n in range(18):
+    if n % 2:
+        base[n].symbol = 'Pd'
+
+
+
+with connect('traj/unique-9atoms-2layer.db') as db:
+    nrgs = set()
+    for i, c in enumerate(product(metals, repeat=len(natoms))):
+        atoms0 = Atoms.copy(base)
+        for j, s in enumerate(natoms):
+            atoms0[s].symbol = c[j]
+
+        atoms = Atoms.copy(atoms0)
+        atoms.set_calculator(EMT())
+        nrg = round(atoms.get_potential_energy(), 3)
+        atoms.set_calculator(None)
+
+        constraint = FixAtoms(mask=[atom.tag > 3 for atom in atoms])
+        atoms.set_constraint(constraint)
+
+        if nrg not in nrgs:
+            nrgs.add(nrg)
+            db.write(atoms)
+#+END_SRC
+
+#+RESULTS:
+
+#+BEGIN_SRC python
 from ase.lattice.surface import fcc111
 from vasp import Vasp
 from ase.constraints import FixAtoms
 from ase.visualize import view
 import numpy as np
 
-a = np.linspace(3.634, 3.939, 3)
+
 
 atoms = fcc111('Cu', size=(3, 3, 5), a=a[1], vacuum=6.0)
 for n in range(18):
@@ -5125,14 +5161,6 @@ for d in db.select():
     db.update(d.id, nnrg=float(energy))
 #+END_SRC
 
-#+BEGIN_SRC python
-from ase.db import connect
-
-db = connect('temp/')
-
-#+END_SRC
-
-#+RESULTS:
 
 * Evidence of NN accuracy using second NN
 #+BEGIN_SRC python
