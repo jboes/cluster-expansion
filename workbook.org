@@ -4151,6 +4151,7 @@ for i, T in enumerate([700, 800, 900]):
     p, _ = curve_fit(Margules, comp, avg)
 
     plt.plot(x, Margules(x, *p), color=c[i])
+    print(p)
     plt.scatter(comp, avg, label=str(T) + ' K', color=c[i])
     ax.fill_between(comp, avg + std, avg - std, alpha=0.5, color=c[i])
 
@@ -4739,50 +4740,485 @@ os.chmod(name, 0755)
 #+RESULTS: 
 : bpsh 30 -m ./run-T800-Pd50.py
 
+
+* Relaxation dependence
+** various compositions
 #+BEGIN_SRC python
 from ase.db import connect
 import matplotlib.pyplot as plt
 import numpy as np
 from jasp import *
+from ase.constraints import FixAtoms
+from jbtools.gilgamesh import compile_trajectory, makedb
+from ase.io.trajectory import Trajectory
+JASPRC['queue.ppn'] = 8
+JASPRC['queue.walltime'] = '24:00:00'
+
+
+
+def get_composition(atoms, basis=None):
+    ''' Acquire the chemical composition of an atoms object
+
+    Returns: a dictionary of atoms and their compositions
+    dictionary sorted by atomic number
+    '''
+
+    symbols = atoms.get_chemical_symbols()
+    count = len(symbols)
+
+    # Collect the symbol and count of each atom type
+    S = OrderedDict()
+
+    for symbol in symbols:
+
+        if symbol in S.keys():
+            S[symbol] += 1.0
+        else:
+            S[symbol] = 1.0
+
+    # Convert to composition
+    for key, val in S.iteritems():
+        S[key] = val / count
+
+    if basis:
+        if basis in S.keys():
+            return S[basis]
+        else:
+            return 0.0
+    else:
+        return S
+
+db = connect('traj/cfg2x2-5layer-2fix.db')
+
+for d in db.select():
+
+    atoms = db.get_atoms(d.id)
+
+    constraint = FixAtoms(mask=[atom.position[2] < 8.5 for atom in atoms])
+    atoms.set_constraint(constraint)
+
+    wd = 'DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg={}'.format(d.id)
+
+    with jasp(wd,
+    	      xc='PBE',
+    	      encut=400,
+    	      kpts=(7, 7, 1),
+    	      ibrion=2,
+    	      isif=2,
+    	      nsw=40,
+    	      ediff=1e-5,
+    	      atoms=atoms) as calc:
+
+	calc.get_required_memory()
+	atoms = calc.get_atoms()
+        nrg = atoms.get_potential_energy()
+
+	compile_trajectory(calc)
+	traj = Trajectory('out.traj')
+	n = len(traj)
+
+	for i, atoms in enumerate(traj):
+
+	    makedb(calc,
+		   atoms=atoms,
+		   dbname='~/research/cluster-expansion/temp/cfg2x2-5layer-2fix.db',
+		   keys={'traj': int(n-i-1), 'comp': float(get_composition(atoms, 'Pd'))})
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=56
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=83
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=96
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=126
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=217
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=239
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=242
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=246
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=247
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=249
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=253
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=263
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=265
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=267
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=268
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=273
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=275
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=331
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=354
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=355
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=356
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=357
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=358
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=359
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=360
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=361
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=362
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=363
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=364
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=365
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=366
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=367
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=368
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=369
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=370
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=371
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=372
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=373
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=374
+VaspSubmitted: DFT/surf=fcc/host=CuPd/lattice=3.787/type=cfg2x2-5layer-2fix/cfg=375
+#+end_example
+
+** 50/50 composition
+#+BEGIN_SRC python
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+from jasp import *
+from ase.constraints import FixAtoms
+from jbtools.gilgamesh import compile_trajectory, makedb
+from ase.io.trajectory import Trajectory
 JASPRC['queue.ppn'] = 8
 JASPRC['queue.walltime'] = '24:00:00'
 
 db = connect('MC-slab/T800-Pd50.db')
 
+def get_composition(atoms, basis=None):
+    ''' Acquire the chemical composition of an atoms object
+
+    Returns: a dictionary of atoms and their compositions
+    dictionary sorted by atomic number
+    '''
+
+    symbols = atoms.get_chemical_symbols()
+    count = len(symbols)
+
+    # Collect the symbol and count of each atom type
+    S = OrderedDict()
+
+    for symbol in symbols:
+
+        if symbol in S.keys():
+            S[symbol] += 1.0
+        else:
+            S[symbol] = 1.0
+
+    # Convert to composition
+    for key, val in S.iteritems():
+        S[key] = val / count
+
+    if basis:
+        if basis in S.keys():
+            return S[basis]
+        else:
+            return 0.0
+    else:
+        return S
+
 for d in db.select():
+    if not d.id % 5:
 
-    if not d.id % 50:
+	atoms = db.get_atoms(d.id)
 
-        atoms = db.get_atoms(d.id)
-        wd = 'DFT/surf=fcc/host=CuPd/lattice=3.787/type=T800-Pd50/cfg={}'.format(d.id)
-     
-        with jasp(wd,
-                  xc='PBE',
-                  encut=400,
-                  kpts=(5, 5, 1),
-                  ibrion=2,
-                  isif=2,
-                  nsw=40,
-                  ediff=1e-5,
-                  atoms=atoms) as calc:
+	constraint = FixAtoms(mask=[atom.position[2] < 8.5 for atom in atoms])
+	atoms.set_constraint(constraint)
 
-            try:
-                calc.get_required_memory()
-                calc.calculate()
-            except(VaspQueued, VaspSubmitted):
-                pass
+	wd = 'DFT/surf=fcc/host=CuPd/lattice=3.787/type=T800-Pd50/cfg={}'.format(d.id)
+
+	with jasp(wd,
+		  xc='PBE',
+		  encut=400,
+		  kpts=(7, 7, 1),
+		  ibrion=2,
+		  isif=2,
+		  nsw=40,
+		  ediff=1e-5,
+		  atoms=atoms) as calc:
+
+	    calc.get_required_memory()
+	    atoms = calc.get_atoms()
+	    nrg = atoms.get_potential_energy()
+
+	    compile_trajectory(calc)
+	    traj = Trajectory('out.traj')
+	    n = len(traj)
+
+	    for i, atoms in enumerate(traj):
+
+		makedb(calc,
+		       atoms=atoms,
+		       dbname='~/research/cluster-expansion/temp/T800-Pd50.db',
+		       keys={'traj': int(n-i-1), 'comp': float(get_composition(atoms, 'Pd'))})
 #+END_SRC
 
+#+RESULTS: 
 
-* Relaxation dependence
+NEED TO ENUMERATE
+
 #+BEGIN_SRC python
-from ase.db import connect
+from ase.lattice.surface import fcc111
+from vasp import Vasp
+from ase.constraints import FixAtoms
 from ase.visualize import view
+import numpy as np
 
-db = connect('temp/pred-2layer.db')
-print db.count()
+a = np.linspace(3.634, 3.939, 3)
+
+atoms = fcc111('Cu', size=(3, 3, 5), a=a[1], vacuum=6.0)
+for n in range(18):
+    if n % 2:
+        atoms[n].symbol = 'Pd'
+
+constraint = FixAtoms(mask=[atom.tag > 3 for atom in atoms])
+atoms.set_constraint(constraint)
+
+view(atoms)
+
+wd = 'DFT/surf=fcc/host=CuPd/lattice=3.787/type=None/cfg=temp'
+
+calc = Vasp(wd,
+            xc='PBE',
+            encut=400,
+            kpts=(5, 5, 1),
+            ibrion=2,
+            isif=2,
+            nsw=40,
+            ediff=1e-5,
+            atoms=atoms)
 #+END_SRC
 
 #+RESULTS:
-: 3430
 
+TODO:
+- evidence of NN accuracy
+-- via DFT
+-- via second NN
+- Think on how to determine accuracy of fully relaxed calculations
+
+- Next we would like to try an MC where the atoms are allowed to be changed from Cu to Pd.
+
+- This requires the chemical potentials from the bulk at the desired bulk composition.
+
+- I am unsure of the best method for calculating the chemical potential.
+
+-- My idea is to use the fitted Marguels equation of the bulk MC to predict chemical potential at the temperature of the surface MC. Is this a valid approach?
+
+
+
+* Determine time requirements on calculations with full relaxation
+#+BEGIN_SRC python
+from timeit import timeit
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import numpy as np
+
+t, rt = [], []
+n = np.array(range(1, 8))
+natoms = 27 * n**3
+
+for i in n:
+    script = '''from amp import Amp
+from ase.db import connect
+
+db = connect('temp/bulk-3x3.db')
+atoms = db.get_atoms(['a=3.634', 'config=1000'])
+
+calc = Amp('networks/db5/40-7-7-1/')
+
+atoms *= ({0}, {0}, {0})
+atoms.set_calculator(calc)
+atoms.get_potential_energy()
+'''.format(i)
+    t += [float(timeit(script, number=1)) / 60.]
+
+    rscript = '''from amp import Amp
+from ase.optimize import BFGS
+from ase.db import connect
+
+db = connect('temp/bulk-3x3.db')
+atoms = db.get_atoms(['a=3.634', 'config=1000'])
+
+calc = Amp('networks/db5/40-7-7-1/')
+
+atoms *= ({0}, {0}, {0})
+atoms.set_calculator(calc)
+dyn = BFGS(atoms)
+dyn.run(fmax=0.02)
+atoms.get_potential_energy()
+'''.format(i)
+    rt += [float(timeit(rscript, number=1)) / 60.]
+
+fit = np.poly1d(np.polyfit(natoms, t, 2))
+rfit = np.poly1d(np.polyfit(natoms, rt, 2))
+print(fit)
+print(rfit)
+
+x = np.linspace(natoms[0], natoms[-1])
+
+plt.figure()
+plt.plot(natoms, t, 'bo')
+plt.plot(x, fit(x), 'b-')
+
+plt.plot(natoms, rt, 'ro')
+plt.plot(x, rfit(x), 'r-')
+
+blue_patch = mpatches.Patch(color='blue', label='Single calculation time')
+red_patch = mpatches.Patch(color='red', label='Full relaxation calculation time')
+
+plt.legend(handles=[blue_patch, red_patch])
+
+plt.xlabel('number of atoms')
+plt.ylabel('Calculation time (min)')
+plt.tight_layout()
+plt.savefig('images/amp-calc-time-bulk.png')
+#+END_SRC
+
+#+RESULTS:
+:            2
+: 1.858e-08 x + 0.0001521 x + 0.09639
+
+[[./images/amp-calc-time-bulk.png]]
+
+* Analysis of ATAT CuPd
+Needed to restart the calculations for 
+
+#+BEGIN_SRC python
+from ase.db import connect
+from jasp import *
+from glob import glob
+JASPRC['queue.ppn'] = 8
+
+db = connect('DFT/ion_relax/data.db')
+
+if os.path.exists('DFT/ion_relax/data.db'):
+    os.unlink('DFT/ion_relax/data.db')
+
+for wd in glob('DFT/ion_relax/*/'):
+
+    ready = False
+    try:
+	with jasp(wd) as calc:
+	    atoms = calc.get_atoms()
+	    nrg = atoms.get_potential_energy()
+	    ready = True
+    except(ValueError, AttributeError):
+	pass
+
+    if ready:
+	db.write(atoms, key_value_pairs={'cfg': int(wd.split('/')[-2])})
+#+END_SRC
+
+#+BEGIN_SRC python
+from ase.db import connect
+from amp import Amp
+import numpy as np
+
+calc = Amp('networks/db6/40-7-7-1/')
+
+db = connect('DFT/ion_relax/data.db')
+
+DFT, NN = [], []
+for d in db.select():
+    atoms = db.get_atoms(d.id)
+    atoms.set_calculator(calc)
+    energy = atoms.get_potential_energy()
+    db.update(d.id, nnrg=float(energy))
+#+END_SRC
+
+#+BEGIN_SRC python
+from ase.db import connect
+
+db = connect('temp/')
+
+#+END_SRC
+
+#+RESULTS:
+
+* Evidence of NN accuracy using second NN
+#+BEGIN_SRC python
+import numpy as np
+from ase.db import connect
+from ase.visualize import view
+import matplotlib.pyplot as plt
+
+db = connect('MC-slab/master.db')
+
+E, dE, ID = [], [], []
+for d in db.select('id<2401'):
+    dE += [d.dE / d.natoms]
+    ID += [d.id]
+    E += [d.nrg / d.natoms]
+dE = np.array(dE)
+E = np.array(E) - E[0]
+
+plt.figure(figsize=(6, 4))
+plt.plot(ID, dE, 'k-', label='Difference')
+plt.plot(ID, E, 'b-', label='NN1 predicitons')
+plt.plot(ID, dE + E, 'r-', label='NN2 predicitons')
+plt.xlabel('MC step')
+plt.ylabel('Energy (eV/atom)')
+plt.legend(loc=1, fontsize=10)
+plt.tight_layout()
+plt.savefig('./images/MC-energy-diff-NN.png')
+#+END_SRC
+
+#+RESULTS:
+
+[[./images/MC-energy-diff-NN.png]]
+
+
+* Evidence of NN accuracy using DFT
+#+BEGIN_SRC python
+from ase.db import connect
+from ase.visualize import view
+import matplotlib.pyplot as plt
+from amp import Amp
+import numpy as np
+
+calc = Amp('networks/db6/40-7-7-1/')
+
+db = connect('temp/cfg2x2-5layer-2fix.db')
+
+DFT, NN = [], []
+for d in db.select():
+    atoms = db.get_atoms(d.id)
+    atoms.set_calculator(calc)
+    energy = atoms.get_potential_energy()
+    db.update(d.id, nrg=float(energy))
+#+END_SRC
+
+
+* Relaxation energies for Cu and Pd structures
+#+BEGIN_SRC python
+from ase.db import connect
+from ase.visualize import view
+import matplotlib.pyplot as plt
+import numpy as np
+
+db = connect('temp/cfg2x2-5layer-2fix.db')
+
+E = []
+for d in db.select('comp=0.2'):
+    E += [d.energy / d.natoms]
+
+E = np.array(E) - E[0]
+
+E2 = []
+for d in db.select('cfg=396'):
+    E2 += [d.energy/ d.natoms]
+
+E2 = np.array(E2) - E2[0]
+
+plt.figure(figsize=(6, 4))
+plt.plot(range(len(E)), E, '-', color='orange', label='Relaxation of mostly Cu slab')
+plt.plot(range(len(E2)), E2, 'b-', label='Relaxation of mostly Pd slab')
+plt.xlabel('Relaxation step')
+plt.ylabel('Energy (eV/atom)')
+plt.legend(loc='best', fontsize=10)
+plt.tight_layout()
+plt.savefig('./images/DFT-2x2-relaxations.png')
+#+END_SRC
+
+#+RESULTS:
+
+[[./images/DFT-2x2-relaxations.png]]
