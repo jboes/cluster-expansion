@@ -1482,7 +1482,7 @@ fcc = FaceCenteredCubic('Cu',
                         directions=[[0, 1, 1],
                                     [1, 0, 1],
                                     [1, 1, 0]],
-                        latticeconstant=3.634)
+                        latticeconstant=3.7865)
 VOL = fcc.get_volume() / len(fcc)
 
 base = BodyCenteredCubic('Cu',
@@ -1501,7 +1501,7 @@ base.set_cell(f*cell0, scale_atoms=True)
 natoms = [a.index for a in base]
 metals = ['Cu', 'Pd']
 
-with connect('traj/unique-bulk-bcc.db') as db:
+with connect('traj/unique-bulk-bcc-2.db') as db:
     nrgs = set()
     for i, c in enumerate(product(metals, repeat=len(natoms))):
 
@@ -1510,6 +1510,7 @@ with connect('traj/unique-bulk-bcc.db') as db:
             atoms0[s].symbol = c[j]
 
         atoms = Atoms.copy(atoms0)
+        from ase.visualize import view
         atoms.set_calculator(EMT())
         nrg = round(atoms.get_potential_energy(), 3)
 
