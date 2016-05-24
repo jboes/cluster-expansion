@@ -888,33 +888,37 @@ for M, a, factors in basis:
 #+BEGIN_SRC python :results silent
 from jasp import *
 from ase.io import read
+from ase.visualize import view
 JASPRC['queue.walltime'] = '24:00:00'
 JASPRC['queue.ppn'] = 4
 
-images = read('traj/unique-bulk.db')
+images = read('traj/unique-bulk-bcc.db', ':')
 
 f =  3.634 / 3.939
 delta = np.array([[f, 0, 0],
                   [0, f, 0],
                   [0, 0, f]])
 
-for i, atoms in enumerate(images):
-    cell0 = atoms.get_cell()
-    atoms.set_cell(np.dot(cell0, delta), scale_atoms=True)
+atoms = images[0]
+view(atoms)
 
-    wd = 'DFT/bulk=fcc/lattice=3.634/config={0}'.format(i)
+# for i, atoms in enumerate(images):
+#     cell0 = atoms.get_cell()
+#     atoms.set_cell(np.dot(cell0, delta), scale_atoms=True)
 
-    with jasp(wd,
-              xc='PBE',
-              encut=400,
-              kpts=(int(12/3), int(12/3), int(12/3)),
-              ibrion=-1,
-              atoms=atoms) as calc:
-        try:
-            calc.get_required_memory()
-            calc.calculate()
-        except(VaspSubmitted, VaspQueued):
-            pass
+#     wd = 'DFT/bulk=fcc/lattice=3.634/config={0}'.format(i)
+
+#     with jasp(wd,
+#               xc='PBE',
+#               encut=400,
+#               kpts=(int(12/3), int(12/3), int(12/3)),
+#               ibrion=-1,
+#               atoms=atoms) as calc:
+#         try:
+#             calc.get_required_memory()
+#             calc.calculate()
+#         except(VaspSubmitted, VaspQueued):
+#             pass
 #+END_SRC
 
 ** 3 free-layer configurations
@@ -4734,7 +4738,7 @@ os.chmod(name, 0755)
 #+RESULTS: 
 : bpsh 30 -m ./run-T800-Pd50.py
 
-* Semi-Grand Canonical
+** Semi-Grand Canonical
 TODO: This is unfinished, but will likely not lead anywhere useful.
 
 #+BEGIN_SRC python
@@ -7279,7 +7283,8 @@ TODO:
 
 
 
-* Determine time requirements on calculations with full relaxation
+* Presentation work
+** Determine time requirements on calculations with full relaxation
 #+BEGIN_SRC python
 from timeit import timeit
 import matplotlib.pyplot as plt
@@ -7353,7 +7358,7 @@ plt.savefig('images/amp-calc-time-bulk.png')
 
 [[./images/amp-calc-time-bulk.png]]
 
-* Analysis of ATAT CuPd
+** Analysis of ATAT CuPd
 Needed to restart the calculations for 
 
 #+BEGIN_SRC python
@@ -7399,8 +7404,7 @@ for d in db.select():
     db.update(d.id, nnrg=float(energy))
 #+END_SRC
 
-
-* Evidence of NN accuracy using second NN
+** Evidence of NN accuracy using second NN
 #+BEGIN_SRC python
 import numpy as np
 from ase.db import connect
@@ -7432,8 +7436,7 @@ plt.savefig('./images/MC-energy-diff-NN.png')
 
 [[./images/MC-energy-diff-NN.png]]
 
-
-* Evidence of NN accuracy using DFT
+** Evidence of NN accuracy using DFT
 #+BEGIN_SRC python
 from ase.db import connect
 from ase.visualize import view
@@ -7453,8 +7456,7 @@ for d in db.select():
     db.update(d.id, nrg=float(energy))
 #+END_SRC
 
-
-* Relaxation energies for Cu and Pd structures
+** Relaxation energies for Cu and Pd structures
 #+BEGIN_SRC python
 from ase.db import connect
 from ase.visualize import view
@@ -7488,3 +7490,378 @@ plt.savefig('./images/DFT-2x2-relaxations.png')
 #+RESULTS:
 
 [[./images/DFT-2x2-relaxations.png]]
+
+* Predictions in bulk CuPd
+The majority of work previous to this point has shown that there is /likely/ no way to correctly predict top layer segregation behavior with the GGA-PBE functional.
+
+In an attempt to salvage some of the NN, we will return to fitting to the bulk bcc to fcc phase transition to produce a first principles phase diagram.
+
+This section is meant to be *dynamic*, i.e. the code will be continuously updated as new fits become available.
+
+** Fit to BCT transition pathway from FCC to BCC
+#+caption: BCT pathway from FCC to BCC unit cell. Labels other than DFT indicate various NN frameworks used for the fit.
+#+label: fig-bct-path
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/bct-path.png]]
+
+#+BEGIN_SRC python
+import numpy as np
+import matplotlib.pyplot as plt
+from amp import Amp
+from ase.db import connect
+from glob import glob
+
+db = connect('data-pathway.db')
+
+col = ['k', 'b', 'g', 'm', 'r']
+framework = [6, 7, 8, 9]
+E = []
+
+ca, images = [], []
+for d in db.select('gga=None'):
+    atoms = db.get_atoms(d.id)
+
+    ca += [d.ca]
+    nrg = [d.total_energy / d.natoms]
+
+    for n in framework:
+        calc = Amp('./networks/db6/40-{0}-{0}-1'.format(n))
+        atoms.set_calculator(calc)
+        nrg += [atoms.get_potential_energy() / d.natoms]
+
+    E += [nrg]
+
+E = np.array(E).T
+
+fig, ax = plt.subplots(figsize=(6, 4))
+for i, y in enumerate(E):
+    ax.plot(ca, y, color=col[i])
+
+ax.set_xlabel('c/a ratio')
+ax.set_ylabel('Potential energy (eV/atom)')
+ax.set_xlim(ca[0], ca[-1])
+
+ax.annotate('bcc', xy=(ca[0], E[0][0]),
+            xytext=(ca[0]+0.05, E[0][0]-0.01),
+            arrowprops=dict(arrowstyle="->",
+                            connectionstyle="arc3"),
+            size=20,
+        )
+ax.annotate('fcc', xy=(ca[-1], E[0][-1]),
+            xytext=(ca[-1]-0.1, E[0][-1]+0.001),
+            arrowprops=dict(arrowstyle="->",
+                            connectionstyle="arc3"),
+            size=20,
+        )
+
+ax.legend(labels=['DFT'] + framework, loc='best')
+plt.tight_layout()
+plt.savefig('./images/bct-path.png')
+#+END_SRC
+
+#+RESULTS:
+
+** 3D BCT space around FCC and BCC phase transition
+#+caption: 3D Minimum energy pathway of fcc to bcc transition through bct geometry space.
+#+label: fig-bct-surface
+#+attr_latex: :width 4in :placement [H]
+#+attr_org: :width 400
+[[./images/bct-surface.png]]
+
+*** Creating the data for 3D map of BCT space
+First, we take the /a/ parameters from the converged PBE calculations. The /ca/ parameter is defined as 1.0 and sqrt(2) for bcc and fcc, respectively. Then, we take these points and generate a mesh around them. Too visualize the region around the fcc and bcc phase, we also expand the mesh to include 1/4th of the difference between the /a/ and /ca/ parameters on either side.
+
+#+BEGIN_SRC python
+from ase.lattice.tetragonal import CenteredTetragonal as bct
+import numpy as np
+from jasp import *
+from jbtools.gilgamesh import makedb
+JASPRC['queue.walltime'] = '24:00:00'
+JASPRC['queue.mem'] = '1GB'
+
+# Configuration '3' for fcc
+with jasp('DFT/bulk=fcc/config=3/xc=PBE/gga=None') as calc:
+    atoms = calc.get_atoms()
+    cell = atoms.get_cell()
+
+# This is the 'a' parameter from the calculation
+afcc = np.linalg.norm(cell[0])
+
+# Configuration '3' for bcc i.e. B2
+with jasp('DFT/bulk=bcc/config=3/xc=PBE/gga=None') as calc:
+    atoms = calc.get_atoms()
+    cell = atoms.get_cell()
+
+# This is the 'a' parameter from the calculation
+abcc = np.linalg.norm(cell[0])
+
+da = abcc - afcc
+a0 = np.linspace(afcc - da/4., abcc + da/4., 31)
+
+dca = np.sqrt(2) - 1
+ca0 = np.linspace(1 - dca/4., np.sqrt(2) + dca/4., 31)
+
+for a in a0:
+    for ca in ca0:
+
+        # Generate structure based on sample points
+        atoms = bct('Cu', latticeconstant={'a': a, 'c/a': ca})
+        atoms[1].symbol = 'Pd'
+
+        wd = 'DFT/bulk=bct/config=3/pathway=False/a={}/ca={}'.format(a, ca)
+
+        with jasp(wd,
+                  xc='PBE',
+                  encut=400,
+                  kpts=(12, 12, 12),
+                  nsw=0,
+                  ediff=1e-6,
+                  atoms=atoms) as calc:
+            try:
+                calc.calculate()
+                makedb(calc,
+                       dbname='/home-research/jboes/research/cluster-expansion/temp/bct.db')
+            except(VaspQueued, VaspSubmitted):
+                pass
+#+END_SRC
+
+*** BCT phase space
+#+BEGIN_SRC python
+from ase.db import connect
+from mpl_toolkits.mplot3d import axes3d
+import matplotlib.pyplot as plt
+from matplotlib import cm
+import numpy as np
+from ase.lattice.tetragonal import CenteredTetragonal as bct
+from jasp import *
+from jbtools.gilgamesh import makedb
+JASPRC['queue.walltime'] = '24:00:00'
+JASPRC['queue.ppn'] = 4
+
+db = connect('temp/bct.db')
+
+A, C = [], []
+for d in db.select('pathway=False'):
+    A += [d.a]
+    C += [d.ca]
+
+A = np.unique(A)
+C = np.unique(C)
+
+X, Y = np.meshgrid(A, C)
+
+Z = np.zeros(X.shape)
+for i, a in enumerate(A):
+    for j, c in enumerate(C):
+	Z[j][i] = db.get(['a={}'.format(a),
+			  'ca={}'.format(c)]).energy
+
+
+mZ = []
+for i, c in enumerate(C[5:-5]):
+    data = Z[i+5, :]
+    j = data.tolist().index(min(data))
+    mZ += [[A[j], c, min(data)]]
+
+mZ = np.array(mZ).T
+
+# Trim energies above this threshhold
+rng = [-9.2, -9.0]
+drng = (rng[1] - rng[0]) / 4.
+Z[Z > rng[1]] = np.nan
+
+fig = plt.figure(figsize=(8, 6))
+ax = fig.gca(projection='3d')
+
+cset = ax.contourf(X, Y, Z,
+                   zdir='z',
+                   offset=rng[0] - drng,
+                   cmap=cm.autumn,
+                   vmin=rng[0],
+                   vmax=rng[1])
+
+ax.plot_surface(X, Y, Z,
+                rstride=1,
+                cstride=1,
+                cmap=cm.autumn,
+                linewidth=0,
+                vmin=rng[0] - drng,
+                vmax=rng[1] + drng)
+
+ax.scatter(mZ[0][1:-1], mZ[1][1:-1], mZ[2][1:-1], c='k')
+
+ax.plot([A[5], A[5]], [C[-5], C[-5]], [rng[0]-drng, mZ[2][-1]], 'go-', zorder=99)
+ax.text(A[5], C[-5], mZ[2][-1]+drng, 'fcc', color='g', zorder=99, size='large')
+
+ax.plot([A[-5], A[-5]], [C[5], C[5]], [rng[0]-drng, mZ[2][0]], 'bo-', zorder=99)
+ax.text(A[-5], C[5], mZ[2][0]+drng, 'bcc', color='b', zorder=99, size='large')
+
+ax.set_xlabel('a')
+ax.set_xlim(min(A), max(A))
+ax.set_ylabel('c/a')
+ax.set_ylim(min(C), max(C))
+ax.set_zlabel('Potential energy (eV)')
+ax.set_zlim(rng[0]-drng, rng[1]+drng)
+plt.tight_layout()
+plt.savefig('./images/bct-phase.png')
+
+for i, ca in enumerate(mZ[1]):
+
+    atoms = bct('Cu', latticeconstant={'a': mZ[0][i], 'c/a': ca})
+    atoms[1].symbol = 'Pd'
+
+    wd = 'DFT/bulk=bct/config=3/pathway=True/ca={}'.format(ca)
+
+    with jasp(wd,
+              xc='PBE',
+              encut=400,
+              kpts=(12, 12, 12),
+              nsw=10,
+              ibrion=2,
+              isif=7,
+              ediff=1e-6,
+              atoms=atoms) as calc:
+        try:
+            calc.get_required_memory()
+            atoms = calc.get_atoms()
+            nrg = atoms.get_potential_energy()
+	    makedb(calc,
+		   dbname='/home-research/jboes/research/cluster-expansion/temp/bct.db')
+        except(VaspQueued, VaspSubmitted):
+            pass
+#+END_SRC
+
+#+RESULTS:
+
+[[./images/bct-phase.png]]
+
+
+*** Relaxed pathway data
+In order to create a higher resolution image of the minimum energy pathways through BCT space, we now relax the lowest energy /ca/ configurations in _volume only_.
+
+* Alternative PP for predicting segregation
+PBE is known to incorrectly predict the dilute limit segregation behavior, and this is carried over to the non-dilute limit as well.
+
+Here we explore other pseudo-potentials predictions of dilute limit segregation for CuPd.
+
+These studies are performed using the new vasp.py, which is different enough from jasp that these calculations should probably be kept separate.
+
+#+BEGIN_SRC python
+from vasp import Vasp
+from vasp.vasprc import VASPRC
+from ase.lattice.cubic import FaceCenteredCubic as fcc
+VASPRC['queue.ppn'] = 4
+VASPRC['queue.walltime'] = '24:00:00'
+
+xcs = ['lda', 'pbe', 'revpbe', 'rpbe', 'am05', 'pbesol', 'beef-vdw']
+elements = ['Cu', 'Pd']
+
+images, wds = [], []
+for e1 in elements:
+
+    atoms = fcc(e1,
+                directions=[[0, 1, 1],
+                            [1, 0, 1],
+                            [1, 1, 0]],
+                size=(3, 3, 3))
+
+    for e2 in elements:
+        atoms[0].symbol = e2
+        images += [atoms]
+
+        wds += ['DFT/type=dilute-limit/bulk={}@{}'.format(e1, e2)]
+
+calcs = [Vasp(wds[i] + '/xc={}'.format(xc),
+              xc=xc,
+              kpts=(3, 3, 3),
+              encut=400,
+              ibrion=2,
+              ediff=1e-6,
+              isif=3,
+              nsw=30,
+              atoms=atoms)
+         for xc in xcs
+         for i, atoms in enumerate(images)]
+
+for calc in calcs:
+     calc.set_memory()
+     calc.calculate()
+#+END_SRC
+
+#+BEGIN_SRC python
+from vasp.vasprc import VASPRC
+from vasp import Vasp
+from ase.lattice.surface import fcc111
+from ase.constraints import FixAtoms
+VASPRC['queue.ppn'] = 8
+
+xcs = ['lda', 'pbe', 'revpbe', 'rpbe', 'am05', 'pbesol', 'beef-vdw']
+elements = ['Cu', 'Pd']
+
+calcs = []
+for e1 in elements:
+    for xc in xcs:
+
+        # Determine bulk lattice constant
+        calc = Vasp('DFT/type=dilute-limit/bulk={0}@{0}/xc={1}'.format(e1, xc))
+        bulk = calc.get_atoms()
+        a = (4 * bulk.get_volume() / len(bulk))**(1 / 3.)
+
+        # Create surface image
+        atoms = fcc111(e1, size=(3, 3, 5), vacuum=6.0, a=a)
+        constraint = FixAtoms(mask=[atom.tag > 3 for atom in atoms])
+        atoms.set_constraint(constraint)
+
+        # Introduce impurities
+        for e2 in elements:
+            atoms[40].symbol = e2
+
+            wds = 'DFT/type=dilute-limit/surf={}@{}/xc={}'.format(e1, e2, xc)
+	    calcs += [Vasp(wds,
+			   xc=xc,
+			   kpts=(3, 3, 1),
+			   encut=400,
+			   ibrion=2,
+			   ediff=1e-5,
+			   isif=2,
+			   nsw=30,
+			   atoms=atoms)]
+
+for calc in calcs:
+     calc.set_memory()
+     calc.calculate()
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=lda submitted: 1395755.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=lda submitted: 1395756.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=pbe submitted: 1395757.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=pbe submitted: 1395758.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=revpbe submitted: 1395759.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=revpbe submitted: 1395760.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=rpbe submitted: 1395761.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=rpbe submitted: 1395762.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=am05 submitted: 1395763.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=am05 submitted: 1395764.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=pbesol submitted: 1395765.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=pbesol submitted: 1395766.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=beef-vdw submitted: 1395767.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=beef-vdw submitted: 1395768.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=lda submitted: 1395769.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=lda submitted: 1395770.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=pbe submitted: 1395771.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=pbe submitted: 1395772.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=revpbe submitted: 1395773.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=revpbe submitted: 1395774.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=rpbe submitted: 1395775.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=rpbe submitted: 1395776.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=am05 submitted: 1395777.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=am05 submitted: 1395778.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=pbesol submitted: 1395779.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=pbesol submitted: 1395780.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=beef-vdw submitted: 1395781.gilgamesh.cheme.cmu.edu
+/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=beef-vdw submitted: 1395782.gilgamesh.cheme.cmu.edu
+#+end_example
+
