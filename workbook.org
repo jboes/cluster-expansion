@@ -1,4 +1,4 @@
-z* ATAT
+* ATAT
 This section is designated for all ATAT related calculation and analysis.
 
 ** Calculations
@@ -7919,9 +7919,6 @@ import numpy as np
 from amp import Amp
 from amp.descriptor import Behler
 from amp.regression import NeuralNetwork
-    
-# 
-
 
 #     n = db.count()
 #     n_train = int(round(n * 0.9))
@@ -7964,6 +7961,43 @@ calc.train(images,
            extend_variables=True)
 #+END_SRC
 
+#+BEGIN_SRC python
+from amp import Amp
+from ase.io import read
+from ase.db import connect 
+
+images = read('networks/db0-bulk/data.db', ':')
+print('{} calculations total'.format(len(images)))
+
+calc = Amp('networks/db0-bulk/40-10-10-1/parameters-checkpoint-1.json')
+
+db = connect('networks/db0-bulk/data.db')
+print('Starting iteration')
+for i, atoms in enumerate(images):
+    if not i+1 % 1000:
+	print('Image:', i+i)
+
+    atoms.set_calculator(calc)
+    nrg = atoms.get_potential_energy()
+
+    db.update(i+1, nnE=nrg)
+#+END_SRC
+
 #+RESULTS: 
-: 608f4877-c813-41db-b63e-c11e6de69acf
+: 29055 calculations total
+: Starting iteration
+: Traceback (most recent call last):
+:   File "/home-research/jboes/research/cluster-expansion/py-56745Jyl", line 19, in <module>
+:     db.update(i+1, nnE=nrg)
+:   File "/home-research/jboes/python/ase/ase/db/core.py", line 140, in new_method
+:     return method(self, *args, **kwargs)
+:   File "/home-research/jboes/python/ase/ase/db/core.py", line 442, in update
+:     add_key_value_pairs)
+:   File "/home-research/jboes/python/ase/ase/db/sqlite.py", line 559, in _update
+:     rows = [self._get_row(id) for id in ids]
+:   File "/home-research/jboes/python/ase/ase/db/sqlite.py", line 316, in _get_row
+:     values = self._old2new(values)
+:   File "/home-research/jboes/python/ase/ase/db/sqlite.py", line 369, in _old2new
+:     assert self.version >= 4, 'Your db-file is too old!'
+: AssertionError: Your db-file is too old!
 
