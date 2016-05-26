@@ -885,7 +885,7 @@ for M, a, factors in basis:
 #+END_SRC
 
 *** bulk
-#+BEGIN_SRC python :results silent
+#+BEGIN_SRC python
 from jasp import *
 from ase.io import read
 from ase.visualize import view
@@ -894,32 +894,36 @@ JASPRC['queue.ppn'] = 4
 
 images = read('traj/unique-bulk-bcc.db', ':')
 
-f =  3.634 / 3.939
+lat = abs(2.890 - 3.012)/2. + 2.890
+print lat
+f =  lat / 2.8843
+print f
 delta = np.array([[f, 0, 0],
                   [0, f, 0],
                   [0, 0, f]])
 
-atoms = images[0]
-view(atoms)
+for i, atoms in enumerate(images):
+    cell0 = atoms.get_cell()
+    atoms.set_cell(np.dot(cell0, delta), scale_atoms=True)
 
-# for i, atoms in enumerate(images):
-#     cell0 = atoms.get_cell()
-#     atoms.set_cell(np.dot(cell0, delta), scale_atoms=True)
+    wd = 'DFT/bulk=bcc/lattice={:.3f}/config={}'.format(lat, i)
 
-#     wd = 'DFT/bulk=fcc/lattice=3.634/config={0}'.format(i)
-
-#     with jasp(wd,
-#               xc='PBE',
-#               encut=400,
-#               kpts=(int(12/3), int(12/3), int(12/3)),
-#               ibrion=-1,
-#               atoms=atoms) as calc:
-#         try:
-#             calc.get_required_memory()
-#             calc.calculate()
-#         except(VaspSubmitted, VaspQueued):
-#             pass
+    # with jasp(wd,
+    #           xc='PBE',
+    #           encut=400,
+    #           kpts=(int(12/3), int(12/3), int(12/3)),
+    #           ibrion=-1,
+    #           atoms=atoms) as calc:
+    #     try:
+    #         calc.get_required_memory()
+    #         calc.calculate()
+    #     except(VaspSubmitted, VaspQueued):
+    #         pass
 #+END_SRC
+
+#+RESULTS:
+: 2.951
+: 1.02312519502
 
 ** 3 free-layer configurations
 #+BEGIN_SRC python
@@ -7865,3 +7869,43 @@ for calc in calcs:
 /home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=beef-vdw submitted: 1395782.gilgamesh.cheme.cmu.edu
 #+end_example
 
+
+* Constructing a db for bulk calculations ONLY
+
+#+BEGIN_SRC python
+from ase.db import connect
+from jasp.utils import vasp_p
+from glob import iglob
+from jasp import *
+from jbtools.gilgamesh import makedb, compile_trajectory
+from ase.io.trajectory import Trajectory
+import sys
+import os
+
+db = '~/research/cluster-expansion/database/db0-bulk.db'
+
+if os.path.exists(db):
+    os.unlink(db)
+
+cwd = os.getcwd()
+
+for f in iglob('DFT/bulk=*'):
+    for r, d, f in os.walk(f):
+        if 'OUTCAR' in f and 'XDATCAR' in f and 'error' not in f:
+            print r
+            try:
+                with jasp(r) as calc:
+
+                    compile_trajectory(calc)
+                    traj = Trajectory('out.traj')
+                    n = len(traj)
+
+                    for i, atoms in enumerate(traj):
+                        makedb(calc,
+                               atoms=atoms,
+                               dbname=db,
+                               keys={'traj': int(n-i-1)})
+            except:
+                print(sys.exc_info()[0], r)
+                os.chdir(cwd)
+#+END_SRC
