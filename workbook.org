@@ -1,4 +1,4 @@
-* ATAT
+z* ATAT
 This section is designated for all ATAT related calculation and analysis.
 
 ** Calculations
@@ -7872,6 +7872,7 @@ for calc in calcs:
 
 * Constructing a db for bulk calculations ONLY
 
+** Assemble all calculations into one database
 #+BEGIN_SRC python
 from ase.db import connect
 from jasp.utils import vasp_p
@@ -7909,3 +7910,60 @@ for f in iglob('DFT/bulk=*'):
                 print(sys.exc_info()[0], r)
                 os.chdir(cwd)
 #+END_SRC
+
+#+BEGIN_SRC python
+from ase.db import connect
+import os
+import random
+import numpy as np
+from amp import Amp
+from amp.descriptor import Behler
+from amp.regression import NeuralNetwork
+    
+# 
+
+
+#     n = db.count()
+#     n_train = int(round(n * 0.9))
+#     ids =  np.array(range(n)) + 1
+
+#     # This will sudo-randomly select 10% of the calculations
+#     # Which is useful for reproducing our results.
+#     print('Generating random samples')
+#     random.seed(256)
+#     train_samples = random.sample(ids, n_train)
+#     valid_samples = set(ids) - set(train_samples)
+
+#     print('Updating database')
+#     db.update(ids=train_samples, train_set=True)
+#     db.update(ids=valid_samples, train_set=False)
+
+#     print('Collecting training data')
+
+os.chdir('networks/db0-bulk/')
+with connect('data.db') as db:
+    images = []
+    for d in db.select('train_set=True'):
+	atoms = db.get_atoms(d.id)
+	del atoms.constraints
+	images += [atoms]
+
+os.chdir('40-10-10-1')
+
+print('Begin training')
+calc = Amp(label="./",
+           dblabel="../",
+           descriptor=Behler(cutoff=7.0),
+           regression=NeuralNetwork(hiddenlayers=(2, 10)))
+
+calc.train(images,
+           data_format='db',
+           cores=8,
+           energy_goal=0.0005,
+           force_goal=None,
+           extend_variables=True)
+#+END_SRC
+
+#+RESULTS: 
+: 608f4877-c813-41db-b63e-c11e6de69acf
+
