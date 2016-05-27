@@ -16,3 +16,4 @@ traj/
 # Ignore large database
 MC/
 MC-slab/
+database/

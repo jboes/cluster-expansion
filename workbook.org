@@ -7751,6 +7751,7 @@ Here we explore other pseudo-potentials predictions of dilute limit segregation 
 
 These studies are performed using the new vasp.py, which is different enough from jasp that these calculations should probably be kept separate.
 
+** Bulk calculations
 #+BEGIN_SRC python
 from vasp import Vasp
 from vasp.vasprc import VASPRC
@@ -7793,6 +7794,7 @@ for calc in calcs:
      calc.calculate()
 #+END_SRC
 
+** Surf calculations
 #+BEGIN_SRC python
 from vasp.vasprc import VASPRC
 from vasp import Vasp
@@ -7837,42 +7839,71 @@ for calc in calcs:
      calc.calculate()
 #+END_SRC
 
+** Calculations
+E = dE^{Surf} - dE^{Bulk}
+dE^{X} = E^{X}_{impurity} - E^{X}_{clean}
+
+#+BEGIN_SRC python
+from ase.db import connect
+from vasp import Vasp
+from ase.visualize import view
+
+#db = connect('')
+xcs = ['lda']# , 'pbe', 'revpbe', 'rpbe', 'pbesol', 'beef-vdw']
+elements = ['Pd', 'Cu']
+
+images = []
+E = {}
+for e2 in elements:
+    E[e2] = {}
+    for xc in xcs:
+        dE = []
+        for s in ['surf', 'bulk']:
+            
+	    for e1 in elements:
+                wd = 'DFT/type=dilute-limit/{}={}@{}/xc={}'.format(s, e1, e2, xc)
+                calc = Vasp(wd)
+                if e1 == e2:
+                    cl = calc.potential_energy
+                    images += [calc.get_atoms()]
+                else:
+                    im = calc.potential_energy
+                    images += [calc.get_atoms()]
+
+            dE += [im - cl]
+        E[e2][xc] = dE[0] - dE[1]
+
+atoms = images[1]
+view(atoms)
+#+END_SRC
+
 #+RESULTS:
-#+begin_example
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=lda submitted: 1395755.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=lda submitted: 1395756.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=pbe submitted: 1395757.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=pbe submitted: 1395758.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=revpbe submitted: 1395759.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=revpbe submitted: 1395760.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=rpbe submitted: 1395761.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=rpbe submitted: 1395762.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=am05 submitted: 1395763.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=am05 submitted: 1395764.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=pbesol submitted: 1395765.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=pbesol submitted: 1395766.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=beef-vdw submitted: 1395767.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Pd/xc=beef-vdw submitted: 1395768.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=lda submitted: 1395769.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=lda submitted: 1395770.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=pbe submitted: 1395771.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=pbe submitted: 1395772.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=revpbe submitted: 1395773.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=revpbe submitted: 1395774.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=rpbe submitted: 1395775.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=rpbe submitted: 1395776.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=am05 submitted: 1395777.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=am05 submitted: 1395778.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=pbesol submitted: 1395779.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=pbesol submitted: 1395780.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Cu/xc=beef-vdw submitted: 1395781.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=beef-vdw submitted: 1395782.gilgamesh.cheme.cmu.edu
-#+end_example
+
+
+Traceback (most recent call last):
+  File "<stdin>", line 25, in <module>
+  File "/home-research/jboes/python/ase/ase/visualize/__init__.py", line 49, in view
+    write(filename, atoms, format=format)
+  File "/home-research/jboes/python/ase/ase/io/formats.py", line 258, in write
+    io.write(filename, images, **kwargs)
+  File "/home-research/jboes/python/ase/ase/io/trajectory.py", line 310, in write_traj
+    trj.write(atoms)
+  File "/home-research/jboes/python/ase/ase/io/trajectory.py", line 184, in write
+    c.write(prop, x)
+  File "/home-research/jboes/python/ase/ase/io/aff.py", line 257, in write
+    self.fill(value)
+  File "/home-research/jboes/python/ase/ase/io/aff.py", line 195, in fill
+    a.tofile(self.fd)
+ValueError: cannot write object arrays to a file in binary mode
 
 
 * Constructing a db for bulk calculations ONLY
 
 ** Assemble all calculations into one database
+The ATAT calculations are giving me trouble and need to be pruned.
+
+This will takes some time, so we construct a database without them for now.
+
 #+BEGIN_SRC python
 from ase.db import connect
 from jasp.utils import vasp_p
@@ -7882,36 +7913,58 @@ from jbtools.gilgamesh import makedb, compile_trajectory
 from ase.io.trajectory import Trajectory
 import sys
 import os
+JASPRC['queue.ppn'] = 8
 
-db = '~/research/cluster-expansion/database/db0-bulk.db'
+db = '~/research/cluster-expansion/networks/db0-bulk.db'
 
 if os.path.exists(db):
     os.unlink(db)
 
 cwd = os.getcwd()
 
-for f in iglob('DFT/bulk=*'):
-    # for r, d, f in os.walk(f):
-    #     if 'OUTCAR' in f and 'XDATCAR' in f and 'error' not in f:
-    #         print r
-    #         try:
-    #             with jasp(r) as calc:
+for f in iglob('DFT/bulk=*/lattice=*/'):
+    print(f)
+    for r, d, f in os.walk(f):
+        if 'OUTCAR' in f and 'XDATCAR' in f and 'error' not in f:
+            print r
+            try:
+                with jasp(r) as calc:
 
-    #                 compile_trajectory(calc)
-    #                 traj = Trajectory('out.traj')
-    #                 n = len(traj)
+                    compile_trajectory(calc)
+                    traj = Trajectory('out.traj')
+                    n = len(traj)
 
-    #                 for i, atoms in enumerate(traj):
-    #                     makedb(calc,
-    #                            atoms=atoms,
-    #                            dbname=db,
-    #                            keys={'traj': int(n-i-1)})
-    #         except:
-    #             print(sys.exc_info()[0], r)
-    #             os.chdir(cwd)
+                    for i, atoms in enumerate(traj):
+                        makedb(calc,
+                               atoms=atoms,
+                               dbname=db,
+                               keys={'traj': int(n-i-1)})
+            except:
+                print(sys.exc_info()[0], r)
+                os.chdir(cwd)
+
+for r, d, f in os.walk('DFT/bulk=bct/'):
+    if 'OUTCAR' in f and 'XDATCAR' in f and 'error' not in f:
+	print r
+	try:
+	    with jasp(r) as calc:
+
+		compile_trajectory(calc)
+		traj = Trajectory('out.traj')
+		n = len(traj)
+
+		for i, atoms in enumerate(traj):
+		    makedb(calc,
+			   atoms=atoms,
+			   dbname=db,
+			   keys={'traj': int(n-i-1)})
+	except:
+	    print(sys.exc_info()[0], r)
+	    os.chdir(cwd)
 #+END_SRC
 
-#+RESULTS:
+
+** Convert a percentage to train_set
 
 #+BEGIN_SRC python
 from ase.db import connect
@@ -8013,7 +8066,6 @@ dE = np.array(dE)
 ID = np.array(ID)
 print len(ID[dE > 100.])
 outliers = ID[dE > 100.]
-
 
 plt.figure(figsize=(6, 4))
 plt.plot(ID, dE, 'bo')
