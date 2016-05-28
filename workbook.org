@@ -7900,6 +7900,8 @@ ValueError: cannot write object arrays to a file in binary mode
 * Constructing a db for bulk calculations ONLY
 
 ** Assemble all calculations into one database
+This pull all of the bulk calculations into a single master database.
+
 The ATAT calculations are giving me trouble and need to be pruned.
 
 This will takes some time, so we construct a database without them for now.
@@ -7915,14 +7917,14 @@ import sys
 import os
 JASPRC['queue.ppn'] = 8
 
-db = '~/research/cluster-expansion/networks/db0-bulk.db'
+db = '~/research/cluster-expansion/database/db0-bulk.db'
 
 if os.path.exists(db):
     os.unlink(db)
 
 cwd = os.getcwd()
 
-for f in iglob('DFT/bulk=*/lattice=*/'):
+for f in iglob('DFT/bulk=*/'):
     print(f)
     for r, d, f in os.walk(f):
         if 'OUTCAR' in f and 'XDATCAR' in f and 'error' not in f:
@@ -7942,29 +7944,50 @@ for f in iglob('DFT/bulk=*/lattice=*/'):
             except:
                 print(sys.exc_info()[0], r)
                 os.chdir(cwd)
-
-for r, d, f in os.walk('DFT/bulk=bct/'):
-    if 'OUTCAR' in f and 'XDATCAR' in f and 'error' not in f:
-	print r
-	try:
-	    with jasp(r) as calc:
-
-		compile_trajectory(calc)
-		traj = Trajectory('out.traj')
-		n = len(traj)
-
-		for i, atoms in enumerate(traj):
-		    makedb(calc,
-			   atoms=atoms,
-			   dbname=db,
-			   keys={'traj': int(n-i-1)})
-	except:
-	    print(sys.exc_info()[0], r)
-	    os.chdir(cwd)
 #+END_SRC
 
-
 ** Convert a percentage to train_set
+
+#+BEGIN_SRC python
+from ase.db import connect
+import os
+import random
+import numpy as np
+
+ids = []
+with connect('database/db0-bulk.db') as db:
+    for d in db.select():
+	if 'ATAT' not in d.key_value_pairs.keys():
+	    ids += [d.id]
+
+# This will sudo-randomly select 10% of the calculations
+# Which is useful for reproducing our results.
+print('Generating random samples')
+random.seed(256)
+n_train = int(round(len(ids) * 0.9))
+train_samples = random.sample(ids, n_train)
+valid_samples = set(ids) - set(train_samples)
+
+with connect('networks/db0-bulk/data.db') as db0:
+    print('Writing the training set')
+    for i in train_samples:
+        d = db.get(i)
+        keys = d.key_value_pairs
+        keys.update({'train_set': True})
+        db0.write(d, key_value_pairs=keys)
+
+    print('Writing the validation set')
+    for i in valid_samples:
+        d = db.get(i)
+        keys = d.key_value_pairs
+        keys.update({'train_set': False})
+        db0.write(d, key_value_pairs=keys)
+#+END_SRC
+
+#+RESULTS: 
+: Generating random samples
+: Writing the training set
+: Writing the validation set
 
 #+BEGIN_SRC python
 from ase.db import connect
