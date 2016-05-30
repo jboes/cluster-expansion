@@ -7947,6 +7947,7 @@ for f in iglob('DFT/bulk=*/'):
 #+END_SRC
 
 ** Convert a percentage to train_set
+10% of calculations need to be converted to training set calculations to predict overfitting.
 
 #+BEGIN_SRC python
 from ase.db import connect
@@ -7962,21 +7963,18 @@ with connect('database/db0-bulk.db') as db:
 
 # This will sudo-randomly select 10% of the calculations
 # Which is useful for reproducing our results.
-print('Generating random samples')
 random.seed(256)
 n_train = int(round(len(ids) * 0.9))
 train_samples = random.sample(ids, n_train)
 valid_samples = set(ids) - set(train_samples)
 
 with connect('networks/db0-bulk/data.db') as db0:
-    print('Writing the training set')
     for i in train_samples:
         d = db.get(i)
         keys = d.key_value_pairs
         keys.update({'train_set': True})
         db0.write(d, key_value_pairs=keys)
 
-    print('Writing the validation set')
     for i in valid_samples:
         d = db.get(i)
         keys = d.key_value_pairs
@@ -7984,11 +7982,9 @@ with connect('networks/db0-bulk/data.db') as db0:
         db0.write(d, key_value_pairs=keys)
 #+END_SRC
 
-#+RESULTS: 
-: Generating random samples
-: Writing the training set
-: Writing the validation set
+The update feature seems to end in an error at the moment. Currently, it is easier to use the code above to write and entirely new database than it is to use the update feature.
 
+DEPRECATED:
 #+BEGIN_SRC python
 from ase.db import connect
 import os
@@ -8003,17 +7999,16 @@ with connect('data.db') as db:
 
     # This will sudo-randomly select 10% of the calculations
     # Which is useful for reproducing our results.
-    print('Generating random samples')
     random.seed(256)
     train_samples = random.sample(ids, n_train)
     valid_samples = set(ids) - set(train_samples)
 
-    print('Updating database')
     db.update(ids=train_samples, train_set=True)
     db.update(ids=valid_samples, train_set=False)
-
-    print('Collecting training data')
 #+END_SRC
+
+** Training the NN
+This code initialize training of the NN for various
 
 #+BEGIN_SRC python
 from ase.db import connect
@@ -8030,47 +8025,59 @@ with connect('data.db') as db:
 	del atoms.constraints
 	images += [atoms]
 
-os.chdir('40-10-10-10-1')
+os.chdir('40-8-8-1')
 
 print('Begin training')
-calc = Amp(label="./",
-           dblabel="../",
-           descriptor=Behler(cutoff=7.0),
-           regression=NeuralNetwork(hiddenlayers=(3, 10)))
+# calc = Amp(label="./",
+#            dblabel="../",
+#            descriptor=Behler(cutoff=7.0),
+#            regression=NeuralNetwork(hiddenlayers=(2, 7)))
+
+calc = Amp(load='./initial-parameters.json',
+           label='./',
+           dblabel='../')
 
 calc.train(images,
            data_format='db',
-           cores=8,
-           energy_goal=0.0005,
+           cores=4,
+           energy_goal=0.001,
            force_goal=None,
            extend_variables=False)
 #+END_SRC
 
-#+RESULTS: 
-: 8bec8b22-c23d-48ee-8ab4-9c5c992ba959
+** Adding NN energies to database
+Again, it is simpler to create a new database than it is to update the existing database.
 
 #+BEGIN_SRC python
 from amp import Amp
 from ase.db import connect
 
-calc = Amp('networks/db0-bulk/40-10-10-1/parameters-checkpoint-1.json')
+calc = Amp('networks/db0-bulk/40-8-8-1/checkpoint-parameters.json')
+calc2 = Amp('networks/db0-bulk/40-7-7-1/checkpoint-parameters.json')
 
 db = connect('networks/db0-bulk/data.db')
-print('Starting iteration')
 with connect('temp/db0-bulk.db') as db0:
     for d in db.select():
         atoms = db.get_atoms(d.id)
 
 	atoms.set_calculator(calc)
 	nrg = atoms.get_potential_energy()
+
+	atoms.set_calculator(calc2)
+	dE = atoms.get_potential_energy() - nrg
+
         keys = d.key_value_pairs
-        keys.update({'nnE': nrg})
+        keys.update({'nnE': nrg, 'nndE': dE})
 
 	db0.write(d, key_value_pairs=keys)
 #+END_SRC
 
 #+RESULTS: 
-: Starting iteration
+: 09079bf2-edcb-4516-927b-37fce40a2306
+
+** Analysis of the results
+
+[[./images/db0-bulk-rmse.png]]
 
 #+BEGIN_SRC python
 from ase.db import connect
@@ -8085,13 +8092,22 @@ for d in db.select():
     dE += [abs(d.nnE - d.energy)]
     ID += [d.id]
 
+th = 0.1
 dE = np.array(dE)
 ID = np.array(ID)
-print len(ID[dE > 100.])
-outliers = ID[dE > 100.]
+outliers = ID[dE > th]
+print(len(outliers))
+RMSE = np.sqrt(sum(dE**2.) / len(dE))
 
-plt.figure(figsize=(6, 4))
-plt.plot(ID, dE, 'bo')
-plt.plot(ID[dE > 100.], dE[dE > 100.], 'ro', ms=5)
-#plt.show()
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.plot(range(len(dE)), dE, 'bo')
+ax.plot(ID[dE > th], dE[dE > th], 'ro', ms=5)
+ax.set_xlim([0, len(dE)])
+ax.text(1000, 0.2, '{:.3f}'.format(RMSE))
+plt.tight_layout()
+plt.savefig('./images/db0-bulk-rmse.png')
 #+END_SRC
+
+#+RESULTS:
+: 42
+
