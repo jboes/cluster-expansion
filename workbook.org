@@ -8119,3 +8119,90 @@ plt.savefig('./images/db0-bulk-rmse.png')
 #+RESULTS:
 : [ 1899 11855]
 
+
+* Surface calculations
+#+BEGIN_SRC python
+from itertools import product
+from ase.lattice.surface import fcc111
+from asap3 import EMT
+from ase import Atoms
+from ase.db import connect
+from ase.visualize import view
+
+atoms = fcc111('Cu', size=(2, 2, 5), vacuum=6.0, a=3.7865)
+natoms = [a.index for a in atoms if a.index > 11]
+metals = ['Cu', 'Pd']
+
+for i in [1, 2, 5, 6, 8, 11, 12, 15]:
+    atoms[i].symbol = 'Pd'
+
+nrgs = set()
+with connect('traj/unique-2x2-2layer.db') as db:
+    for i, c in enumerate(product(metals, repeat=len(natoms))):
+	atoms0 = Atoms.copy(atoms)
+	for j, s in enumerate(natoms):
+	    atoms0[s].symbol = c[j]
+
+	atoms = Atoms.copy(atoms0)
+	atoms.set_calculator(EMT())
+	nrg = round(atoms.get_potential_energy(), 6)
+	atoms.set_calculator(None)
+
+	if nrg not in nrgs:
+	    nrgs.add(nrg)
+	    db.write(atoms)
+#+END_SRC
+
+#+RESULTS:
+
+
+#+BEGIN_SRC python
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+from jasp import *
+from ase.constraints import FixAtoms
+from jbtools.gilgamesh import compile_trajectory, makedb
+from ase.io.trajectory import Trajectory
+from ase.visualize import view
+JASPRC['queue.ppn'] = 8
+JASPRC['queue.walltime'] = '24:00:00'
+
+db = connect('traj/unique-2x2-2layer.db')
+for d in db.select():
+
+    atoms = db.get_atoms(d.id)
+
+    constraint = FixAtoms(mask=[atom.tag > 3 for atom in atoms])
+    atoms.set_constraint(constraint)
+
+    wd = 'DFT/surf=fcc/host=CuPd/lattice=3.787/type=unique-2x2-2layer/cfg={}'.format(d.id)
+
+    with jasp(wd,
+    	      xc='PBE',
+    	      encut=400,
+    	      kpts=(6, 6, 1),
+    	      ibrion=2,
+    	      isif=2,
+    	      nsw=40,
+    	      ediff=1e-5,
+    	      atoms=atoms) as calc:
+
+    	calc.get_required_memory()
+    	atoms = calc.get_atoms()
+        nrg = atoms.get_potential_energy()
+
+    	compile_trajectory(calc)
+    	traj = Trajectory('out.traj')
+    	n = len(traj)
+
+    	for i, atoms in enumerate(traj):
+
+    	    makedb(calc,
+    		   atoms=atoms,
+    		   dbname='~/research/cluster-expansion/temp/unique-2x2-2layer.db',
+    		   keys={'traj': int(n-i-1), 'comp': float(get_composition(atoms, 'Pd'))})
+#+END_SRC
+
+#+RESULTS:
+
