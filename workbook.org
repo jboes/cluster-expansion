@@ -7751,16 +7751,6 @@ Here we explore other pseudo-potentials predictions of dilute limit segregation 
 
 These studies are performed using the new vasp.py, which is different enough from jasp that these calculations should probably be kept separate.
 
-#+BEGIN_SRC python
-from vasp import Vasp
-xcs = Vasp.xc_defaults.keys()
-
-print xcs
-#+END_SRC
-
-#+RESULTS:
-: ['optb86b-vdw', 'lda', 'm06l', 'hf', 'beef-vdw', 'optpbe-vdw', 'hse06', 'revtpss', 'pbe0', 'pbe', 'rpbe', 'tpss', 'optb88-vdw', 'hse03', 'vdw-df2', 'pbesol', 'b3lyp', 'revpbe', 'am05']
-
 ** Bulk calculations
 #+BEGIN_SRC python
 from vasp import Vasp
@@ -7771,7 +7761,8 @@ VASPRC['queue.ppn'] = 8
 VASPRC['queue.mem'] = '2GB'
 VASPRC['queue.walltime'] = '24:00:00'
 
-xcs = Vasp.xc_defaults.keys()
+hy = ['hf', 'hse03', 'hse06', 'pbe0', 'b3lyp']
+xcs = [xc for xc in Vasp.xc_defaults.keys() if xc not in hy]
 elements = ['Cu', 'Pd']
 
 calcs = []
@@ -7788,78 +7779,20 @@ for e1 in elements:
             atoms[0].symbol = e2
 
             wd = 'DFT/type=dilute-limit/bulk={}@{}/xc={}'.format(e2, e1, xc)
-            calcs += [Vasp(wd,
-                          xc=xc,
-                          kpts=[3, 3, 3],
-                          encut=400,
-                          ibrion=2,
-                          ediff=1e-6,
-                          isif=3,
-                          nsw=30,
-                          atoms=atoms)]
+            calc = Vasp(wd,
+                        xc=xc,
+                        kpts=[3, 3, 3],
+                        encut=400,
+                        ibrion=2,
+                        ediff=1e-6,
+                        isif=3,
+                        nsw=30,
+                        atoms=atoms)
 
-for calc in calcs:
-    calc.calculate()
+            atoms = calc.get_atoms()
+            nrg = atoms.get_potential_energy()
+            print('{:<12}: {}@{} {:>8}'.format(xc, e2, e1, nrg))
 #+END_SRC
-
-#+RESULTS:
-#+begin_example
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=optb86b-vdw Queued: 1398835.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=optb86b-vdw Queued: 1398836.gilgamesh.cheme.cmu.edu
-No calculation_required.
-No calculation_required.
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=m06l Queued: 1398837.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=m06l Queued: 1398838.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=hf Queued: 1398839.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=hf Queued: 1398840.gilgamesh.cheme.cmu.edu
-No calculation_required.
-No calculation_required.
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=optpbe-vdw Queued: 1398841.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=optpbe-vdw Queued: 1398842.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=hse06 submitted: 1398843.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=hse06 submitted: 1398844.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=revtpss submitted: 1398845.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=revtpss submitted: 1398846.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=pbe0 submitted: 1398847.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=pbe0 submitted: 1398848.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=tpss submitted: 1398849.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=tpss submitted: 1398850.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=optb88-vdw submitted: 1398851.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=optb88-vdw submitted: 1398852.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=hse03 submitted: 1398853.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=hse03 submitted: 1398854.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=vdw-df2 submitted: 1398855.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=vdw-df2 submitted: 1398856.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=b3lyp submitted: 1398857.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=b3lyp submitted: 1398858.gilgamesh.cheme.cmu.edu
-No calculation_required.
-No calculation_required.
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=optb86b-vdw submitted: 1398859.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=optb86b-vdw submitted: 1398860.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=m06l submitted: 1398861.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=m06l submitted: 1398862.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=hf submitted: 1398863.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=hf submitted: 1398864.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=optpbe-vdw submitted: 1398865.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=optpbe-vdw submitted: 1398866.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=hse06 submitted: 1398867.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=hse06 submitted: 1398868.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=revtpss submitted: 1398869.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=revtpss submitted: 1398870.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=pbe0 submitted: 1398871.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=pbe0 submitted: 1398872.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=tpss submitted: 1398873.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=tpss submitted: 1398874.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=optb88-vdw submitted: 1398875.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=optb88-vdw submitted: 1398876.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=hse03 submitted: 1398877.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=hse03 submitted: 1398878.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=vdw-df2 submitted: 1398879.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=vdw-df2 submitted: 1398880.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=b3lyp submitted: 1398881.gilgamesh.cheme.cmu.edu
-/home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=b3lyp submitted: 1398882.gilgamesh.cheme.cmu.edu
-No calculation_required.
-#+end_example
 
 ** Surf calculations
 #+BEGIN_SRC python
@@ -7870,7 +7803,7 @@ from ase.constraints import FixAtoms
 VASPRC['queue.ppn'] = 12
 VASPRC['queue.walltime'] = '24:00:00'
 
-hy = ['hf', 'hse03', 'hse06', 'pbe0', 'b3lyp']
+hy = ['hf', 'hse03', 'hse06', 'pbe0', 'b3lyp', 'am05', 'optb88-vdw', 'm06l']
 xcs = [xc for xc in Vasp.xc_defaults.keys() if xc not in hy]
 elements = ['Cu', 'Pd']
 
@@ -7903,7 +7836,9 @@ for e1 in elements:
                             nsw=60,
                             atoms=atoms)
                 calc.set_memory()
-                calc.calculate()
+                atoms = calc.get_atoms()
+                nrg = atoms.get_potential_energy()
+                print('{:<12}: {}@{} {:>8}'.format(xc, e2, e1, nrg))
             except(RuntimeError):
                 print(calc.directory)
 #+END_SRC
@@ -7912,14 +7847,14 @@ for e1 in elements:
 E = dE^{Surf} - dE^{Bulk}
 dE^{X} = E^{X}_{impurity} - E^{X}_{clean}
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results raw
 from ase.db import connect
 from vasp import Vasp
 from ase.visualize import view
 from jbtools.utils import get_composition
 
-#db = connect('')
-xcs = ['lda', 'pbe', 'revpbe', 'rpbe', 'pbesol', 'beef-vdw']
+hy = ['hf', 'hse03', 'hse06', 'pbe0', 'b3lyp', 'am05', 'optb88-vdw', 'm06l']
+xcs = [xc for xc in Vasp.xc_defaults.keys() if xc not in hy]
 elements = ['Pd', 'Cu']
 
 images = []
@@ -7945,44 +7880,27 @@ for xc in xcs:
 
             dE += [im - cl]
         E[xc] += [dE[0] - dE[1]]
-print('{:>19}{:>10}'.format('Cu', 'Pd'))
+print('|xc|Cu@Pd|Pd@Cu|')
+print('|-')
 for k, v in E.iteritems():
     ECu, EPd = v
-    print('{:>8}:{:>10.3f}{:>10.3f}'.format(k, ECu, EPd))
+    print('|{}|{:.3f}|{:.3f}|'.format(k, ECu, EPd))
 #+END_SRC
 
 #+RESULTS:
-:                  Cu        Pd
-:      lda:     0.071    -0.302
-: beef-vdw:     0.032    -0.163
-:      pbe:     0.075    -0.227
-:     rpbe:     0.082    -0.199
-:   pbesol:     0.069    -0.263
-:   revpbe:     0.079    -0.202
-
-#+BEGIN_SRC python
-import os
-from glob import glob
-
-files = glob('DFT/type=dilute-limit/*=*@*')
-
-temp = []
-temp2 = []
-for i, f in enumerate(files):
-    n = f.split('=')
-    e1, e2 = n.pop().split('@')
-    n2 = '@'.join([e2, e1])
-
-    t = '='.join(n + [str(i)])
-    temp2 += [t]
-    temp += ['='.join(n + [n2])]
-    os.rename(f, t)
-
-for i, t in enumerate(temp):
-    os.rename(temp2[i], t)
-#+END_SRC
-
-#+RESULTS:
+| xc          | Cu@Pd |  Pd@Cu |
+|-------------+-------+--------|
+| pbe         | 0.075 | -0.227 |
+| lda         | 0.071 | -0.302 |
+| revpbe      | 0.079 | -0.202 |
+| optpbe-vdw  | 0.037 | -0.167 |
+| tpss        | 0.070 | -0.346 |
+| optb86b-vdw | 0.032 | -0.199 |
+| rpbe        | 0.082 | -0.199 |
+| revtpss     | 0.086 | -0.387 |
+| vdw-df2     | 0.029 | -0.097 |
+| pbesol      | 0.069 | -0.263 |
+| beef-vdw    | 0.032 | -0.163 |
 
 * Constructing a db for bulk calculations ONLY
 ** Assemble all calculations into one database
