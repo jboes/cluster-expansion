@@ -8077,7 +8077,6 @@ with connect('temp/db0-bulk.db') as db0:
 #+END_SRC
 
 #+RESULTS: 
-: 09079bf2-edcb-4516-927b-37fce40a2306
 
 ** Analysis of the results
 
@@ -8093,25 +8092,30 @@ db = connect('temp/db0-bulk.db')
 
 ID, dE = [], []
 for d in db.select():
-    dE += [abs(d.nnE - d.energy)]
+    dE += [abs(d.nnE - d.energy) / d.natoms]
     ID += [d.id]
 
-th = 0.1
+th = 0.01
 dE = np.array(dE)
 ID = np.array(ID)
 outliers = ID[dE > th]
-print(len(outliers))
+print(outliers)
 RMSE = np.sqrt(sum(dE**2.) / len(dE))
 
 fig, ax = plt.subplots(figsize=(6, 4))
 ax.plot(range(len(dE)), dE, 'bo')
 ax.plot(ID[dE > th], dE[dE > th], 'ro', ms=5)
 ax.set_xlim([0, len(dE)])
-ax.text(1000, 0.2, '{:.3f}'.format(RMSE))
+x0, x1 = ax.get_xlim()
+y0, y1 = ax.get_ylim()
+ax.text((x1-x0)*0.8 + x0, (y1-y0)*0.8 + y0,
+        'RMSE: {:.2e}'.format(RMSE), ha='right')
+ax.set_xlabel('Calculation ID')
+ax.set_ylabel('Residual error (eV/atom)')
 plt.tight_layout()
 plt.savefig('./images/db0-bulk-rmse.png')
 #+END_SRC
 
 #+RESULTS:
-: 42
+: [ 1899 11855]
 
