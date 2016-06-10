@@ -5807,9 +5807,8 @@ from ase.visualize import view
 VASPRC['queue.ppn'] = 16
 VASPRC['queue.mem'] = '2GB'
 
-#hy = ['hf', 'hse03', 'hse06', 'pbe0', 'b3lyp']
-#xcs = [xc for xc in Vasp.xc_defaults.keys() if xc not in hy]
-xcs = ['hse06']
+hy = ['hf', 'hse03', 'hse06', 'pbe0', 'b3lyp']
+xcs = [xc for xc in Vasp.xc_defaults.keys() if xc not in hy]
 elements = ['Cu', 'Pd']
 
 calcs = []
@@ -5899,6 +5898,37 @@ for e1 in elements:
             except(RuntimeError):
                 print(calc.directory)
 #+END_SRC
+
+** HSE06 calculations
+#+BEGIN_SRC python
+from vasp import Vasp
+from vasp.vasprc import VASPRC
+VASPRC['queue.ppn'] = 16
+VASPRC['queue.mem'] = '2GB'
+
+elements = ['Cu', 'Pd']
+
+for e1 in elements:
+    for e2 in elements:
+
+	wd = 'DFT/type=dilute-limit/bulk={}@{}/xc=pbe'.format(e2, e1)
+	nwd = 'DFT/type=dilute-limit/bilk={}@{}/xc=hse06'.format(e2, e1)
+
+	calc = Vasp(wd)
+	calc.clone(nwd)
+
+	calc = Vasp(nwd,
+		    xc='hse06')
+	calc.calculate()
+#+END_SRC
+
+#+RESULTS:
+: /home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Cu/xc=hse06 submitted: 1402018.gilgamesh.cheme.cmu.edu
+: /home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Cu/xc=hse06 submitted: 1402019.gilgamesh.cheme.cmu.edu
+: /home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Cu@Pd/xc=hse06 submitted: 1402020.gilgamesh.cheme.cmu.edu
+: /home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/bulk=Pd@Pd/xc=hse06 submitted: 1402021.gilgamesh.cheme.cmu.edu
+: /home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Cu@Cu/xc=hse06 submitted: 1402022.gilgamesh.cheme.cmu.edu
+: /home-research/jboes/research/cluster-expansion/DFT/type=dilute-limit/surf=Pd@Pd/xc=hse06 submitted: 1402023.gilgamesh.cheme.cmu.edu
 
 ** Calculations
 E = dE^{Surf} - dE^{Bulk}
