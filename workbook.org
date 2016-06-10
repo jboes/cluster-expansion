@@ -3159,6 +3159,40 @@ for n in random.sample(range(len(atoms)),
     atoms[n].symbol = 'Pd'
 #+END_SRC
 
+**** Thick slab with Cu deposited layers
+#+BEGIN_SRC python
+from ase.lattice.surface import fcc111
+
+atoms = fcc111('Pd', size=(8, 8, 15), vacuum=6.0,
+               a=(3.939 - 3.634)*50/100. + 3.634)
+atoms.set_pbc([True, True, False])
+
+for i, atom in enumerate(atoms):
+    if atom.tag < 4:
+        atoms[i].symbol = 'Cu'
+
+from ase.visualize import view
+#view(atoms)
+
+from ase.calculators.neighborlist import NeighborList
+nl = NeighborList([2.677/2.0]*len(atoms), self_interaction=False, bothways=True)
+nl.update(atoms)
+
+indices, offsets = nl.get_neighbors(918)
+
+Pd_neighbors = [atoms[i].symbol
+                for i in indices
+                if atoms[i].symbol == 'Pd']
+
+if Pd_neighbors:
+    print('Pd', indicies)
+else:
+    print('Nope')
+#+END_SRC
+
+#+RESULTS:
+: Nope
+
 *** Slab MC
 #+BEGIN_SRC python
 import os
@@ -4744,6 +4778,107 @@ os.chmod(name, 0755)
 #+RESULTS: 
 : bpsh 30 -m ./run-T800-Pd50.py
 
+** large Pd slab MC for Cu top layer diffusion
+#+BEGIN_SRC python
+import numpy as np
+import random
+from ase.units import kB
+from ase.db import connect
+from ase.calculators.neighborlist import NeighborList
+
+def main(atoms, dbname, T, steps):
+
+    db = connect(dbname)
+
+    # Setting up variables for Cannonical MC
+    symbols = atoms.get_chemical_symbols()
+    chem_bins = {sym: [] for sym in set(symbols)}
+
+    for i, s in enumerate(symbols):
+	chem_bins[s] += [i]
+
+    # Calculate the initial energy and store it
+    nrg = atoms.get_potential_energy()
+
+    # dummy = atoms.copy()
+    # db.write(dummy, nrg=nrg)
+
+    # Construct a Neighbors list
+    nl = NeighborList([2.677/2.0]*len(atoms),
+                      self_interaction=False,
+                      bothways=True)
+
+    # Perform MC steps
+    attempt, success = 0, 0
+    while success < steps:
+
+        ind2 = None
+        while ind2 is None:
+            # First, choose a random Cu
+            sym1, sym2 = 'Cu', 'Pd'
+            random.shuffle(chem_bins[sym1])
+            ind1 = chem_bins[sym1][-1]
+
+            # calculate nearest neighbors
+            nl.update(atoms)
+	    indices, _ = nl.get_neighbors(ind1)
+
+            # Determine if Pd neighbors exist and choose one
+	    Pd_neighbors = [i for i in indices
+			    if atoms[i].symbol == sym2]
+            if Pd_neighbors:
+                ind2 = random.sample(Pd_neighbors, 1)[0]
+
+        # Create new atoms object to test
+        new_atoms = atoms.copy()
+        new_atoms.set_calculator(atoms.get_calculator())
+
+        # Update the atoms object
+        new_atoms[ind1].symbol, new_atoms[ind2].symbol = sym2, sym1
+
+        # Calculate the energy of the new system
+        new_nrg = new_atoms.get_potential_energy()
+
+        # Determine if lower than previous energy
+        if new_nrg < nrg:
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = atoms.copy()
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        elif np.exp(-(new_nrg - nrg) / (kB * T)) > np.random.rand():
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym2][-1] = ind1
+	    chem_bins[sym1][-1] = ind2
+
+            dummy = atoms.copy()
+            db.write(dummy, nrg=nrg)
+            success += 1
+
+        attempt += 1
+
+    return success/attempt
+
+from amp import Amp
+from ase.io import read
+
+images = read('MC/T300-diff-Cu.db', ':')
+atoms = images[-1]
+
+atoms.set_calculator(Amp('/home/jacob/research/cluster-expansion/networks/db6/40-7-7-1/'))
+
+main(atoms, '/home/jacob/research/cluster-expansion/MC/T300-diff-Cu.db', T=300, steps=10000)
+#+END_SRC
+
+#+RESULTS: 
+
+
+
 ** Semi-Grand Canonical
 TODO: This is unfinished, but will likely not lead anywhere useful.
 
@@ -5786,7 +5921,6 @@ for i, ca in enumerate(mZ[1]):
 #+RESULTS:
 
 [[./images/bct-phase.png]]
-
 
 *** Relaxed pathway data
 In order to create a higher resolution image of the minimum energy pathways through BCT space, we now relax the lowest energy /ca/ configurations in _volume only_.
