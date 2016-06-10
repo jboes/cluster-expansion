@@ -33,7 +33,7 @@ $$\frac{y}{1-y} = \frac{x}{1-x} e^{\frac{-\Delta G}{k_{B}T}}$$
 #+caption: Experimental surface segregation of Cu_{x}Pd_{1-x}.
 #+attr_latex: :width 3in :placement [H]
 #+attr_org: :width 300
-[[./images/cupd-segregation.jpeg]]
+[[./images/cupd-segregation.jpg]]
 
 - Furthermore, experiments observe a Cu deficient second layer.
 
@@ -62,8 +62,9 @@ $$\frac{y}{1-y} = \frac{x}{1-x} e^{\frac{-\Delta G}{k_{B}T}}$$
 - Training to cluster expansion structures is ineffective:
 -- Relatively small configuration space explored
 -- NNs struggle to predict "Needle" like structures
+-- Mike Widom suggests this is likely due to poor k-point sampling
 #+attr_latex: :width 1in :placement [H]
-#+attr_org: :width 100
+#+attr_org: :width 60
 [[./images/fcc-56-A.png]]
 
 - For a small unit cell of 100 atoms there are over 1.2 \times 10$^{30}$ configurations of Cu and Pd.
@@ -282,7 +283,7 @@ plt.savefig('images/composition-types.png')
 
 - Errors are very small, indicating the NN is ready for use at fixed lattice constant.
 
-#+caption: Energy differences of unique 3 x 3 primitive fcc unit cell configurations scaled to an appropriate lattice constant via Vegard's Law.
+#+caption: Energy differences of unique 3 \times 3 primitive fcc unit cell configurations scaled to an appropriate lattice constant via Vegard's Law.
 #+label: fig-vegard-error
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
