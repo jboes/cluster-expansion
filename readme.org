@@ -1,0 +1,1435 @@
+#+LATEX_CLASS: cmu-article
+#+LATEX_CLASS_OPTIONS: [12pt]
+#+LATEX_HEADER: \usepackage{setspace}
+#+LATEX_HEADER: \doublespacing
+#+STARTUP: hideblocks
+
+#+OPTIONS: toc:t
+#+TITLE: Neural Networks for CuPd segregation
+#+AUTHOR: Jacob Boes
+
+
+* Site enumeration
+
+** 1 \times 1 \times 7 -- all layer slab
+We will begin by training a simple representation of possible slab configurations. A 1 \times 1 slab, but 7 layers deep. With 7 layers, there is a single atom in the middle which will experience bulk like energetics since the furthest atoms (at the slab surfaces) are further than 6.5 \AA away. Therefore, any NN trained with that cutoff should be equivalent to the energy predicted by a bulk structure.
+
+This is an attempt to counteract the fact that previous NN have had difficulty extrapolating to larger numbers of layers.
+
+We enumerate with EMT, which is also proving difficult to work with due to its sensitivity. Using PBC seems to help reduce some of this error, however, results are also sensitive to the lattice constant used.
+
+#+BEGIN_SRC python :results silent
+from ase.lattice.surface import fcc111
+from ase.db import connect
+from itertools import product
+from asap3 import EMT
+import numpy as np
+
+db = connect('tmp/EMT/1x1x7.db')
+
+atoms0 = fcc111('Au', [1, 1, 7], a=3.634, vacuum=6.0)
+pbc = ([True, True, False])
+natoms = [a.index for a in atoms0]
+metals = ['Cu', 'Pd']
+
+nrgs = set()
+for i, c in enumerate(product(metals, repeat=len(natoms))):
+    atoms = atoms0.copy()
+    for j, s in enumerate(natoms):
+	atoms[s].symbol = c[j]
+
+    atoms.set_calculator(EMT())
+    nrg = round(atoms.get_potential_energy(), 11)
+
+    atoms.set_calculator(None)
+
+    if nrg not in nrgs:
+	nrgs.add(nrg)
+        db.write(atoms)
+#+END_SRC
+
+** 2 \times 1 \times 7 -- all layer slab
+#+BEGIN_SRC python :results silent
+from ase.lattice.surface import fcc111
+from ase.db import connect
+from itertools import product
+from asap3 import EMT
+import numpy as np
+
+db = connect('tmp/EMT/2x1x7.db')
+
+atoms0 = fcc111('Cu', [2, 1, 7], a=3.634, vacuum=6.0)
+pbc = ([True, True, False])
+natoms = [a.index for a in atoms0]
+metals = ['Cu', 'Pd']
+
+nrgs = set()
+for i, c in enumerate(product(metals, repeat=len(natoms))):
+    atoms = atoms0.copy()
+    for j, s in enumerate(natoms):
+	atoms[s].symbol = c[j]
+
+    atoms.set_calculator(EMT())
+    nrg = round(atoms.get_potential_energy(), 11)
+
+    atoms.set_calculator(None)
+
+    if nrg not in nrgs:
+	nrgs.add(nrg)
+        db.write(atoms)
+#+END_SRC
+
+** r3 \times r3 \times 7 -- all layer slab
+#+BEGIN_SRC python :results silent
+from ase.lattice.surface import fcc111_root
+from ase.db import connect
+from itertools import product
+from asap3 import EMT
+import numpy as np
+
+db = connect('tmp/EMT/r3xr3x7.db')
+
+atoms0 = fcc111_root('Cu', 3, [1, 1, 7], a=3.634, vacuum=6.0)
+pbc = ([True, True, False])
+natoms = [a.index for a in atoms0]
+metals = ['Cu', 'Pd']
+
+nrgs = set()
+for i, c in enumerate(product(metals, repeat=len(natoms))):
+    atoms = atoms0.copy()
+    for j, s in enumerate(natoms):
+	atoms[s].symbol = c[j]
+
+    atoms.set_calculator(EMT())
+    nrg = round(atoms.get_potential_energy(), 11)
+
+    atoms.set_calculator(None)
+
+    if nrg not in nrgs:
+	nrgs.add(nrg)
+        db.write(atoms)
+#+END_SRC
+
+#+RESULTS:
+: <async:797f538a44030881ec04e4e5f04c0652>
+
+** Compile directories
+This is a dynamic bit of code. I will use this section to compile *all* currently enumerated configurations with their 3 lattice constants as well.
+
+*** db1
+#+BEGIN_SRC python :results output org drawer
+from amp.utilities import hash_image
+import numpy as np
+from ase.io import read
+from glob import glob
+from ase.db import connect
+from amp import Amp
+from ase.calculators.singlepoint import SinglePointCalculator
+
+db = connect('tmp/EMT-unique-db2-AuPd.db')
+
+calc = Amp('networks/db1/7-7/')
+calc1 = Amp('networks/db1/8-8/')
+
+dirs = glob('tmp/EMT-unique-*x7-AuPd.db')
+lats = np.linspace(3.934, 4.154, 5)
+
+nrgs = set()
+H = set()
+for d in dirs:
+    images = read(d, ':')
+
+    nrg, calcs = [], []
+    for atoms1 in images:
+        for a in lats:
+            atoms = atoms1.copy()
+            x = a / 3.934
+
+            delta = np.array([[x, 0., 0.],
+                              [0., x, 0.],
+                              [0., 0., x]])
+
+            atoms.set_cell(np.dot(atoms.get_cell(), delta),
+                           scale_atoms=True)
+
+	    atoms.set_calculator(calc)
+            E = atoms.get_potential_energy()
+	    nrg = round(E, 5)
+
+            hash = hash_image(atoms)
+            if hash not in H and nrg not in nrgs:
+                H.add(hash)
+                nrgs.add(nrg)
+
+                atoms.set_calculator(calc1)
+                E1 = atoms.get_potential_energy()
+                dE = (E - E1) / len(atoms)
+                atoms.set_calculator(SinglePointCalculator(atoms, energy=dE))
+
+                lat = round(a, 3)
+                db.write(atoms, hash=hash, a=float(lat))
+#+END_SRC 
+
+*** db2
+#+BEGIN_SRC python :results output org drawer
+from amp.utilities import hash_image
+import numpy as np
+from ase.io import read
+from glob import glob
+from ase.db import connect
+from amp import Amp
+from ase.calculators.singlepoint import SinglePointCalculator
+
+db = connect('tmp/EMT-unique-db2-AuPd.db')
+
+calc = Amp('networks/db2/8-8/')
+calc1 = Amp('networks/db2/9-9/')
+
+dirs = glob('tmp/EMT-unique-*x7-AuPd.db')
+lats = np.linspace(3.934, 4.154, 5)
+
+nrgs = set()
+H = set([d.hash for d in db.select()])
+for d in dirs:
+    images = read(d, ':')
+
+    nrg, calcs = [], []
+    for atoms1 in images:
+        for a in lats:
+            atoms = atoms1.copy()
+            x = a / 3.934
+
+            delta = np.array([[x, 0., 0.],
+                              [0., x, 0.],
+                              [0., 0., x]])
+
+            atoms.set_cell(np.dot(atoms.get_cell(), delta),
+                           scale_atoms=True)
+
+            hash = hash_image(atoms)
+            if hash not in H:
+                atoms.set_calculator(calc)
+                E = atoms.get_potential_energy()
+	        nrg = round(E, 5)
+
+                if nrg not in nrgs:
+                    H.add(hash)
+                    nrgs.add(nrg)
+
+                    atoms.set_calculator(calc1)
+                    E1 = atoms.get_potential_energy()
+                    dE = (E - E1) / len(atoms)
+                    atoms.set_calculator(SinglePointCalculator(atoms, energy=dE))
+
+                    lat = round(a, 3)
+                    db.write(atoms, hash=hash, a=float(lat))
+#+END_SRC
+
+#+BEGIN_SRC python :results silent
+from amp.utilities import hash_image
+import numpy as np
+from ase.io import read
+from glob import glob
+from ase.db import connect
+from amp import Amp
+from ase.calculators.singlepoint import SinglePointCalculator
+
+db = connect('tmp/EMT-unique-db2-AuPd-lrgAu2.db')
+
+calcs = [Amp('networks/db2/8-8/'),
+         Amp('networks/db2/9-9/')]
+
+dirs = glob('tmp/EMT-unique-r7xr7x7-*layers-AuPd.db')
+lats = np.linspace(3.934, 4.154, 5)
+
+nrgs = set()
+H = set()
+for d in dirs:
+    images = read(d, ':')
+
+    nrg = []
+    for atoms1 in images:
+        for a in lats:
+            atoms = atoms1.copy()
+
+            # invert chemical symbols
+	    symbols = []
+	    for atom in atoms:
+		if atom.symbol == 'Au':
+		    symbols += ['Pd']
+		else:
+		    symbols += ['Au']
+	    atoms.set_chemical_symbols(symbols)
+
+            x = a / 3.934
+
+            delta = np.array([[x, 0., 0.],
+                              [0., x, 0.],
+                              [0., 0., x]])
+
+            atoms.set_cell(np.dot(atoms.get_cell(), delta),
+                           scale_atoms=True)
+
+            hash = hash_image(atoms)
+            if hash not in H:
+
+                atoms.set_calculator(calcs[0])
+                E = atoms.get_potential_energy()
+                nrg = round(E, 5)
+
+                if nrg not in nrgs:
+                    H.add(hash)
+                    nrgs.add(nrg)
+
+                    atoms.set_calculator(calcs[1])
+                    E1 = atoms.get_potential_energy()
+                    dE = (E - E1) / len(atoms)
+                    atoms.set_calculator(SinglePointCalculator(atoms, energy=dE))
+
+                    db.write(atoms, hash=hash, a=round(a, 3), base='Pd')
+#+END_SRC
+
+#+BEGIN_SRC python :results output org drawer
+from ase.db import connect
+
+db = connect('tmp/EMT-unique-db2-AuPd.db')
+
+db1 = connect('tmp/EMT-unique-db2-AuPd-lrgAu.db')
+db2 = connect('tmp/EMT-unique-db2-AuPd-lrgAu2.db')
+
+for d in db1.select():
+    keys = d.key_value_pairs
+    db.write(d, key_value_pairs=keys)
+
+for d in db2.select():
+    keys = d.ke_value_pairs
+    db.write(d, key_value_pairs=keys)
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+:END:
+
+* db0
+** DFT
+Next, we calculate the energy of each structure which EMT predicts to be energy unique. There are 72 in total, of a possible 128 structures. We also perform these calculations at 3 lattice constants. That of Au and Pd, and one in between.
+
+This way, I hope to capture not only the configurations energies, but also some of the contribution of strain effects. _No relaxations are performed_.
+
+#+BEGIN_SRC python
+from vasp import Vasp
+from amp.utilities import hash_image
+import numpy as np
+from ase.io import read
+Vasp.VASPRC['queue.walltime'] = '24:00:00'
+
+lats = np.linspace(3.934, 4.154, 5)
+images = read('tmp/EMT-unique-1x1x7-AuPd.db', ':')
+
+nrg, calcs = [], []
+for atoms1 in images:
+    for a in lats:
+        atoms = atoms1.copy()
+        x = a / 3.934
+
+        delta = np.array([[x, 0., 0.],
+                          [0., x, 0.],
+                          [0., 0., x]])
+
+        atoms.set_cell(np.dot(atoms.get_cell(), delta),
+                       scale_atoms=True)
+
+        hash = hash_image(atoms)
+
+        wd = 'DFT/type=AuPd-NN/surf=117/lattice={:.3f}/hash={}'.format(a, hash)
+        print(wd)
+        calc = Vasp(wd,
+                    xc='pbe',
+                    kpts=[16, 16, 1],
+                    encut=400,
+                    nsw=0,
+                    atoms=atoms)
+        nrg += [calc.potential_energy]
+        calcs += [calc]
+Vasp.stop_if(None in nrg)
+
+[calc.write_db('database/AuPd.db', parser='=',
+               overwrite=False, keys={'dbkey': 0})
+ for calc in calcs]
+#+END_SRC
+
+** NN training
+Here we repeat the process as above. This time, we will train to a selection of 90% of the data instead of the whole training set.
+
+#+BEGIN_SRC python
+from ase.db import connect
+import random
+import numpy as np
+
+db = connect('database/AuPd.db')
+
+n = db.count()
+n_train = int(round(n * 0.9))
+ids =  np.array(range(n)) + 1
+
+# This will sudo-randomly select 10% of the calculations
+# Which is useful for reproducing our results.
+random.seed(256)
+train_samples = random.sample(ids, n_train)
+valid_samples = set(ids) - set(train_samples)
+
+db.update(train_samples, train_set='True')
+db.update(valid_samples, train_set='False')
+#+END_SRC
+
+Here we will train two separate frameworks 
+
+#+BEGIN_SRC python
+from amp import Amp
+from ase.io import read
+from amp import SimulatedAnnealing
+from amp.descriptor import Gaussian
+from amp.regression import NeuralNetwork
+import os, shutil
+
+if os.path.exists('networks/db0/7-7/'):
+    shutil.rmtree('networks/db0/7-7/')
+    os.mkdir('networks/db0/7-7/')
+else:
+    os.mkdir('networks/db0/7-7/')
+
+calc = Amp(label='networks/db0/7-7/',
+	   dblabel='networks/',
+	   descriptor=Gaussian(cutoff=6.5),
+	   regression=NeuralNetwork(hiddenlayers=(2, 8)))
+
+calc.train(images=read('database/AuPd.db', ':'),
+	   data_format='db',
+	   cores=4,
+	   energy_goal=1e-3,
+	   force_goal=None, # Not useful for site enumeration
+	   global_search=SimulatedAnnealing(temperature=70,
+					    steps=50),
+	   extend_variables=False)
+#+END_SRC
+
+#+BEGIN_SRC python
+from amp import Amp
+from ase.io import read
+from amp import SimulatedAnnealing
+from amp.descriptor import Gaussian
+from amp.regression import NeuralNetwork
+import os, shutil
+
+if os.path.exists('networks/db0/8-8/'):
+    shutil.rmtree('networks/db0/8-8/')
+    os.mkdir('networks/db0/8-8/')
+else:
+    os.mkdir('networks/db0/8-8/')
+
+calc = Amp(label='networks/db0/8-8/',
+	   dblabel='networks/',
+	   descriptor=Gaussian(cutoff=6.5),
+	   regression=NeuralNetwork(hiddenlayers=(2, 8)))
+
+calc.train(images=read('database/AuPd.db', ':'),
+	   data_format='db',
+	   cores=4,
+	   energy_goal=1e-3,
+	   force_goal=None, # Not useful for site enumeration
+	   global_search=SimulatedAnnealing(temperature=70,
+					    steps=50),
+	   extend_variables=False)
+#+END_SRC
+
+** Analysis and predictions
+
+#+BEGIN_SRC python
+from ase.db import connect
+
+db = connect('database/AuPd.db')
+
+nrgs = set()
+for d in db.select():
+    nrgs.add(d.energy)
+
+print(db.count())
+#+END_SRC
+
+#+RESULTS: 
+: 360
+
+#+BEGIN_SRC python
+from ase.lattice.surface import fcc111
+from itertools import product
+from amp import Amp
+import numpy as np
+from asap3 import EMT
+
+calc = Amp('networks/db0/7-7/checkpoint-parameters.json')
+calc1 = Amp('networks/db0/8-8/checkpoint-parameters.json')
+
+lats = np.linspace(3.934, 4.154, 20)
+
+nrgs = set()
+for l in lats:
+
+    atoms0 = fcc111('Au', [1, 1, 7], a=l, vacuum=6.0)
+    natoms = [a.index for a in atoms0]
+    metals = ['Au', 'Pd']
+
+    for i, c in enumerate(product(metals, repeat=len(natoms))):
+        atoms = atoms0.copy()
+        for j, s in enumerate(natoms):
+            atoms[s].symbol = c[j]
+
+        atoms.set_calculator(calc)
+        nrg = round(atoms.get_potential_energy(), 11)
+        atoms.set_calculator(calc1)
+        nrg1 = round(atoms.get_potential_energy(), 11)
+        atoms.set_calculator(None)
+        d = abs((nrg - nrg1) / len(atoms))
+
+        if d not in nrgs:
+            nrgs.add(d)
+
+import matplotlib.pyplot as plt
+plt.hist(list(nrgs))
+plt.savefig('./images/tmp.png')
+
+nrgs = np.array(list(nrgs))
+
+print(max(nrgs))
+print(len(nrgs[nrgs > 0.001]))
+print(len(nrgs))
+#+END_SRC
+
+#+RESULTS:
+: 0.0516348209586
+: 542
+: 1453
+
+[[./images/tmp.png]]
+
+* db1
+** DFT
+Based on the analysis from above, it is apparent that there isn't nearly enough data yet to make an accurate NN. Here we utilize the existing NN frameworks to determine the most poorly predicted structures. Of the 500 most poorly predicted structures, we perform DFT calculations at the same 3 lattice constants as above.
+
+#+BEGIN_SRC python
+from ase.db import connect
+import numpy as np
+from vasp import Vasp
+from amp.utilities import hash_image
+Vasp.VASPRC['queue.walltime'] = '24:00:00'
+Vasp.VASPRC['queue.ppn'] = 4
+
+db = connect('tmp/EMT-unique-2x1x7-AuPd.db')
+dE0, ID = [], []
+for d in db.select():
+
+    ID += [d.id]
+    dE0 += [abs((d.nn0 - d.nn1) / d.natoms)]
+
+n = float(db.count())
+ID = np.array(ID)
+dE0 = np.array(dE0)
+
+# The threshold we will use for sampling the PES
+print(len(ID[dE0 > 1.82]))
+
+lats = np.linspace(3.934, 4.154, 3)
+nrg, calcs = [], []
+for i in ID[dE0 > 1.82]:
+    atoms1 = db.get_atoms(i)
+
+    for a in lats:
+        atoms = atoms1.copy()
+        x = a / 3.934
+
+        delta = np.array([[x, 0., 0.],
+                          [0., x, 0.],
+                          [0., 0., x]])
+
+        atoms.set_cell(np.dot(atoms.get_cell(), delta),
+                       scale_atoms=True)
+
+        hash = hash_image(atoms)
+
+        wd = 'DFT/type=AuPd-NN/surf=217/lattice={:.3f}/hash={}'.format(a, hash)
+        calc = Vasp(wd,
+                    xc='pbe',
+                    kpts=[8, 16, 1],
+                    encut=400,
+                    nsw=0,
+                    atoms=atoms)
+        calc.set_memory()
+        nrg += [calc.potential_energy]
+        calcs += [calc]
+Vasp.stop_if(None in nrg)
+
+[calc.write_db('database/AuPd.db', parser='=',
+               overwrite=False, keys={'dbkey': 1})
+ for calc in calcs]
+#+END_SRC
+
+** NN training
+Here we repeat the process as performed above. However, this time we will only include 90% of the training points for training and leave the rest for validation.
+
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+import random
+import numpy as np
+
+db = connect('database/AuPd.db')
+
+n = db.count()
+n_train = int(round(n * 0.9))
+ids =  np.array(range(n)) + 1
+
+random.seed(256)
+train_samples = random.sample(ids, n_train)
+valid_samples = set(ids) - set(train_samples)
+
+db.update(list(train_samples), train_set=True)
+db.update(list(valid_samples), train_set=False)
+#+END_SRC
+
+Now, we create a new framework for the next instance of the database.
+
+#+BEGIN_SRC python
+from amp import Amp
+from ase.db import connect
+from amp import SimulatedAnnealing
+from amp.descriptor import Gaussian
+from amp.regression import NeuralNetwork
+import os
+import shutil
+
+images = []
+db = connect('database/AuPd.db')
+for d in db.select('train_set'):
+    atoms = d.toatoms()
+    del atoms.constraints
+    images += [atoms]
+
+if os.path.exists('networks/db1/7-7/'):
+    shutil.rmtree('networks/db1/7-7/')
+    os.makedirs('networks/db1/7-7/')
+else:
+    os.makedirs('networks/db1/7-7/')
+
+calc = Amp(label='networks/db1/7-7/',
+	   dblabel='networks/',
+	   descriptor=Gaussian(cutoff=6.5),
+	   regression=NeuralNetwork(hiddenlayers=(2, 8)))
+
+calc.train(images=images,
+	   data_format='db',
+	   cores=4,
+	   energy_goal=1e-3,
+	   force_goal=None, # Not useful for site enumeration
+	   global_search=SimulatedAnnealing(temperature=70,
+					    steps=50),
+	   extend_variables=False)
+#+END_SRC
+
+#+RESULTS: 
+
+#+BEGIN_SRC python
+from amp import Amp
+from ase.db import connect
+from amp import SimulatedAnnealing
+from amp.descriptor import Gaussian
+from amp.regression import NeuralNetwork
+import os
+import shutil
+
+images = []
+db = connect('database/AuPd.db')
+for d in db.select('train_set'):
+    atoms = d.toatoms()
+    del atoms.constraints
+    images += [atoms]
+
+if os.path.exists('networks/db1/8-8/'):
+    shutil.rmtree('networks/db1/8-8/')
+    os.mkdir('networks/db1/8-8/')
+else:
+    os.mkdir('networks/db1/8-8/')
+
+calc = Amp(label='networks/db1/8-8/',
+	   dblabel='networks/',
+	   descriptor=Gaussian(cutoff=6.5),
+	   regression=NeuralNetwork(hiddenlayers=(2, 8)))
+
+calc.train(images=images,
+	   data_format='db',
+	   cores=4,
+	   energy_goal=1e-3,
+	   force_goal=None, # Not useful for site enumeration
+	   global_search=SimulatedAnnealing(temperature=70,
+					    steps=50),
+	   extend_variables=False)
+#+END_SRC
+
+#+RESULTS: 
+
+** Analysis and predictions
+#+BEGIN_SRC python
+from ase.db import connect
+
+db = connect('database/AuPd.db')
+
+nrgs = set()
+for d in db.select():
+    nrgs.add(d.energy)
+
+print('Database contains {} calculations'.format(db.count()))
+#+END_SRC
+
+#+RESULTS:
+: Database contains 1860 calculations
+
+#+BEGIN_SRC python
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+
+db = connect('tmp/EMT-unique-db1-AuPd.db')
+
+E = []
+for d in db.select():
+    E += [abs(d.energy)]
+
+cut = 0.0175
+E = np.array(E)
+
+dE = len(E[E >  cut])
+print('{} structures with error greater than {:.0f} meV/atom'.format(dE, cut*1e3))
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.hist(E, bins=np.arange(0, 0.050, 0.0025))
+ax.set_xlabel('Difference of neural networks (eV/atom)')
+ax.set_ylabel('Frequency')
+plt.tight_layout()
+plt.savefig('./images/db1-nn-diff.png')
+#+END_SRC
+
+#+RESULTS:
+: 1310 structures with error greater than 18 meV/atom
+
+[[./images/db1-nn-diff.png]]q
+
+* db2
+** DFT
+#+BEGIN_SRC python
+from ase.db import connect
+import numpy as np
+from vasp import Vasp
+from amp.utilities import hash_image
+Vasp.VASPRC['queue.walltime'] = '24:00:00'
+Vasp.VASPRC['queue.ppn'] = 4
+
+db = connect('tmp/EMT-unique-db1-AuPd.db')
+E, n, ID = [], [], []
+for d in db.select():
+    E += [abs(d.energy)]
+    n += [d.natoms / 7]
+    ID += [d.id]
+
+cut = 0.0175
+E = np.array(E)
+ID = np.array(ID)
+n = np.array(n)
+
+dID = ID[E >  cut]
+dn = n[E >  cut]
+dE = len(E[E >  cut])
+
+nrg, calcs = [], []
+for i, ID in enumerate(dID):
+    atoms = db.get_atoms(ID)
+    hash = hash_image(atoms)
+
+    if n[i] == 1:
+        wd = 'DFT/type=AuPd-NN/surf=117/lattice=mixed/hash={}'.format(hash)
+
+	calc = Vasp(wd,
+		    xc='pbe',
+		    kpts=[16, 16, 1],
+		    encut=400,
+		    nsw=0,
+		    atoms=atoms)
+	calc.set_memory()
+	nrg += [calc.potential_energy]
+        if nrg[-1] is not None:
+            calcs += [calc]
+
+    if n[i] == 2:
+        wd = 'DFT/type=AuPd-NN/surf=217/lattice=mixed/hash={}'.format(hash)
+
+	calc = Vasp(wd,
+		    xc='pbe',
+		    kpts=[8, 16, 1],
+		    encut=400,
+		    nsw=0,
+		    atoms=atoms)
+	calc.set_memory()
+	nrg += [calc.potential_energy]
+        if nrg[-1] is not None:
+            calcs += [calc]
+
+    if n[i] == 3:
+        wd = 'DFT/type=AuPd-NN/surf=r3r37/lattice=mixed/hash={}'.format(hash)
+
+	calc = Vasp(wd,
+		    xc='pbe',
+		    kpts=[10, 10, 1],
+		    encut=400,
+		    nsw=0,
+		    atoms=atoms)
+	calc.set_memory()
+	nrg += [calc.potential_energy]
+        if nrg[-1] is not None:
+            calcs += [calc]
+
+[calc.write_db('database/AuPd.db', parser='=',
+               overwrite=False, keys={'dbkey': 1})
+ for calc in calcs]
+#+END_SRC
+
+#+RESULTS:
+
+** NN training
+Here we repeat the process as performed above. However, this time we will only include 90% of the training points for training and leave the rest for validation.
+
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+import random
+import numpy as np
+
+db = connect('database/AuPd.db')
+
+n = db.count()
+n_train = int(round(n * 0.9))
+ids =  np.array(range(n)) + 1
+
+random.seed(256)
+train_samples = random.sample(ids, n_train)
+valid_samples = set(ids) - set(train_samples)
+
+db.update(list(train_samples), train_set=True)
+db.update(list(valid_samples), train_set=False)
+#+END_SRC
+
+Now, we create a new framework for the next instance of the database.
+
+#+BEGIN_SRC python :results silent
+from amp import Amp
+from ase.db import connect
+from amp import SimulatedAnnealing
+from amp.descriptor import Gaussian
+from amp.regression import NeuralNetwork
+import os
+import shutil
+
+images = []
+db = connect('database/AuPd.db')
+for d in db.select('train_set=True'):
+    atoms = d.toatoms()
+    del atoms.constraints
+    images += [atoms]
+
+if os.path.exists('networks/db2/8-8/'):
+    shutil.rmtree('networks/db2/8-8/')
+    os.makedirs('networks/db2/8-8/')
+else:
+    os.makedirs('networks/db2/8-8/')
+
+calc = Amp(label='networks/db2/8-8/',
+	   dblabel='networks/db2/',
+	   descriptor=Gaussian(cutoff=6.5),
+	   regression=NeuralNetwork(hiddenlayers=(2, 8)))
+
+calc.train(images=images,
+	   data_format='db',
+	   cores=4,
+	   energy_goal=1e-3,
+	   force_goal=None, # Not useful for site enumeration
+	   global_search=SimulatedAnnealing(temperature=100,
+					    steps=50),
+	   extend_variables=False)
+#+END_SRC
+
+#+BEGIN_SRC python :results silent
+from amp import Amp
+from ase.db import connect
+from amp import SimulatedAnnealing
+from amp.descriptor import Gaussian
+from amp.regression import NeuralNetwork
+import os
+import shutil
+
+images = []
+db = connect('database/AuPd.db')
+for d in db.select('train_set'):
+    atoms = d.toatoms()
+    del atoms.constraints
+    images += [atoms]
+
+if os.path.exists('networks/db2/9-9/'):
+    shutil.rmtree('networks/db2/9-9/')
+    os.mkdir('networks/db2/9-9/')
+else:
+    os.mkdir('networks/db2/9-9/')
+
+calc = Amp(label='networks/db2/9-9/',
+	   dblabel='networks/db2/',
+	   descriptor=Gaussian(cutoff=6.5),
+	   regression=NeuralNetwork(hiddenlayers=(2, 9)))
+
+calc.train(images=images,
+	   data_format='db',
+	   cores=4,
+	   energy_goal=1e-3,
+	   force_goal=None, # Not useful for site enumeration
+	   global_search=SimulatedAnnealing(temperature=100,
+					    steps=50),
+	   extend_variables=False)
+#+END_SRC
+
+** Analysis and predictions
+#+BEGIN_SRC python
+from ase.db import connect
+
+db = connect('database/AuPd.db')
+
+nrgs = set()
+for d in db.select():
+    nrgs.add(d.energy)
+
+print('Database contains {} calculations'.format(db.count()))
+#+END_SRC
+
+#+RESULTS:
+: Database contains 3170 calculations
+
+*** Comparison to existing 7 layer structures
+This includes all full enumerations from the 1 \time 1, 2 \times 1, and r3 \times r3 structures.
+
+#+BEGIN_SRC python
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+from amp.utilities import hash_image
+
+db = connect('tmp/EMT/AuPd/db2.db')
+
+d = np.array([_.energy for _ in db.select('natoms>30')]).T
+
+cut = 0.0125
+dE = len(d[d >  cut])
+print('{:,} structures with error greater than ' \
+      '{:.0f} meV/atom of {:,} total structures'.format(dE, cut*1e3, len(d)))
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.hist(d, bins=np.arange(0, 0.030, 0.001))
+ax.set_xlabel('Difference of neural networks (eV/atom)')
+ax.set_ylabel('Frequency')
+plt.tight_layout()
+plt.savefig('./images/db2-nn-diff.png')
+
+# print(max(d))
+# print(list(d).index(max(d))+1)
+
+# from ase.visualize import view
+# view(db.get_atoms(60))
+#+END_SRC
+
+#+RESULTS:
+: 12,648 structures with error greater than 12 meV/atom of 546,980 total structures
+
+#+attr_org: :width 400
+[[./images/db2-nn-diff.png]]
+
+* db3
+** DFT
+#+BEGIN_SRC python
+from ase.db import connect
+import numpy as np
+from vasp import Vasp
+Vasp.VASPRC['queue.walltime'] = '24:00:00'
+Vasp.VASPRC['queue.ppn'] = 4
+
+db0 = connect('database/AuPd.db')
+H = set([d.hash for d in db0.select()])
+
+
+db = connect('tmp/EMT-unique-db2-AuPd.db')
+d = np.array([[_.energy, _.natoms, _.hash, _.toatoms()]
+              for _ in db.select('natoms<30')]).T
+data = np.array([_[d[0] >  0.0125] for _ in d[1:]]).T
+
+calcs = []
+for n, hash, atoms in data:
+    if hash not in H:
+
+	if int(n) == 7:
+	    wd = 'DFT/type=AuPd-NN/surf=117/lattice=mixed/hash={}'.format(hash)
+	    kpts = [16, 16, 1]
+	elif int(n) == 14:
+	    wd = 'DFT/type=AuPd-NN/surf=217/lattice=mixed/hash={}'.format(hash)
+	    kpts = [8, 16, 1]
+	elif int(n) == 21:
+	    wd = 'DFT/type=AuPd-NN/surf=r3r37/lattice=mixed/hash={}'.format(hash)
+	    kpts = [10, 10, 1]
+
+	calc = Vasp(wd,
+		    xc='PBE',
+		    kpts=kpts,
+		    encut=400,
+		    nsw=0,
+		    atoms=atoms)
+	calc.set_memory()
+	nrg = calc.potential_energy
+	print(nrg)
+	if nrg is not None:
+	    calcs += [calc]
+
+[calc.write_db('database/AuPd.db', parser='=',
+               overwrite=False, keys={'dbkey': 1})
+ for calc in calcs]
+#+END_SRC
+
+** NN training
+Here we repeat the process as performed above. However, this time we will only include 90% of the training points for training and leave the rest for validation.
+
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+import random
+import numpy as np
+
+db = connect('database/AuPd.db')
+
+n = db.count()
+n_train = int(round(n * 0.9))
+ids =  np.array(range(n)) + 1
+
+random.seed(256)
+train_samples = random.sample(ids, n_train)
+valid_samples = set(ids) - set(train_samples)
+
+db.update(list(train_samples), train_set=True)
+db.update(list(valid_samples), train_set=False)
+#+END_SRC
+
+Now, we create a new framework for the next instance of the database.
+
+#+BEGIN_SRC python :results silent
+from amp import Amp
+from ase.db import connect
+from amp import SimulatedAnnealing
+from amp.descriptor import Gaussian
+from amp.regression import NeuralNetwork
+import os
+import shutil
+
+images = []
+db = connect('database/AuPd.db')
+for d in db.select('train_set=True'):
+    atoms = d.toatoms()
+    del atoms.constraints
+    images += [atoms]
+
+if os.path.exists('networks/db3/8-8-f/'):
+    shutil.rmtree('networks/db3/8-8-f/')
+    os.makedirs('networks/db3/8-8-f/')
+else:
+    os.makedirs('networks/db3/8-8-f/')
+
+calc = Amp(label='networks/db3/8-8-f/',
+	   dblabel='networks/db3/',
+	   descriptor=Gaussian(cutoff=6.0),
+	   regression=NeuralNetwork(hiddenlayers=(2, 8)))
+
+calc.train(images=images,
+	   data_format='db',
+	   cores=4,
+	   energy_goal=1e-3,
+	   force_goal=1e-2,
+	   global_search=SimulatedAnnealing(temperature=100,
+					    steps=50),
+	   extend_variables=False)
+#+END_SRC
+
+#+BEGIN_SRC python :results silent
+from amp import Amp
+from ase.db import connect
+from amp import SimulatedAnnealing
+from amp.descriptor import Gaussian
+from amp.regression import NeuralNetwork
+import os
+import shutil
+
+images = []
+db = connect('database/AuPd.db')
+for d in db.select('train_set'):
+    atoms = d.toatoms()
+    del atoms.constraints
+    images += [atoms]
+
+if os.path.exists('networks/db3/9-9-f/'):
+    shutil.rmtree('networks/db3/9-9-f/')
+    os.mkdir('networks/db3/9-9-f/')
+else:
+    os.mkdir('networks/db3/9-9-f/')
+
+calc = Amp(label='networks/db3/9-9-f/',
+	   dblabel='networks/db3/',
+	   descriptor=Gaussian(cutoff=6.0),
+	   regression=NeuralNetwork(hiddenlayers=(2, 9)))
+
+calc.train(images=images,
+	   data_format='db',
+	   cores=4,
+	   energy_goal=1e-3,
+	   force_goal=1e-2,
+	   global_search=SimulatedAnnealing(temperature=100,
+					    steps=50),
+	   extend_variables=False)
+#+END_SRC
+
+** Analysis and predictions
+#+BEGIN_SRC python
+from ase.db import connect
+
+db = connect('database/AuPd.db')
+
+nrgs = set()
+for d in db.select():
+    nrgs.add(d.energy)
+
+print('Database contains {} calculations'.format(db.count()))
+#+END_SRC
+
+#+RESULTS:
+: Database contains 3914 calculations
+
+*** Comparison to existing 7 layer structures
+This includes all full enumerations from the 1 \time 1, 2 \times 1, and r3 \times r3 structures.
+
+#+BEGIN_SRC python
+from ase.db import connect
+from amp.utilities import hash_image
+from amp import Amp
+
+calc = Amp('networks/db3/8-8-f/checkpoint-parameters.json')
+calc1 = Amp('networks/db3/9-9-f/checkpoint-parameters.json')
+
+with connect('tmp/EMT/AuPd/enum-f.db') as db:
+    for d in db.select():
+        try:
+            _ = d.nnE
+        except(AttributeError):
+            atoms = d.toatoms()
+            atoms.set_calculator(calc)
+            nrg = atoms.get_potential_energy()
+
+            atoms.set_calculator(calc1)
+            nrg1 = atoms.get_potential_energy()
+
+            db.update(d.id, nnE=nrg1, nndE=nrg1-nrg)
+#+END_SRC
+
+#+BEGIN_SRC python
+from ase.db import connect
+from amp.utilities import hash_image
+from amp import Amp
+
+calc = Amp('networks/db3/8-8')
+calc1 = Amp('networks/db3/9-9')
+
+with connect('tmp/EMT/AuPd/enum.db') as db:
+    for d in db.select():
+        try:
+            _ = d.nnE
+        except(AttributeError):
+            atoms = d.toatoms()
+            atoms.set_calculator(calc)
+            nrg = atoms.get_potential_energy()
+
+            atoms.set_calculator(calc1)
+            nrg1 = atoms.get_potential_energy()
+
+            db.update(d.id, nnE=nrg1, nndE=nrg1-nrg)
+#+END_SRC
+
+** MC
+*** Base MC code
+#+BEGIN_SRC python :tangle GCMC.py
+import numpy as np
+import random
+from ase.units import kB
+from ase.db import connect
+from ase.calculators.neighborlist import NeighborList
+from ase.calculators.singlepoint import SinglePointCalculator as SPC
+
+def main(atoms, dbname, T=800, steps=20000):
+
+    db = connect(dbname)
+
+    # Setting up variables for grand canonical MC
+    symbols = atoms.get_chemical_symbols()
+    sym = list(set(symbols))
+    chem_bins = {_: [] for _ in sym}
+
+    for i, s in enumerate(symbols):
+	chem_bins[s] += [i]
+
+    # Ensure sym1 has the lower concentration
+    if len(chem_bins[sym[0]]) > len(chem_bins[sym[1]]):
+	sym.reverse()
+
+    # Calculate the initial energy and store it
+    nrg = atoms.get_potential_energy()
+
+    # Write the initial configuration
+    # dummy = atoms.copy()
+    # dummy.set_calculator(SPC(atoms, energy=nrg))
+    # db.write(dummy)
+
+    # Construct a Neighbors list
+    r = atoms.get_distance(0, 1) / np.sqrt(2) / 1.5
+    nl = NeighborList([r]*len(atoms),
+                      self_interaction=False,
+                      bothways=True)
+
+    # Perform MC steps
+    attempt, success = 0, 0
+    while success < steps:
+
+        ind1 = None
+        while ind1 is None:
+            # First, choose a random index from sym[0]
+            random.shuffle(chem_bins[sym[0]])
+            ind0 = chem_bins[sym[0]][-1]
+
+            # Calculate nearest neighbors
+            nl.update(atoms)
+	    indices, _ = nl.get_neighbors(ind0)
+
+            # Determine if sym2 neighbors exist and choose one
+	    sym1_neighbors = [i for i in indices
+			      if atoms[i].symbol == sym[1]]
+            if sym1_neighbors:
+                ind1 = random.sample(sym1_neighbors, 1)[0]
+
+        # Create new atoms object to test
+        new_atoms = atoms.copy()
+        new_atoms.set_calculator(atoms.get_calculator())
+
+        # Update the atoms object
+        new_atoms[ind0].symbol, new_atoms[ind1].symbol = sym[1], sym[0]
+
+        # Calculate the energy of the new system
+        new_nrg = new_atoms.get_potential_energy()
+
+        # Determine if lower than previous energy
+        if new_nrg < nrg:
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym[1]][-1] = ind0
+	    chem_bins[sym[0]][-1] = ind1
+
+            dummy = atoms.copy()
+            dummy.set_calculator(SPC(atoms, energy=nrg))
+            db.write(dummy)
+            success += 1
+
+        elif np.exp(-(new_nrg - nrg) / (kB * T)) > np.random.rand():
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym[1]][-1] = ind0
+	    chem_bins[sym[0]][-1] = ind1
+
+            dummy = atoms.copy()
+            dummy.set_calculator(SPC(atoms, energy=nrg))
+            db.write(dummy)
+            success += 1
+
+        attempt += 1
+
+    return success/attempt
+#+END_SRC
+
+*** Starting structures
+#+BEGIN_SRC python :results output org drawer
+import os
+
+cmd = ''
+x0 = [0.1, 0.3, 0.5, 0.7, 0.9]
+for x in x0:
+    script = """#!/usr/bin/env python
+from amp import Amp
+from ase.lattice.surface import fcc111
+from scipy.interpolate import interp1d
+from GCMC import main as GCMC
+
+lat = interp1d([0, 1], [3.934, 4.154])
+
+# Define a dummy slab
+atoms = fcc111('Pd', size=(10, 10, 15), vacuum=6.0, a=lat(x))
+atoms.set_pbc([1, 1, 0])
+
+# Randomly populate Au
+samp = np.random.choice(range(len(atoms)), len(atoms)*x, replace=False)
+for i in samp:
+    atoms[i].symbol = 'Au'
+
+# Attach the calculator 
+calc = Amp('../networks/db3/9-9-f/checkpoint-parameters.json')
+atoms.set_calculator(calc)
+
+GCMC(atoms, dbname='db3/10x10x15-x{0:.1f}-long.db')
+""".format(x)
+
+    with open('MC/run-{:.1f}.py'.format(x), 'w') as f:
+	f.write(run)
+    os.chmod('MC/run-{:.1f}.py'.format(x), 0777)
+    cmd += './run-{:.1f}.py & '.format(x)
+print(cmd)
+#+END_SRC
+
+#+BEGIN_SRC python :results output org drawer
+import os
+
+cmd = ''
+x0 = [0.1, 0.3, 0.5, 0.7, 0.9]
+for x in x0:
+    script = """#!/usr/bin/env python
+from ase.io import read
+from amp import Amp
+from GCMC import main as GCMC
+
+images = read('db3/10x10x15-x{0:.1f}-long.db', ':')
+atoms = images[-1]
+
+# Attach the calculator 
+calc = Amp('../networks/db3/9-9-f/checkpoint-parameters.json')
+atoms.set_calculator(calc)
+
+GCMC(atoms, dbname='db3/10x10x15-x{0:.1f}-long.db', steps=20000-len(images))
+""".format(x)
+
+    with open('MC/run-{:.1f}.py'.format(x), 'w') as f:
+	f.write(script)
+    os.chmod('MC/run-{:.1f}.py'.format(x), 0777)
+    cmd += './run-{:.1f}.py & '.format(x)
+print(cmd)
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+./run-0.1.py & ./run-0.3.py & ./run-0.5.py & ./run-0.7.py & ./run-0.9.py & 
+:END:
+
+*** Analysis
+#+BEGIN_SRC python :results output org drawer
+from ase.io import read
+from ase.visualize import view
+import matplotlib.pyplot as plt
+import numpy as np
+
+y0, s0 = [], []
+x0 = [0.1, 0.3, 0.5, 0.7, 0.9]
+for x in x0:
+    images = read('MC/db3/10x10x15-x{}-long.db'.format(x), ':')
+
+    tl1, tl2, tl3 = [], [], []
+    for atoms in images:
+	syms = atoms.get_chemical_symbols()
+
+	l01 = syms[:100].count('Au') / 100.
+	l15 = syms[1400:].count('Au') / 100.
+
+	l02 = syms[100:200].count('Au') / 100.
+	l14 = syms[1300:1400].count('Au') / 100.
+
+	l03 = syms[200:300].count('Au') / 100.
+	l13 = syms[1200:1300].count('Au') / 100.
+
+	tl1 += [(l01 + l15) / 2.]
+	tl2 += [(l02 + l14) / 2.]
+	tl3 += [(l03 + l13) / 2.]
+
+    avg = np.mean(tl1[3000:])
+    std = np.std(tl1[3000:])
+
+    plt.figure(figsize=(6, 4))
+    plt.plot([0, len(images)], [avg]*2, 'k--')
+    plt.plot([0, len(images)], [avg + std]*2, 'k:')
+    plt.plot([0, len(images)], [avg - std]*2, 'k:')
+    plt.plot(tl1, '-', color='0.0', label='1st layer')
+    plt.plot(tl2, 'b-', color='0.4', label='2nd layer')
+    plt.plot(tl3, 'r-', color='0.8', label='3rd layer')
+    plt.plot([0, len(images)], [x]*2, 'r-', label='bulk')
+    plt.xlim(0, len(images))
+    plt.ylim(0, 1)
+    plt.text(len(images) - 3000, avg - std - 0.06, r'{:.2f} $\pm$ {:.2f}'.format(avg, std))
+    plt.xlabel('MC step')
+    plt.ylabel('Composition of Au')
+    plt.legend(loc='best')
+    plt.tight_layout()
+    plt.savefig('./images/AuPd-MC-{:.1f}.png'.format(x))
+    y0 += [avg]
+    s0 += [std]
+
+print(y0)
+print(x0)
+print(s0)
+
+# Experimental data
+# C.-W. Yi et al. DOI: 10.1021/jp053515r
+y1 = np.array([0.4, 0.65, 0.82, 0.935, 0.96])
+x1 = np.array([0.1, 0.25, 0.5, 0.75, 0.9])
+
+# D. G. Swartzfager et al. DOI: 10.1116/1.571102
+y2 = np.array([0.51, 0.68, 0.85, 0.97])
+x2 = np.array([0.2, 0.4, 0.6, 0.8])
+
+plt.figure(figsize=(6, 4))
+plt.plot([0, 1], [0, 1], 'k:')
+plt.plot(x1, y1, 'ko', label='C.-W. Yi et. al.')
+plt.plot(x2, y2, 'ks', label='D. G. Swartzfager et. al.')
+plt.errorbar(x0, y0, xerr=0, yerr=s0, fmt='o', color='r')
+plt.xlim(0, 1)
+plt.ylim(0, 1)
+plt.legend(loc='best')
+plt.tight_layout()
+plt.savefig('./images/AuPd-segregation.png')
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+[0.46077944199706311, 0.65959405475267308, 0.76655840723556701, 0.96024759163533835, 0.99866092933090511]
+[0.1, 0.3, 0.5, 0.7, 0.9]
+[0.047666059865744681, 0.024136594457521792, 0.019613300202688894, 0.010382237152373542, 0.0027190054984181197]
+:END:
+
+#+attr_org: :width 600
+[[./images/AuPd-MC-0.1.png]]
+
+#+attr_org: :width 600
+[[./images/AuPd-MC-0.3.png]]
+
+#+attr_org: :width 600
+[[./images/AuPd-MC-0.5.png]]
+
+#+attr_org: :width 600
+[[./images/AuPd-MC-0.7.png]]
+
+#+attr_org: :width 600
+[[./images/AuPd-MC-0.9.png]]
+
+#+attr_org: :width 600
+[[./images/AuPd-segregation.png]]

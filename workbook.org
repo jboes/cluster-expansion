@@ -4575,7 +4575,7 @@ for i, a in enumerate(np.linspace(3.634, 3.939, 5)[1:-1]):
 : [[./images/T800-c0-bNone.png]]
 : [[./images/T800-c1-bCu.png]]
 : [[./images/T800-c1-bPd.png]]
-: [[./images/T800-c1-bNone.png]]
+: [[./images/T800-c1-bNone.png]
 : [[./images/T800-c2-bCu.png]]
 : [[./images/T800-c2-bPd.png]]
 : [[./images/T800-c2-bNone.png]]

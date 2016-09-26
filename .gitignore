@@ -12,6 +12,7 @@ CuPd_bcc/
 CuPd_fcc/
 temp/
 traj/
+tmp/
 
 # Ignore large database
 MC/

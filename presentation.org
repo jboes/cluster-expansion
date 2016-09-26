@@ -71,7 +71,7 @@ $$\frac{y}{1-y} = \frac{x}{1-x} e^{\frac{-\Delta G}{k_{B}T}}$$
 -- Not all of these are energy unique
 -- CuPd has no appreciable long-range interactions, so many of these are irrelevant for training purposes.
 
-- NNs will only fit to configurations of relatively small unit cells because of $R_{c}$ 
+- NNs will only fit to configurations of relatively small unit cells because of $R_{c}$
 
 - Energy unique configurations can be determined manually, by unit cell geometry (not recommend).
 
@@ -709,8 +709,6 @@ There are two primary reasons sources of error that may be contributing to the i
 #+attr_latex: :width 4in :placement [H]
 #+attr_org: :width 400
 [[./images/calc-time.png]]
-
-
 * Extra material
 ** Boltzmann distribution
 
