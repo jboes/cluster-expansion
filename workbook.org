@@ -4865,7 +4865,15 @@ def main(atoms, dbname, T, steps):
     return success/attempt
 
 from amp import Amp
-from ase.io import read
+from ase.lattice.surface import fcc111
+from ase.visualize import view
+
+base = fcc111('Cu', size=(10, 10, 20), vacuum=6.0, a=3.939)
+for i in range(1000):
+    base[i].symbol = 'Au'
+
+
+view(base)
 
 images = read('MC/T300-diff-Cu.db', ':')
 atoms = images[-1]
