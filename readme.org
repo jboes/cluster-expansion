@@ -323,14 +323,14 @@ import numpy as np
 from ase.io import read
 Vasp.VASPRC['queue.walltime'] = '24:00:00'
 
-lats = np.linspace(3.934, 4.154, 5)
-images = read('tmp/EMT-unique-1x1x7-AuPd.db', ':')
+lats = np.linspace(3.634, 3.939, 5)
+images = read('tmp/EMT/1x1x7.db', ':')
 
 nrg, calcs = [], []
 for atoms1 in images:
     for a in lats:
         atoms = atoms1.copy()
-        x = a / 3.934
+        x = a / 3.634
 
         delta = np.array([[x, 0., 0.],
                           [0., x, 0.],
@@ -341,10 +341,10 @@ for atoms1 in images:
 
         hash = hash_image(atoms)
 
-        wd = 'DFT/type=AuPd-NN/surf=117/lattice={:.3f}/hash={}'.format(a, hash)
+        wd = 'DFT/type=CuPd-NN/surf=117/lattice={:.3f}/hash={}'.format(a, hash)
         print(wd)
         calc = Vasp(wd,
-                    xc='pbe',
+                    xc='PBE',
                     kpts=[16, 16, 1],
                     encut=400,
                     nsw=0,
@@ -353,7 +353,7 @@ for atoms1 in images:
         calcs += [calc]
 Vasp.stop_if(None in nrg)
 
-[calc.write_db('database/AuPd.db', parser='=',
+[calc.write_db('database/CuPd.db', parser='=',
                overwrite=False, keys={'dbkey': 0})
  for calc in calcs]
 #+END_SRC
@@ -366,7 +366,7 @@ from ase.db import connect
 import random
 import numpy as np
 
-db = connect('database/AuPd.db')
+db = connect('database/CuPd.db')
 
 n = db.count()
 n_train = int(round(n * 0.9))
@@ -378,9 +378,12 @@ random.seed(256)
 train_samples = random.sample(ids, n_train)
 valid_samples = set(ids) - set(train_samples)
 
-db.update(train_samples, train_set='True')
-db.update(valid_samples, train_set='False')
+db.update(list(train_samples), train_set='True')
+db.update(list(valid_samples), train_set='False')
 #+END_SRC
+
+#+RESULTS:
+
 
 Here we will train two separate frameworks 
 
@@ -400,10 +403,10 @@ else:
 
 calc = Amp(label='networks/db0/7-7/',
 	   dblabel='networks/',
-	   descriptor=Gaussian(cutoff=6.5),
+	   descriptor=Gaussian(cutoff=6.0),
 	   regression=NeuralNetwork(hiddenlayers=(2, 8)))
 
-calc.train(images=read('database/AuPd.db', ':'),
+calc.train(images=read('database/CuPd.db', ':'),
 	   data_format='db',
 	   cores=4,
 	   energy_goal=1e-3,
@@ -412,6 +415,8 @@ calc.train(images=read('database/AuPd.db', ':'),
 					    steps=50),
 	   extend_variables=False)
 #+END_SRC
+
+#+RESULTS:
 
 #+BEGIN_SRC python
 from amp import Amp
@@ -429,10 +434,10 @@ else:
 
 calc = Amp(label='networks/db0/8-8/',
 	   dblabel='networks/',
-	   descriptor=Gaussian(cutoff=6.5),
+	   descriptor=Gaussian(cutoff=6.0),
 	   regression=NeuralNetwork(hiddenlayers=(2, 8)))
 
-calc.train(images=read('database/AuPd.db', ':'),
+calc.train(images=read('database/CuPd.db', ':'),
 	   data_format='db',
 	   cores=4,
 	   energy_goal=1e-3,
@@ -442,12 +447,14 @@ calc.train(images=read('database/AuPd.db', ':'),
 	   extend_variables=False)
 #+END_SRC
 
+#+RESULTS:
+
 ** Analysis and predictions
 
 #+BEGIN_SRC python
 from ase.db import connect
 
-db = connect('database/AuPd.db')
+db = connect('database/CuPd.db')
 
 nrgs = set()
 for d in db.select():
@@ -523,7 +530,7 @@ from amp.utilities import hash_image
 Vasp.VASPRC['queue.walltime'] = '24:00:00'
 Vasp.VASPRC['queue.ppn'] = 4
 
-db = connect('tmp/EMT-unique-2x1x7-AuPd.db')
+db = connect('tmp/EMT/2x1x7.db')
 dE0, ID = [], []
 for d in db.select():
 
@@ -537,14 +544,14 @@ dE0 = np.array(dE0)
 # The threshold we will use for sampling the PES
 print(len(ID[dE0 > 1.82]))
 
-lats = np.linspace(3.934, 4.154, 3)
+lats = np.linspace(3.634, 3.939, 5)
 nrg, calcs = [], []
 for i in ID[dE0 > 1.82]:
     atoms1 = db.get_atoms(i)
 
     for a in lats:
         atoms = atoms1.copy()
-        x = a / 3.934
+        x = a / 3.634
 
         delta = np.array([[x, 0., 0.],
                           [0., x, 0.],
@@ -557,7 +564,7 @@ for i in ID[dE0 > 1.82]:
 
         wd = 'DFT/type=AuPd-NN/surf=217/lattice={:.3f}/hash={}'.format(a, hash)
         calc = Vasp(wd,
-                    xc='pbe',
+                    xc='PBE',
                     kpts=[8, 16, 1],
                     encut=400,
                     nsw=0,
