@@ -101,7 +101,7 @@ for i, c in enumerate(product(metals, repeat=len(natoms))):
 	atoms[s].symbol = c[j]
 
     atoms.set_calculator(EMT())
-    nrg = round(atoms.get_potential_energy(), 11)
+    nrg = round(atoms.get_potential_energy(), 4)
 
     atoms.set_calculator(None)
 
@@ -110,13 +110,10 @@ for i, c in enumerate(product(metals, repeat=len(natoms))):
         db.write(atoms)
 #+END_SRC
 
-#+RESULTS:
-: <async:797f538a44030881ec04e4e5f04c0652>
-
 ** Compile directories
 This is a dynamic bit of code. I will use this section to compile *all* currently enumerated configurations with their 3 lattice constants as well.
 
-*** db1
+*** db0
 #+BEGIN_SRC python :results output org drawer
 from amp.utilities import hash_image
 import numpy as np
@@ -126,13 +123,13 @@ from ase.db import connect
 from amp import Amp
 from ase.calculators.singlepoint import SinglePointCalculator
 
-db = connect('tmp/EMT-unique-db2-AuPd.db')
+db = connect('tmp/enum.db')
 
-calc = Amp('networks/db1/7-7/')
-calc1 = Amp('networks/db1/8-8/')
+calc = Amp('networks/db0/7-7/')
+calc1 = Amp('networks/db0/8-8/')
 
-dirs = glob('tmp/EMT-unique-*x7-AuPd.db')
-lats = np.linspace(3.934, 4.154, 5)
+dirs = glob('tmp/EMT/*.db')
+lats = np.linspace(3.634, 3.939, 5)
 
 nrgs = set()
 H = set()
@@ -143,11 +140,11 @@ for d in dirs:
     for atoms1 in images:
         for a in lats:
             atoms = atoms1.copy()
-            x = a / 3.934
+            x = a / 3.634
 
-            delta = np.array([[x, 0., 0.],
-                              [0., x, 0.],
-                              [0., 0., x]])
+            delta = np.array([[x, 0, 0],
+                              [0, x, 0],
+                              [0, 0, x]])
 
             atoms.set_cell(np.dot(atoms.get_cell(), delta),
                            scale_atoms=True)
@@ -167,8 +164,12 @@ for d in dirs:
                 atoms.set_calculator(SinglePointCalculator(atoms, energy=dE))
 
                 lat = round(a, 3)
-                db.write(atoms, hash=hash, a=float(lat))
+                db.write(atoms, hash=hash, a=float(a))
 #+END_SRC 
+
+#+RESULTS:
+:RESULTS:
+:END:
 
 *** db2
 #+BEGIN_SRC python :results output org drawer
@@ -467,54 +468,26 @@ print(db.count())
 : 360
 
 #+BEGIN_SRC python
-from ase.lattice.surface import fcc111
-from itertools import product
-from amp import Amp
 import numpy as np
-from asap3 import EMT
-
-calc = Amp('networks/db0/7-7/checkpoint-parameters.json')
-calc1 = Amp('networks/db0/8-8/checkpoint-parameters.json')
-
-lats = np.linspace(3.934, 4.154, 20)
-
-nrgs = set()
-for l in lats:
-
-    atoms0 = fcc111('Au', [1, 1, 7], a=l, vacuum=6.0)
-    natoms = [a.index for a in atoms0]
-    metals = ['Au', 'Pd']
-
-    for i, c in enumerate(product(metals, repeat=len(natoms))):
-        atoms = atoms0.copy()
-        for j, s in enumerate(natoms):
-            atoms[s].symbol = c[j]
-
-        atoms.set_calculator(calc)
-        nrg = round(atoms.get_potential_energy(), 11)
-        atoms.set_calculator(calc1)
-        nrg1 = round(atoms.get_potential_energy(), 11)
-        atoms.set_calculator(None)
-        d = abs((nrg - nrg1) / len(atoms))
-
-        if d not in nrgs:
-            nrgs.add(d)
-
+from ase.db import connect
 import matplotlib.pyplot as plt
-plt.hist(list(nrgs))
+
+db = connect('./tmp/enum.db')
+
+nrgs = []
+for d in db.select():
+    nrgs += [abs(d.energy)]
+
+plt.hist(nrgs)
 plt.savefig('./images/tmp.png')
 
-nrgs = np.array(list(nrgs))
+nrgs = np.array(nrgs)
 
-print(max(nrgs))
-print(len(nrgs[nrgs > 0.001]))
-print(len(nrgs))
+print(len(nrgs[nrgs > 0.06]))
 #+END_SRC
 
 #+RESULTS:
-: 0.0516348209586
-: 542
-: 1453
+: 1184
 
 [[./images/tmp.png]]
 
@@ -530,51 +503,40 @@ from amp.utilities import hash_image
 Vasp.VASPRC['queue.walltime'] = '24:00:00'
 Vasp.VASPRC['queue.ppn'] = 4
 
-db = connect('tmp/EMT/2x1x7.db')
-dE0, ID = [], []
-for d in db.select():
+db0 = connect('database/CuPd.db')
+H = set([d.hash for d in db0.select()])
 
-    ID += [d.id]
-    dE0 += [abs((d.nn0 - d.nn1) / d.natoms)]
+db = connect('tmp/enum.db')
+d = np.array([[_.energy, _.natoms, _.hash, _.toatoms()]
+              for _ in db.select()]).T
+data = np.array([_[d[0] >  0.06] for _ in d[1:]]).T
 
-n = float(db.count())
-ID = np.array(ID)
-dE0 = np.array(dE0)
+calcs = []
+for n, hash, atoms in data:
+    if hash not in H:
 
-# The threshold we will use for sampling the PES
-print(len(ID[dE0 > 1.82]))
+	if int(n) == 7:
+	    wd = 'DFT/type=CuPd-NN/surf=117/lattice={:.3f}/hash={}'.format(hash)
+	    kpts = [16, 16, 1]
+	elif int(n) == 14:
+	    wd = 'DFT/type=CuPd-NN/surf=217/lattice={:.3f}/hash={}'.format(hash)
+	    kpts = [8, 16, 1]
+	elif int(n) == 21:
+	    wd = 'DFT/type=CuPd-NN/surf=r3r37/lattice={:.3f}/hash={}'.format(hash)
+	    kpts = [10, 10, 1]
 
-lats = np.linspace(3.634, 3.939, 5)
-nrg, calcs = [], []
-for i in ID[dE0 > 1.82]:
-    atoms1 = db.get_atoms(i)
+	calc = Vasp(wd,
+		    xc='PBE',
+		    kpts=kpts,
+		    encut=400,
+		    nsw=0,
+		    atoms=atoms)
+	calc.set_memory()
+	nrg = calc.potential_energy
+	if nrg is not None:
+	    calcs += [calc]
 
-    for a in lats:
-        atoms = atoms1.copy()
-        x = a / 3.634
-
-        delta = np.array([[x, 0., 0.],
-                          [0., x, 0.],
-                          [0., 0., x]])
-
-        atoms.set_cell(np.dot(atoms.get_cell(), delta),
-                       scale_atoms=True)
-
-        hash = hash_image(atoms)
-
-        wd = 'DFT/type=AuPd-NN/surf=217/lattice={:.3f}/hash={}'.format(a, hash)
-        calc = Vasp(wd,
-                    xc='PBE',
-                    kpts=[8, 16, 1],
-                    encut=400,
-                    nsw=0,
-                    atoms=atoms)
-        calc.set_memory()
-        nrg += [calc.potential_energy]
-        calcs += [calc]
-Vasp.stop_if(None in nrg)
-
-[calc.write_db('database/AuPd.db', parser='=',
+[calc.write_db('database/CuPd.db', parser='=',
                overwrite=False, keys={'dbkey': 1})
  for calc in calcs]
 #+END_SRC
