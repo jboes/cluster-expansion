@@ -110,6 +110,37 @@ for i, c in enumerate(product(metals, repeat=len(natoms))):
         db.write(atoms)
 #+END_SRC
 
+** 2 \times 2 \times 7 -- all layer slab
+#+BEGIN_SRC python :results silent
+from ase.lattice.surface import fcc111
+from ase.db import connect
+from itertools import product
+from asap3 import EMT
+import numpy as np
+
+db = connect('tmp/EMT/2x2x7.db')
+
+atoms0 = fcc111('Cu', [2, 2, 7], a=3.634, vacuum=6.0)
+pbc = ([True, True, False])
+natoms = [a.index for a in atoms0]
+metals = ['Cu', 'Pd']
+
+nrgs = set()
+for i, c in enumerate(product(metals, repeat=len(natoms))):
+    atoms = atoms0.copy()
+    for j, s in enumerate(natoms):
+	atoms[s].symbol = c[j]
+
+    atoms.set_calculator(EMT())
+    nrg = round(atoms.get_potential_energy(), 11)
+
+    atoms.set_calculator(None)
+
+    if nrg not in nrgs:
+	nrgs.add(nrg)
+        db.write(atoms)
+#+END_SRC
+
 ** Compile directories
 This is a dynamic bit of code. I will use this section to compile *all* currently enumerated configurations with their 3 lattice constants as well.
 
@@ -483,11 +514,11 @@ plt.savefig('./images/tmp.png')
 
 nrgs = np.array(nrgs)
 
-print(len(nrgs[nrgs > 0.06]))
+print(len(nrgs[nrgs > 0.1]))
 #+END_SRC
 
 #+RESULTS:
-: 1184
+: 20
 
 [[./images/tmp.png]]
 
@@ -501,45 +532,50 @@ import numpy as np
 from vasp import Vasp
 from amp.utilities import hash_image
 Vasp.VASPRC['queue.walltime'] = '24:00:00'
-Vasp.VASPRC['queue.ppn'] = 4
+from xml.etree.ElementTree import ParseError
 
 db0 = connect('database/CuPd.db')
 H = set([d.hash for d in db0.select()])
 
 db = connect('tmp/enum.db')
-d = np.array([[_.energy, _.natoms, _.hash, _.toatoms()]
+d = np.array([[abs(_.energy), _.natoms, _.hash, _.a, _.toatoms()]
               for _ in db.select()]).T
 data = np.array([_[d[0] >  0.06] for _ in d[1:]]).T
 
-calcs = []
-for n, hash, atoms in data:
+calcs, nrg = [], []
+for n, hash, a, atoms in data:
     if hash not in H:
 
-	if int(n) == 7:
-	    wd = 'DFT/type=CuPd-NN/surf=117/lattice={:.3f}/hash={}'.format(hash)
-	    kpts = [16, 16, 1]
-	elif int(n) == 14:
-	    wd = 'DFT/type=CuPd-NN/surf=217/lattice={:.3f}/hash={}'.format(hash)
+        # All eunmerations of the 1x1x7 structure are already included.
+
+	if int(n) == 14:
+            Vasp.VASPRC['queue.ppn'] = 2
+	    wd = 'DFT/type=CuPd-NN/surf=217/lattice={:.3f}/hash={}'.format(a, hash)
 	    kpts = [8, 16, 1]
 	elif int(n) == 21:
-	    wd = 'DFT/type=CuPd-NN/surf=r3r37/lattice={:.3f}/hash={}'.format(hash)
+            Vasp.VASPRC['queue.ppn'] = 4
+	    wd = 'DFT/type=CuPd-NN/surf=r3r37/lattice={:.3f}/hash={}'.format(a, hash)
 	    kpts = [10, 10, 1]
 
-	calc = Vasp(wd,
-		    xc='PBE',
-		    kpts=kpts,
-		    encut=400,
-		    nsw=0,
-		    atoms=atoms)
-	calc.set_memory()
-	nrg = calc.potential_energy
-	if nrg is not None:
-	    calcs += [calc]
+        try:
+            calc = Vasp(wd,
+                        xc='PBE',
+                        kpts=kpts,
+                        encut=400,
+                        nsw=0,
+                        atoms=atoms)
+            calc.set_memory()
+            E = calc.get_potential_energy()
+            if E:
+                calcs += [calc]
+        except(ParseError):
+            print(wd)
 
 [calc.write_db('database/CuPd.db', parser='=',
                overwrite=False, keys={'dbkey': 1})
  for calc in calcs]
 #+END_SRC
+
 
 ** NN training
 Here we repeat the process as performed above. However, this time we will only include 90% of the training points for training and leave the rest for validation.
@@ -549,7 +585,7 @@ from ase.db import connect
 import random
 import numpy as np
 
-db = connect('database/AuPd.db')
+db = connect('database/CuPd.db')
 
 n = db.count()
 n_train = int(round(n * 0.9))
@@ -575,22 +611,23 @@ import os
 import shutil
 
 images = []
-db = connect('database/AuPd.db')
-for d in db.select('train_set'):
+db = connect('database/CuPd.db')
+for d in db.select('train_set=True'):
     atoms = d.toatoms()
     del atoms.constraints
     images += [atoms]
 
-if os.path.exists('networks/db1/7-7/'):
-    shutil.rmtree('networks/db1/7-7/')
-    os.makedirs('networks/db1/7-7/')
-else:
-    os.makedirs('networks/db1/7-7/')
+s = (4, 4)
 
-calc = Amp(label='networks/db1/7-7/',
-	   dblabel='networks/',
-	   descriptor=Gaussian(cutoff=6.5),
-	   regression=NeuralNetwork(hiddenlayers=(2, 8)))
+if os.path.exists('networks/db1/{}-{}/'.format(*s)):
+    shutil.rmtree('networks/db1/{}-{}/'.format(*s))
+    os.makedirs('networks/db1/{}-{}/'.format(*s))
+else:
+    os.makedirs('networks/db1/{}-{}/'.format(*s))
+
+calc = Amp(label='networks/db1/{}-{}/'.format(*s),
+	   descriptor=Gaussian(cutoff=6.0),
+	   regression=NeuralNetwork(hiddenlayers=s))
 
 calc.train(images=images,
 	   data_format='db',
@@ -601,9 +638,6 @@ calc.train(images=images,
 					    steps=50),
 	   extend_variables=False)
 #+END_SRC
-
-#+RESULTS: 
-
 #+BEGIN_SRC python
 from amp import Amp
 from ase.db import connect
@@ -614,22 +648,23 @@ import os
 import shutil
 
 images = []
-db = connect('database/AuPd.db')
-for d in db.select('train_set'):
+db = connect('database/CuPd.db')
+for d in db.select('train_set=True'):
     atoms = d.toatoms()
     del atoms.constraints
     images += [atoms]
 
-if os.path.exists('networks/db1/8-8/'):
-    shutil.rmtree('networks/db1/8-8/')
-    os.mkdir('networks/db1/8-8/')
-else:
-    os.mkdir('networks/db1/8-8/')
+s = (4, 4)
 
-calc = Amp(label='networks/db1/8-8/',
-	   dblabel='networks/',
-	   descriptor=Gaussian(cutoff=6.5),
-	   regression=NeuralNetwork(hiddenlayers=(2, 8)))
+if os.path.exists('networks/db1/{}-{}/'.format(*s)):
+    shutil.rmtree('networks/db1/{}-{}/'.format(*s))
+    os.makedirs('networks/db1/{}-{}/'.format(*s))
+else:
+    os.makedirs('networks/db1/{}-{}/'.format(*s))
+
+calc = Amp(label='networks/db1/{}-{}/'.format(*s),
+	   descriptor=Gaussian(cutoff=6.0),
+	   regression=NeuralNetwork(hiddenlayers=s))
 
 calc.train(images=images,
 	   data_format='db',
@@ -641,7 +676,6 @@ calc.train(images=images,
 	   extend_variables=False)
 #+END_SRC
 
-#+RESULTS: 
 
 ** Analysis and predictions
 #+BEGIN_SRC python
