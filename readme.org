@@ -160,46 +160,48 @@ calc = Amp('networks/db0/7-7/')
 calc1 = Amp('networks/db0/8-8/')
 
 dirs = glob('tmp/EMT/*.db')
-lats = np.linspace(3.634, 3.939, 5)
+print dirs
+# lats = np.linspace(3.634, 3.939, 5)
 
-nrgs = set()
-H = set()
-for d in dirs:
-    images = read(d, ':')
+# nrgs = set()
+# H = set()
+# for d in dirs:
+#     images = read(d, ':')
 
-    nrg, calcs = [], []
-    for atoms1 in images:
-        for a in lats:
-            atoms = atoms1.copy()
-            x = a / 3.634
+#     nrg, calcs = [], []
+#     for atoms1 in images:
+#         for a in lats:
+#             atoms = atoms1.copy()
+#             x = a / 3.634
 
-            delta = np.array([[x, 0, 0],
-                              [0, x, 0],
-                              [0, 0, x]])
+#             delta = np.array([[x, 0, 0],
+#                               [0, x, 0],
+#                               [0, 0, x]])
 
-            atoms.set_cell(np.dot(atoms.get_cell(), delta),
-                           scale_atoms=True)
+#             atoms.set_cell(np.dot(atoms.get_cell(), delta),
+#                            scale_atoms=True)
 
-	    atoms.set_calculator(calc)
-            E = atoms.get_potential_energy()
-	    nrg = round(E, 5)
+# 	    atoms.set_calculator(calc)
+#             E = atoms.get_potential_energy()
+# 	    nrg = round(E, 5)
 
-            hash = hash_image(atoms)
-            if hash not in H and nrg not in nrgs:
-                H.add(hash)
-                nrgs.add(nrg)
+#             hash = hash_image(atoms)
+#             if hash not in H and nrg not in nrgs:
+#                 H.add(hash)
+#                 nrgs.add(nrg)
 
-                atoms.set_calculator(calc1)
-                E1 = atoms.get_potential_energy()
-                dE = (E - E1) / len(atoms)
-                atoms.set_calculator(SinglePointCalculator(atoms, energy=dE))
+#                 atoms.set_calculator(calc1)
+#                 E1 = atoms.get_potential_energy()
+#                 dE = (E - E1) / len(atoms)
+#                 atoms.set_calculator(SinglePointCalculator(atoms, energy=dE))
 
-                lat = round(a, 3)
-                db.write(atoms, hash=hash, a=float(a))
+#                 lat = round(a, 3)
+#                 db.write(atoms, hash=hash, a=float(a))
 #+END_SRC 
 
 #+RESULTS:
 :RESULTS:
+['tmp/EMT/r3xr3x7.db', 'tmp/EMT/1x1x7.db', 'tmp/EMT/2x1x7.db']
 :END:
 
 *** db2
