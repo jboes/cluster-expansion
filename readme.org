@@ -10,9 +10,8 @@
 
 
 * Site enumeration
-
 ** 1 \times 1 \times 7 -- all layer slab
-We will begin by training a simple representation of possible slab configurations. A 1 \times 1 slab, but 7 layers deep. With 7 layers, there is a single atom in the middle which will experience bulk like energetics since the furthest atoms (at the slab surfaces) are further than 6.5 \AA away. Therefore, any NN trained with that cutoff should be equivalent to the energy predicted by a bulk structure.
+We will begin by training a simple representation of possible slab configurations. A 1 \times 1 slab, but 7 layers deep. With 7 layers, there is a single atom in the middle which will experience bulk like energetics since the furthest atoms (at the slab surfaces) are further than 6.0 \AA away. Therefore, any NN trained with that cutoff should be equivalent to the energy predicted by a bulk structure.
 
 This is an attempt to counteract the fact that previous NN have had difficulty extrapolating to larger numbers of layers.
 
@@ -110,39 +109,8 @@ for i, c in enumerate(product(metals, repeat=len(natoms))):
         db.write(atoms)
 #+END_SRC
 
-** 2 \times 2 \times 7 -- all layer slab
-#+BEGIN_SRC python :results silent
-from ase.lattice.surface import fcc111
-from ase.db import connect
-from itertools import product
-from asap3 import EMT
-import numpy as np
-
-db = connect('tmp/EMT/2x2x7.db')
-
-atoms0 = fcc111('Cu', [2, 2, 7], a=3.634, vacuum=6.0)
-pbc = ([True, True, False])
-natoms = [a.index for a in atoms0]
-metals = ['Cu', 'Pd']
-
-nrgs = set()
-for i, c in enumerate(product(metals, repeat=len(natoms))):
-    atoms = atoms0.copy()
-    for j, s in enumerate(natoms):
-	atoms[s].symbol = c[j]
-
-    atoms.set_calculator(EMT())
-    nrg = round(atoms.get_potential_energy(), 11)
-
-    atoms.set_calculator(None)
-
-    if nrg not in nrgs:
-	nrgs.add(nrg)
-        db.write(atoms)
-#+END_SRC
-
 ** Compile directories
-This is a dynamic bit of code. I will use this section to compile *all* currently enumerated configurations with their 3 lattice constants as well.
+For the first instance, I use this code to assemble all of the enumerations from the 3 types of configurations included above into a single database for validation purposes.
 
 #+BEGIN_SRC python :results output org drawer
 from amp.utilities import hash_image
@@ -197,42 +165,9 @@ for d in dirs:
                 db.write(atoms, hash=hash, a=float(a))
 #+END_SRC 
 
-#+BEGIN_SRC python :results output org drawer
-from amp.utilities import hash_image
-import numpy as np
-from ase.io import read
-from glob import glob
-from ase.db import connect
-from amp import Amp
-from ase.calculators.singlepoint import SinglePointCalculator
-
-db = connect('tmp/enum.db')
-
-calc = Amp('networks/db1/2-2/')
-calc1 = Amp('networks/db1/3-3/')
-
-with connect('tmp/enum-db1.db') as db0:
-    for d in db.select():
-        atoms = d.toatoms()
-
-	atoms.set_calculator(calc)
-	E = atoms.get_potential_energy()
-
-	atoms.set_calculator(calc1)
-	E1 = atoms.get_potential_energy()
-	dE = (E - E1) / len(atoms)
-	atoms.set_calculator(SinglePointCalculator(atoms, energy=dE))
-
-	db0.write(atoms, hash=d.hash, a=d.a)
-#+END_SRC
-
-#+RESULTS:
-:RESULTS:
-:END:
-
 * db0
 ** DFT
-Next, we calculate the energy of each structure which EMT predicts to be energy unique. There are 72 in total, of a possible 128 structures. We also perform these calculations at 3 lattice constants. That of Au and Pd, and one in between.
+Next, we calculate the energy of each structure which EMT predicts to be energy unique. There are 72 in total, of a possible 128 structures. We also perform these calculations at 5 lattice constants. That of Cu and Pd, and three linearly interpolated in between.
 
 This way, I hope to capture not only the configurations energies, but also some of the contribution of strain effects. _No relaxations are performed_.
 
@@ -278,10 +213,27 @@ Vasp.stop_if(None in nrg)
  for calc in calcs]
 #+END_SRC
 
-** NN training
-Here we repeat the process as above. This time, we will train to a selection of 90% of the data instead of the whole training set.
+To ensure that the calculations have been successfully added to the database, I check the number of calculations here.
 
 #+BEGIN_SRC python
+from ase.db import connect
+
+db = connect('database/CuPd.db')
+
+nrgs = set()
+for d in db.select():
+    nrgs.add(d.energy)
+
+print(db.count())
+#+END_SRC
+
+#+RESULTS: 
+: 360
+
+** NN training
+Here we repeat the process as above. This time, we will train to a selection of 90% of the data instead of the whole training set. This way, 10% of the data can be used for validation, which is standard practice when testing for over fitting.
+
+#+BEGIN_SRC python :results silent
 from ase.db import connect
 import random
 import numpy as np
@@ -302,89 +254,82 @@ db.update(list(train_samples), train_set='True')
 db.update(list(valid_samples), train_set='False')
 #+END_SRC
 
-#+RESULTS:
-
-
-Here we will train two separate frameworks 
+Here we will train two separate frameworks of NN.
 
 #+BEGIN_SRC python
 from amp import Amp
-from ase.io import read
+from ase.db import connect
 from amp import SimulatedAnnealing
 from amp.descriptor import Gaussian
 from amp.regression import NeuralNetwork
-import os, shutil
+import os
+import shutil
 
-if os.path.exists('networks/db0/7-7/'):
-    shutil.rmtree('networks/db0/7-7/')
-    os.mkdir('networks/db0/7-7/')
-else:
-    os.mkdir('networks/db0/7-7/')
+images = []
+db = connect('database/CuPd.db')
+for d in db.select('train_set=True'):
+    atoms = d.toatoms()
+    del atoms.constraints
+    images += [atoms]
 
-calc = Amp(label='networks/db0/7-7/',
-	   dblabel='networks/',
-	   descriptor=Gaussian(cutoff=6.0),
-	   regression=NeuralNetwork(hiddenlayers=(2, 8)))
+# These are so quick to finish, I run them in series.
+frameworks = [(2, 2), (3, 3)]
 
-calc.train(images=read('database/CuPd.db', ':'),
-	   data_format='db',
-	   cores=4,
-	   energy_goal=1e-3,
-	   force_goal=None, # Not useful for site enumeration
-	   global_search=SimulatedAnnealing(temperature=70,
-					    steps=50),
-	   extend_variables=False)
+for s in frameworks:
+    if os.path.exists('networks/db0/{}-{}/'.format(*s)):
+	shutil.rmtree('networks/db0/{}-{}/'.format(*s))
+	os.makedirs('networks/db0/{}-{}/'.format(*s))
+    else:
+	os.makedirs('networks/db0/{}-{}/'.format(*s))
+
+    calc = Amp(label='networks/db0/{}-{}/'.format(*s),
+	       dblabel='networks/db0/',
+	       descriptor=Gaussian(cutoff=6.0),
+	       regression=NeuralNetwork(hiddenlayers=s))
+
+    calc.train(images=images,
+	       data_format='db',
+	       cores=4,
+	       energy_goal=1e-3,
+	       force_goal=None,
+	       global_search=SimulatedAnnealing(temperature=100,
+						steps=50),
+	       extend_variables=False)
 #+END_SRC
-
-#+RESULTS:
-
-#+BEGIN_SRC python
-from amp import Amp
-from ase.io import read
-from amp import SimulatedAnnealing
-from amp.descriptor import Gaussian
-from amp.regression import NeuralNetwork
-import os, shutil
-
-if os.path.exists('networks/db0/8-8/'):
-    shutil.rmtree('networks/db0/8-8/')
-    os.mkdir('networks/db0/8-8/')
-else:
-    os.mkdir('networks/db0/8-8/')
-
-calc = Amp(label='networks/db0/8-8/',
-	   dblabel='networks/',
-	   descriptor=Gaussian(cutoff=6.0),
-	   regression=NeuralNetwork(hiddenlayers=(2, 8)))
-
-calc.train(images=read('database/CuPd.db', ':'),
-	   data_format='db',
-	   cores=4,
-	   energy_goal=1e-3,
-	   force_goal=None, # Not useful for site enumeration
-	   global_search=SimulatedAnnealing(temperature=70,
-					    steps=50),
-	   extend_variables=False)
-#+END_SRC
-
-#+RESULTS:
 
 ** Analysis and predictions
+Now that we have 2 fully trained NN's, we can use them on the EMT enumerations to validate which structures are well fit, and which are not. To do this, we first add the energy predictions of each NN to the temporary database of EMT enumerations.
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results silent
+from amp.utilities import hash_image
+import numpy as np
+from ase.io import read
+from glob import glob
 from ase.db import connect
+from amp import Amp
+from ase.calculators.singlepoint import SinglePointCalculator
 
-db = connect('database/CuPd.db')
+db = connect('tmp/enum.db')
 
-nrgs = set()
-for d in db.select():
-    nrgs.add(d.energy)
+calc = Amp('networks/db0/2-2/')
+calc1 = Amp('networks/db0/3-3/')
 
-print(db.count())
+with connect('tmp/enum.db') as db0:
+    for d in db.select():
+        atoms = d.toatoms()
+
+	atoms.set_calculator(calc)
+	E = atoms.get_potential_energy()
+
+	atoms.set_calculator(calc1)
+	E1 = atoms.get_potential_energy()
+	dE = (E - E1) / len(atoms)
+	atoms.set_calculator(SinglePointCalculator(atoms, energy=dE))
+
+	db0.write(atoms, hash=d.hash, a=d.a)
 #+END_SRC
 
-#+RESULTS: 
-: 360
+To determine which structures of the full set of EMT enumerations to train next, we need to determine a cutoff energy which will sample the structures with the worst agreement between NN predictions. This is done manually via guess and check at the moment.
 
 #+BEGIN_SRC python
 import numpy as np
@@ -402,17 +347,19 @@ plt.savefig('./images/tmp.png')
 
 nrgs = np.array(nrgs)
 
-print(len(nrgs[nrgs > 0.1]))
+print(len(nrgs[nrgs > 0.06]))
 #+END_SRC
 
 #+RESULTS:
-: 20
+: 1184
 
 [[./images/tmp.png]]
 
+We want to include about 1000 configurations for the first instance of the training. A cutoff of 0.06 eV/atom gives 1184 structures which is close enough for our purposes.
+
 * db1
 ** DFT
-Based on the analysis from above, it is apparent that there isn't nearly enough data yet to make an accurate NN. Here we utilize the existing NN frameworks to determine the most poorly predicted structures. Of the 500 most poorly predicted structures, we perform DFT calculations at the same 3 lattice constants as above.
+Based on the analysis from above, it is apparent that there isn't nearly enough data yet to make an accurate NN. Here we utilize the existing NN frameworks to determine the most poorly predicted structures. Of the \approx 1000 most poorly predicted structures, we perform DFT calculations at the same 5 lattice constants as above.
 
 #+BEGIN_SRC python
 from ase.db import connect
@@ -600,9 +547,11 @@ plt.savefig('./images/db1-nn-diff.png')
 
 [[./images/db1-nn-diff.png]]
 
-* db1
+The fitting is already quite good (I am targeting residuals below \approx 0.01 ev/atom). Using 0.01 eV/atom as the next cutoff gives 567 structures which are "poorly predicted" by both frameworks, so we will repeat the process for these structures.
+
+* db2
 ** DFT
-Based on the analysis from above, it is apparent that there isn't nearly enough data yet to make an accurate NN. Here we utilize the existing NN frameworks to determine the most poorly predicted structures. Of the 500 most poorly predicted structures, we perform DFT calculations at the same 3 lattice constants as above.
+From this point on, the methods are the same as above. We are simply repeating the process until the desired level of convergence is obtained.
 
 #+BEGIN_SRC python
 from ase.db import connect
@@ -626,11 +575,11 @@ for n, hash, a, atoms in data:
         # All eunmerations of the 1x1x7 structure are already included.
 
 	if int(n) == 14:
-            Vasp.VASPRC['queue.ppn'] = 3
+            Vasp.VASPRC['queue.ppn'] = 2
 	    wd = 'DFT/type=CuPd-NN/surf=217/lattice={:.3f}/hash={}'.format(a, hash)
 	    kpts = [8, 16, 1]
 	elif int(n) == 21:
-            Vasp.VASPRC['queue.ppn'] = 6
+            Vasp.VASPRC['queue.ppn'] = 4
 	    wd = 'DFT/type=CuPd-NN/surf=r3r37/lattice={:.3f}/hash={}'.format(a, hash)
 	    kpts = [10, 10, 1]
 
@@ -663,4 +612,125 @@ print('Database contains {} calculations'.format(db.count()))
 #+END_SRC
 
 #+RESULTS:
-: Database contains 1518 calculations
+: Database contains 2085 calculations
+
+** NN training
+#+BEGIN_SRC python :results silent
+from ase.db import connect
+import random
+import numpy as np
+
+db = connect('database/CuPd.db')
+
+n = db.count()
+n_train = int(round(n * 0.9))
+ids =  np.array(range(n)) + 1
+
+random.seed(256)
+train_samples = random.sample(ids, n_train)
+valid_samples = set(ids) - set(train_samples)
+
+db.update(list(train_samples), train_set=True)
+db.update(list(valid_samples), train_set=False)
+#+END_SRC
+
+Now, we create a new framework for the next instance of the database.
+
+#+BEGIN_SRC python
+from amp import Amp
+from ase.db import connect
+from amp import SimulatedAnnealing
+from amp.descriptor import Gaussian
+from amp.regression import NeuralNetwork
+import os
+import shutil
+
+images = []
+db = connect('database/CuPd.db')
+for d in db.select('train_set=True'):
+    atoms = d.toatoms()
+    del atoms.constraints
+    images += [atoms]
+
+# These are so quick to finish, I run them in series.
+frameworks = [(2, 2), (3, 3)]
+
+for s in frameworks:
+    if os.path.exists('networks/db2/{}-{}/'.format(*s)):
+	shutil.rmtree('networks/db2/{}-{}/'.format(*s))
+	os.makedirs('networks/db2/{}-{}/'.format(*s))
+    else:
+	os.makedirs('networks/db2/{}-{}/'.format(*s))
+
+    calc = Amp(label='networks/db2/{}-{}/'.format(*s),
+	       dblabel='networks/db2/',
+	       descriptor=Gaussian(cutoff=6.0),
+	       regression=NeuralNetwork(hiddenlayers=s))
+
+    calc.train(images=images,
+	       data_format='db',
+	       cores=4,
+	       energy_goal=1e-3,
+	       force_goal=None,
+	       global_search=SimulatedAnnealing(temperature=100,
+						steps=50),
+	       extend_variables=False)
+#+END_SRC
+
+** Analysis and predictions
+#+BEGIN_SRC python :results output org drawer
+from amp.utilities import hash_image
+import numpy as np
+from ase.io import read
+from glob import glob
+from ase.db import connect
+from amp import Amp
+from ase.calculators.singlepoint import SinglePointCalculator
+
+db = connect('tmp/enum-db1.db')
+
+calc = Amp('networks/db2/2-2/')
+calc1 = Amp('networks/db2/3-3/')
+
+with connect('tmp/enum-db2.db') as db0:
+    for d in db.select():
+        atoms = d.toatoms()
+
+	atoms.set_calculator(calc)
+	E = atoms.get_potential_energy()
+
+	atoms.set_calculator(calc1)
+	E1 = atoms.get_potential_energy()
+	dE = (E - E1) / len(atoms)
+	atoms.set_calculator(SinglePointCalculator(atoms, energy=dE))
+
+	db0.write(atoms, hash=d.hash, a=d.a)
+#+END_SRC
+
+#+BEGIN_SRC python
+from ase.db import connect
+import matplotlib.pyplot as plt
+import numpy as np
+
+db = connect('tmp/enum-db2.db')
+
+E = []
+for d in db.select():
+    E += [abs(d.energy)]
+
+cut = 0.01
+E = np.array(E)
+
+dE = len(E[E >  cut])
+print('{} structures with error greater than {:.0f} meV/atom'.format(dE, cut*1e3))
+
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.hist(E, bins=np.arange(0, 0.050, 0.0025))
+ax.set_xlabel('Difference of neural networks (eV/atom)')
+ax.set_ylabel('Frequency')
+plt.tight_layout()
+plt.savefig('./images/db2-nn-diff.png')
+#+END_SRC
+
+
+[[./images/db2-nn-diff.png]]
