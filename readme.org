@@ -717,9 +717,6 @@ with connect('tmp/enum-db2.db') as db0:
 	db0.write(atoms, hash=d.hash, a=d.a)
 #+END_SRC
 
-#+RESULTS:
-: <async:a4b01088959f75971c1ba07b35f525de>
-
 #+BEGIN_SRC python
 from ase.db import connect
 import matplotlib.pyplot as plt
@@ -731,20 +728,25 @@ E = []
 for d in db.select():
     E += [abs(d.energy)]
 
-cut = 0.01
+cut = 0.005
 E = np.array(E)
 
 dE = len(E[E >  cut])
 print('{} structures with error greater than {:.0f} meV/atom'.format(dE, cut*1e3))
 
 fig, ax = plt.subplots(figsize=(6, 4))
-ax.hist(E, bins=np.arange(0, 0.050, 0.0025))
+ax.hist(E, bins=np.arange(0, 0.02, 0.001))
 ax.set_xlabel('Difference of neural networks (eV/atom)')
 ax.set_ylabel('Frequency')
 plt.tight_layout()
 plt.savefig('./images/db2-nn-diff.png')
 #+END_SRC
 
-#+caption: Dual neural network validation for 7 layer slabs of 1 \times 1, 2 \times 1, and r3 \times r3 energy unique configuration as predicted by EMT. Validations are made for the third instance of the database (db2) which contains all 2085 configurations.
+#+RESULTS:
+: 1117 structures with error greater than 5 meV/atom
+
+#+caption: Dual neural network validation for 7 layer slabs of 1 \times 1, 2 \times 1, and r3 \times r3 energy unique configuration as predicted by EMT. Validations are made for the third instance of the database (db2) which contains 2085 configurations.
 #+attr_org: :width 600
 [[./images/db2-nn-diff.png]]
+
+After only 2 training instances, there is incredible agreement between both NN.
