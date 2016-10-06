@@ -273,7 +273,7 @@ for d in db.select('train_set=True'):
     images += [atoms]
 
 # These are so quick to finish, I run them in series.
-frameworks = [(2, 2), (3, 3)]
+frameworks = [(7, 7), (8, 8)]
 
 for s in frameworks:
     if os.path.exists('networks/db0/{}-{}/'.format(*s)):
@@ -311,8 +311,8 @@ from ase.calculators.singlepoint import SinglePointCalculator
 
 db = connect('tmp/enum.db')
 
-calc = Amp('networks/db0/2-2/')
-calc1 = Amp('networks/db0/3-3/')
+calc = Amp('networks/db0/8-8/')
+calc1 = Amp('networks/db0/7-7/')
 
 with connect('tmp/enum.db') as db0:
     for d in db.select():
@@ -332,28 +332,36 @@ with connect('tmp/enum.db') as db0:
 To determine which structures of the full set of EMT enumerations to train next, we need to determine a cutoff energy which will sample the structures with the worst agreement between NN predictions. This is done manually via guess and check at the moment.
 
 #+BEGIN_SRC python
-import numpy as np
 from ase.db import connect
 import matplotlib.pyplot as plt
+import numpy as np
 
-db = connect('./tmp/enum.db')
+db = connect('tmp/enum.db')
 
-nrgs = []
+E = []
 for d in db.select():
-    nrgs += [abs(d.energy)]
+    E += [abs(d.energy)]
 
-plt.hist(nrgs)
-plt.savefig('./images/tmp.png')
+cut = 0.06
+E = np.array(E)
 
-nrgs = np.array(nrgs)
+dE = len(E[E >  cut])
+print('{} structures with error greater than {:.0f} meV/atom'.format(dE, cut*1e3))
 
-print(len(nrgs[nrgs > 0.06]))
+fig, ax = plt.subplots(figsize=(6, 4))
+ax.hist(E, bins=np.arange(0, 0.15, 0.01))
+ax.set_xlabel('Difference of neural networks (eV/atom)')
+ax.set_ylabel('Frequency')
+plt.tight_layout()
+plt.savefig('./images/db0-nn-diff.png')
 #+END_SRC
 
 #+RESULTS:
-: 1184
+: 1184 structures with error greater than 60 meV/atom
 
-[[./images/tmp.png]]
+#+caption: Dual neural network validation for 7 layer slabs of 1 \times 1, 2 \times 1, and r3 \times r3 energy unique configuration as predicted by EMT. Validations are made for the first instance of the database (db0) which contains 360 configurations.
+#+attr_org: :width 600
+[[./images/db0-nn-diff.png]]
 
 We want to include about 1000 configurations for the first instance of the training. A cutoff of 0.06 eV/atom gives 1184 structures which is close enough for our purposes.
 
@@ -535,7 +543,7 @@ dE = len(E[E >  cut])
 print('{} structures with error greater than {:.0f} meV/atom'.format(dE, cut*1e3))
 
 fig, ax = plt.subplots(figsize=(6, 4))
-ax.hist(E, bins=np.arange(0, 0.050, 0.0025))
+ax.hist(E, bins=np.arange(0, 0.02, 0.001))
 ax.set_xlabel('Difference of neural networks (eV/atom)')
 ax.set_ylabel('Frequency')
 plt.tight_layout()
@@ -545,6 +553,8 @@ plt.savefig('./images/db1-nn-diff.png')
 #+RESULTS:
 : 567 structures with error greater than 10 meV/atom
 
+#+caption: Dual neural network validation for 7 layer slabs of 1 \times 1, 2 \times 1, and r3 \times r3 energy unique configuration as predicted by EMT. Validations are made for the second instance of the database (db1) which contains 1518 configurations.
+#+attr_org: :width 600
 [[./images/db1-nn-diff.png]]
 
 The fitting is already quite good (I am targeting residuals below \approx 0.01 ev/atom). Using 0.01 eV/atom as the next cutoff gives 567 structures which are "poorly predicted" by both frameworks, so we will repeat the process for these structures.
@@ -636,7 +646,7 @@ db.update(list(valid_samples), train_set=False)
 
 Now, we create a new framework for the next instance of the database.
 
-#+BEGIN_SRC python
+#+BEGIN_SRC python :results silent
 from amp import Amp
 from ase.db import connect
 from amp import SimulatedAnnealing
@@ -678,7 +688,7 @@ for s in frameworks:
 #+END_SRC
 
 ** Analysis and predictions
-#+BEGIN_SRC python :results output org drawer
+#+BEGIN_SRC python :results silent
 from amp.utilities import hash_image
 import numpy as np
 from ase.io import read
@@ -707,6 +717,9 @@ with connect('tmp/enum-db2.db') as db0:
 	db0.write(atoms, hash=d.hash, a=d.a)
 #+END_SRC
 
+#+RESULTS:
+: <async:a4b01088959f75971c1ba07b35f525de>
+
 #+BEGIN_SRC python
 from ase.db import connect
 import matplotlib.pyplot as plt
@@ -732,5 +745,6 @@ plt.tight_layout()
 plt.savefig('./images/db2-nn-diff.png')
 #+END_SRC
 
-
+#+caption: Dual neural network validation for 7 layer slabs of 1 \times 1, 2 \times 1, and r3 \times r3 energy unique configuration as predicted by EMT. Validations are made for the third instance of the database (db2) which contains all 2085 configurations.
+#+attr_org: :width 600
 [[./images/db2-nn-diff.png]]
