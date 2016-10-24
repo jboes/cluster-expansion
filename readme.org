@@ -750,3 +750,144 @@ plt.savefig('./images/db2-nn-diff.png')
 [[./images/db2-nn-diff.png]]
 
 After only 2 training instances, there is incredible agreement between both NN.
+* Monte-Carlo simulations
+Here is an example code for performing MC simulations for the annealing process of a 10 \times 10 \times 15 slab.
+
+Copy this code to a 
+
+** Base MC code
+Copy this code to a file called "CEMC.py" in the same directory as this file. You can also do this by running M-x org-babel-tangle in emacs.
+
+#+BEGIN_SRC python :tangle ./CEMC.py
+import numpy as np
+import random
+from ase.units import kB
+from ase.db import connect
+from ase.calculators.neighborlist import NeighborList
+from ase.calculators.singlepoint import SinglePointCalculator as SPC
+
+def main(atoms, dbname, T=800, steps=20000):
+
+    db = connect(dbname)
+
+    # Setting up variables for grand canonical MC
+    symbols = atoms.get_chemical_symbols()
+    sym = list(set(symbols))
+    chem_bins = {_: [] for _ in sym}
+
+    for i, s in enumerate(symbols):
+	chem_bins[s] += [i]
+
+    # Ensure sym1 has the lower concentration
+    if len(chem_bins[sym[0]]) > len(chem_bins[sym[1]]):
+	sym.reverse()
+
+    # Calculate the initial energy and store it
+    nrg = atoms.get_potential_energy()
+
+    # Write the initial configuration
+    if db.count() == 0:
+        dummy = atoms.copy()
+        dummy.set_calculator(SPC(atoms, energy=nrg))
+        db.write(dummy)
+
+    # Construct a Neighbors list
+    r = atoms.get_distance(0, 1) / np.sqrt(2) / 1.5
+    nl = NeighborList([r]*len(atoms),
+                      self_interaction=False,
+                      bothways=True)
+
+    # Perform MC steps
+    attempt, success = 0, 0
+    while success < steps:
+
+        ind1 = None
+        while ind1 is None:
+            # First, choose a random index from sym[0]
+            random.shuffle(chem_bins[sym[0]])
+            ind0 = chem_bins[sym[0]][-1]
+
+            # Calculate nearest neighbors
+            nl.update(atoms)
+	    indices, _ = nl.get_neighbors(ind0)
+
+            # Determine if sym2 neighbors exist and choose one
+	    sym1_neighbors = [i for i in indices
+			      if atoms[i].symbol == sym[1]]
+            if sym1_neighbors:
+                ind1 = random.sample(sym1_neighbors, 1)[0]
+
+        # Create new atoms object to test
+        new_atoms = atoms.copy()
+        new_atoms.set_calculator(atoms.get_calculator())
+
+        # Update the atoms object
+        new_atoms[ind0].symbol, new_atoms[ind1].symbol = sym[1], sym[0]
+
+        # Calculate the energy of the new system
+        new_nrg = new_atoms.get_potential_energy()
+
+        # Determine if lower than previous energy
+        if new_nrg < nrg:
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym[1]][-1] = ind0
+	    chem_bins[sym[0]][-1] = ind1
+
+            dummy = atoms.copy()
+            dummy.set_calculator(SPC(atoms, energy=nrg))
+            db.write(dummy)
+            success += 1
+
+        elif np.exp(-(new_nrg - nrg) / (kB * T)) > np.random.rand():
+            atoms = new_atoms
+            nrg = new_nrg
+	    chem_bins[sym[1]][-1] = ind0
+	    chem_bins[sym[0]][-1] = ind1
+
+            dummy = atoms.copy()
+            dummy.set_calculator(SPC(atoms, energy=nrg))
+            db.write(dummy)
+            success += 1
+
+        attempt += 1
+
+    return success/attempt
+#+END_SRC
+
+** Running the simulation
+
+Next, we can perform the MC simulation by calling the earlier code that we wrote to "CEMC.py".
+
+Here is an example MC simulation at 1000 K and a bulk composition of 50:50 CuPd.
+
+#+BEGIN_SRC python :results output org drawer
+from amp import Amp
+from ase.lattice.surface import fcc111
+from scipy.interpolate import interp1d
+import numpy as np
+from CEMC import main as CEMC
+
+# Simulation temperature
+T = 1000
+
+# Simulation bulk composition
+x = 0.5
+
+lat = interp1d([0, 1], [3.634, 3.939])
+
+# Define a dummy slab
+atoms = fcc111('Pd', size=(10, 10, 15), vacuum=6.0, a=lat(x))
+atoms.set_pbc([1, 1, 0])
+
+# Randomly populate Cu
+samp = np.random.choice(range(len(atoms)), len(atoms)*{0}, replace=False)
+for i in samp:
+    atoms[i].symbol = 'Cu'
+
+# Attach the calculator
+calc = Amp('../networks/db2/3-3/checkpoint-parameters.json')
+atoms.set_calculator(calc)
+
+CEMC(atoms, dbname='x{0:.1f}-{1}K.db', T={1})
+#+END_SRC
