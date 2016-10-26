@@ -753,8 +753,6 @@ After only 2 training instances, there is incredible agreement between both NN.
 * Monte-Carlo simulations
 Here is an example code for performing MC simulations for the annealing process of a 10 \times 10 \times 15 slab.
 
-Copy this code to a 
-
 ** Base MC code
 Copy this code to a file called "CEMC.py" in the same directory as this file. You can also do this by running M-x org-babel-tangle in emacs.
 
@@ -889,5 +887,5 @@ for i in samp:
 calc = Amp('../networks/db2/3-3/checkpoint-parameters.json')
 atoms.set_calculator(calc)
 
-CEMC(atoms, dbname='x{0:.1f}-{1}K.db', T={1})
+CEMC(atoms, dbname='x0.5-1000K.db', T=1000)
 #+END_SRC
