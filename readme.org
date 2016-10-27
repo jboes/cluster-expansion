@@ -879,7 +879,7 @@ atoms = fcc111('Pd', size=(10, 10, 15), vacuum=6.0, a=lat(x))
 atoms.set_pbc([1, 1, 0])
 
 # Randomly populate Cu
-samp = np.random.choice(range(len(atoms)), len(atoms)*{0}, replace=False)
+samp = np.random.choice(range(len(atoms)), len(atoms)*x, replace=False)
 for i in samp:
     atoms[i].symbol = 'Cu'
 
@@ -888,4 +888,114 @@ calc = Amp('../networks/db2/3-3/checkpoint-parameters.json')
 atoms.set_calculator(calc)
 
 CEMC(atoms, dbname='x0.5-1000K.db', T=1000)
+#+END_SRC
+* Training with smaller number of input nodes
+Here is an example where we change the default symmetry functions for Amp (G functions). This will reduce the number of input nodes to 4 for each element (8 total) for the usual default of 40 for a binary alloy. This should substantially increase the speed of our neural network. However, this will also likely come at the cost of some reduced accuracy.
+
+For our final NN calculation it is also ideal to use the forces to train our network (shown in the second example). This will allow us a more accurate fit without actually performing more DFT calculations.
+
+** Energy only
+#+BEGIN_SRC python
+from amp import Amp
+from ase.db import connect
+from amp import SimulatedAnnealing
+from amp.descriptor import Gaussian
+from amp.regression import NeuralNetwork
+import os
+import shutil
+
+elements = ['Cu', 'Pd']
+G = {}
+for element0 in elements:
+
+    # Radial symmetry functions.
+    etas = [1., 10.]
+    _G = [{'type': 'G2', 'element': element, 'eta': eta}
+	  for eta in etas
+	  for element in elements]
+
+    G[element0] = _G
+
+images = []
+db = connect('database/CuPd.db')
+for d in db.select('train_set=True'):
+    atoms = d.toatoms()
+    del atoms.constraints
+    images += [atoms]
+
+# This defines a framework of 2 hidden layers with 3 nodes each.
+s = (len(G['Cu'])*2, 3, 3)
+
+if os.path.exists('networks/db3/{}-{}-{}/'.format(*s)):
+    shutil.rmtree('networks/db3/{}-{}-{}/'.format(*s))
+    os.makedirs('networks/db3/{}-{}-{}/'.format(*s))
+else:
+    os.makedirs('networks/db3/{}-{}-{}/'.format(*s))
+
+calc = Amp(label='networks/db3/{}-{}-{}/'.format(*s),
+           dblabel='networks/db3/',
+	   descriptor=Gaussian(cutoff=6.0, Gs=G),
+	   regression=NeuralNetwork(hiddenlayers=s[1:]))
+
+calc.train(images=images,
+	   data_format='db',
+	   cores=4,
+	   energy_goal=1e-3,
+	   force_goal=None,
+	   global_search=SimulatedAnnealing(temperature=100,
+					    steps=50),
+	   extend_variables=False)
+#+END_SRC
+
+** Force training
+#+BEGIN_SRC python
+from amp import Amp
+from ase.db import connect
+from amp import SimulatedAnnealing
+from amp.descriptor import Gaussian
+from amp.regression import NeuralNetwork
+import os
+import shutil
+
+elements = ['Cu', 'Pd']
+G = {}
+for element0 in elements:
+
+    # Radial symmetry functions.
+    etas = [1., 10.]
+    _G = [{'type': 'G2', 'element': element, 'eta': eta}
+	  for eta in etas
+	  for element in elements]
+
+    G[element0] = _G
+
+images = []
+db = connect('database/CuPd.db')
+for d in db.select('train_set=True'):
+    atoms = d.toatoms()
+    del atoms.constraints
+    images += [atoms]
+
+# This defines a framework of 2 hidden layers with 3 nodes each.
+s = (len(G['Cu'])*2, 3, 3)
+
+if os.path.exists('networks/db3/{}-{}-{}-f/'.format(*s)):
+    shutil.rmtree('networks/db3/{}-{}-{}-f/'.format(*s))
+    os.makedirs('networks/db3/{}-{}-{}-f/'.format(*s))
+else:
+    os.makedirs('networks/db3/{}-{}-{}-f/'.format(*s))
+
+calc = Amp(label='networks/db3/{}-{}-{}-f/'.format(*s),
+           dblabel='networks/db3/',
+	   descriptor=Gaussian(cutoff=6.0, Gs=G),
+	   regression=NeuralNetwork(hiddenlayers=s[1:]))
+
+calc.train(images=images,
+	   data_format='db',
+	   cores=1,
+	   energy_goal=1e-3,
+	   force_goal=1e-2,
+	   global_search=SimulatedAnnealing(temperature=100,
+					    steps=50),
+	   extend_variables=False)
 #+END_SRC
